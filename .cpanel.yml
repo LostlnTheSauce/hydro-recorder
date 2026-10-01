@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEST=$HOME/public_html/live
+    - export DEST=$HOME/public_html/watch
     - /bin/mkdir -p $DEST
     - /bin/cp site/index.html site/viewer.js site/api.php $DEST/
     - /bin/cp recorder/web/chart.js recorder/web/style.css $DEST/

@@ -15,7 +15,7 @@ from .share import Uploader, post
 NEAR_MS = 30_000  # a 15-minute row is left blank rather than filled from a reading further away than this
 STEPS = {15, 60, 300, 600, 900}  # seconds; what the on-screen record can be stepped by
 SCREEN_ROWS = 240  # finer steps show only the latest rows
-DEFAULT_SITE = "https://grantgsolutions.com/live"
+DEFAULT_SITE = "https://grantgsolutions.com/watch"
 EDITABLE = {"name": str, "offset": float, "chart_max": float, "window_low": float, "window_high": float,
             "duration_hours": float, "official_start": int, "official_end": int}
 CLEARABLE = {"window_low", "window_high", "official_start", "official_end"}
