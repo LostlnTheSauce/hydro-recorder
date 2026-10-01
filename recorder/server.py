@@ -54,6 +54,9 @@ class Handler(BaseHTTPRequestHandler):
                 name, text = self.app.export(int(m.group(1)), m.group(2))
                 return self._send(200, ("﻿" + text).encode(), "text/csv; charset=utf-8",
                                   {"Content-Disposition": f'attachment; filename="{name}"'})
+            m = re.match(r"^/api/tests/(\d+)/qr\.svg$", url.path)
+            if m:
+                return self._send(200, self.app.share_qr(int(m.group(1))), "image/svg+xml")
             target = (WEB / (url.path.lstrip("/") or "index.html")).resolve()
             if WEB.resolve() in target.parents and target.is_file():
                 return self._send(200, target.read_bytes(), mimetypes.guess_type(target.name)[0] or "application/octet-stream")

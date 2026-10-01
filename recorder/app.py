@@ -138,6 +138,15 @@ class App:
             except Exception:
                 pass  # the site drops a link by itself after 30 days without updates
 
+    def share_qr(self, test_id: int) -> bytes:
+        import segno
+        t = self._need(test_id)
+        if not t["share_token"]:
+            raise Problem("This test is not being shared.")
+        out = io.BytesIO()
+        segno.make(f"{self.site()}/?t={t['share_token']}", error="m").save(out, kind="svg", scale=8, border=4, dark="#14231e", light="#ffffff")
+        return out.getvalue()
+
     def share_meta(self, t: dict) -> dict:
         """What viewers see besides the trace."""
         keep = ("name", "details", "chart_max", "window_low", "window_high", "duration_hours", "official_start", "official_end", "closed_at")

@@ -163,7 +163,7 @@
     $('shareOff').hidden = !!share;
     $('shareOn').hidden = !share;
     $('shareError').textContent = '';
-    if (share) $('shareLink').value = share.link; else $('shareSite').value = site;
+    if (share) { $('shareLink').value = share.link; $('shareQr').src = `/api/tests/${current.id}/qr.svg?${encodeURIComponent(share.link)}`; } else $('shareSite').value = site;
     $('shareDlg').open || $('shareDlg').showModal();
   }
   $('shareBtn').onclick = openShare;

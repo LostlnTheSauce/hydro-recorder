@@ -57,6 +57,8 @@ input:focus, button:focus-visible { outline: 2px solid var(--green); outline-off
 .share-line { font-size: 13px; font-weight: 600; color: var(--green); margin-top: 4px; }
 .share-line.behind { color: var(--amber); }
 .copy-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px; }
+.qr { display: block; width: 220px; height: 220px; margin: 16px auto 0; }
+.center { text-align: center; }
 .chart-options { justify-content: center; gap: 22px; margin-top: 12px; }
 label.check { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-size: 14px; color: var(--ink); cursor: pointer; }
 label.check input { width: auto; margin: 0; }
