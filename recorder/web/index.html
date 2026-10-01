@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hydro Recorder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">Hydro Recorder</div>
+    <nav id="tabs" class="tabs"></nav>
+    <div class="bar-right">
+      <button class="link" id="pastBtn">Past tests</button>
+      <a class="link" href="calculator.html" target="_blank">Calculator</a>
+      <span id="clock" class="clock"></span>
+    </div>
+  </header>
+
+  <div id="alert" class="alert" hidden></div>
+
+  <main id="welcome" class="welcome" hidden>
+    <h1>No test is running</h1>
+    <p>Start a test, plug in the gauge, and every reading is saved on this computer as it arrives.</p>
+    <div class="row">
+      <button class="primary big" data-new>Start a new test</button>
+      <button class="big" id="demoBtn">Try it with a practice gauge</button>
+    </div>
+  </main>
+
+  <main id="test" class="test" hidden>
+    <section class="card chart-card">
+      <div class="card-head">
+        <div>
+          <h1 id="name"></h1>
+          <p id="jobLine" class="muted"></p>
+        </div>
+        <div class="row no-print">
+          <button id="detailsBtn">Test details</button>
+          <button id="printBtn">Print chart</button>
+        </div>
+      </div>
+      <canvas id="chart" width="700" height="700"></canvas>
+      <div class="row chart-options no-print">
+        <label class="check"><input type="checkbox" id="optWindow"> Show test window</label>
+        <label class="check"><input type="checkbox" id="optLift"> Lift pen where readings are missing</label>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card">
+        <div class="label">Pressure</div>
+        <div class="pressure"><span id="psi">—</span><small>psi</small></div>
+        <div id="gauge" class="status"></div>
+        <div class="stats">
+          <div><span class="label">Low</span><b id="low">—</b></div>
+          <div><span class="label">High</span><b id="high">—</b></div>
+          <div><span class="label">Offset</span><b><button class="link" id="offsetBtn">0</button></b></div>
+        </div>
+      </section>
+
+      <section class="card no-print" id="clockCard">
+        <div class="label">Official test</div>
+        <div id="official"></div>
+      </section>
+
+      <section class="card no-print">
+        <div class="label">Notes &amp; stroke counts</div>
+        <form id="markForm" class="mark-form">
+          <input id="markText" placeholder="Note" autocomplete="off">
+          <input id="markStrokes" placeholder="Strokes" inputmode="decimal" autocomplete="off">
+          <button class="primary">Add</button>
+        </form>
+        <p class="hint">Saved with the current time and pressure. Fill in strokes only for a stroke count.</p>
+        <ul id="marks" class="marks"></ul>
+      </section>
+    </aside>
+
+    <section class="card record">
+      <div class="card-head">
+        <div class="row">
+          <h2>Pressure record</h2>
+          <select id="step" class="no-print" aria-label="Time between rows">
+            <option value="15">Every 15 seconds</option>
+            <option value="60">Every minute</option>
+            <option value="300">Every 5 minutes</option>
+            <option value="600">Every 10 minutes</option>
+            <option value="900">Every 15 minutes</option>
+          </select>
+        </div>
+        <div class="row no-print">
+          <a class="button" id="dlLog">Download 15-minute record</a>
+          <a class="button" id="dlNotes">Notes &amp; strokes</a>
+          <a class="button" id="dlPressure">Every reading</a>
+          <button class="danger" id="finishBtn">Finish test</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Time</th><th>Pressure</th><th>Remarks</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="hint no-print" id="rowsNote"></p>
+    </section>
+  </main>
+
+  <dialog id="detailsDlg">
+    <form method="dialog" id="detailsForm">
+      <h2 id="detailsTitle">New test</h2>
+      <label>Test name<input name="name" placeholder="Example: Henrietta 6-inch main" required></label>
+      <div class="grid2">
+        <label>Job number<input name="job"></label>
+        <label>PO / AFE<input name="po"></label>
+        <label>Location<input name="location"></label>
+        <label>Inspector<input name="inspector"></label>
+        <label>Chart maximum (psi)<input name="chart_max" inputmode="decimal" value="1000"></label>
+        <label>Test length (hours)<input name="duration_hours" inputmode="decimal" value="8"></label>
+        <label>Bottom of test window (psi)<input name="window_low" inputmode="decimal" placeholder="Optional"></label>
+        <label>Top of test window (psi)<input name="window_high" inputmode="decimal" placeholder="Optional"></label>
+      </div>
+      <p class="error" id="detailsError"></p>
+      <div class="row end">
+        <button type="button" data-close>Cancel</button>
+        <button class="primary" id="detailsSave">Start test</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="portDlg">
+    <h2>Connect gauge</h2>
+    <p class="muted">Pick the port the Crystal gauge is plugged into. The gauge must be set to PSI.</p>
+    <div id="ports" class="ports"></div>
+    <p class="error" id="portError"></p>
+    <div class="row end"><button id="portRefresh">Look again</button><button data-close>Cancel</button></div>
+  </dialog>
+
+  <dialog id="askDlg">
+    <form method="dialog" id="askForm">
+      <h2 id="askTitle"></h2>
+      <p class="muted" id="askHelp"></p>
+      <input id="askInput">
+      <p class="error" id="askError"></p>
+      <div class="row end">
+        <button type="button" id="askClear" hidden>Clear</button>
+        <button type="button" data-close>Cancel</button>
+        <button class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pastDlg">
+    <h2>Past tests</h2>
+    <div id="past" class="past"></div>
+    <div class="row end"><button data-close>Close</button></div>
+  </dialog>
+
+  <script src="chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
