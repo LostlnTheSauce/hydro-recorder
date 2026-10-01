@@ -69,7 +69,7 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
             if path == "/api/tests":
                 return self._json({"id": self.app.create(data)})
-            m = re.match(r"^/api/tests/(\d+)(?:/(connect|disconnect|finish|marks))?$", path)
+            m = re.match(r"^/api/tests/(\d+)(?:/(connect|disconnect|finish|marks|share|unshare))?$", path)
             if m:
                 test_id, action = int(m.group(1)), m.group(2)
                 if action == "connect":
@@ -78,6 +78,10 @@ class Handler(BaseHTTPRequestHandler):
                     self.app.disconnect(test_id)
                 elif action == "finish":
                     self.app.finish(test_id)
+                elif action == "share":
+                    self.app.share_start(test_id, str(data.get("site") or ""))
+                elif action == "unshare":
+                    self.app.share_stop(test_id)
                 elif action == "marks":
                     self.app.add_mark(test_id, data)
                 else:

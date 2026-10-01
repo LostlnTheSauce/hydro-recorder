@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Live hydrotest</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">Live hydrotest</div>
+    <div class="tabs"></div>
+    <div class="bar-right"><span class="muted">View only</span><span id="clock" class="clock"></span></div>
+  </header>
+
+  <div id="alert" class="alert warn" hidden></div>
+
+  <main id="welcome" class="welcome" hidden>
+    <h1 id="gone">Loading…</h1>
+    <p id="goneHelp"></p>
+  </main>
+
+  <main id="test" class="test" hidden>
+    <section class="card chart-card">
+      <div class="card-head">
+        <div>
+          <h1 id="name"></h1>
+          <p id="jobLine" class="muted"></p>
+        </div>
+      </div>
+      <canvas id="chart" width="700" height="700"></canvas>
+    </section>
+
+    <aside class="side">
+      <section class="card">
+        <div class="label">Pressure</div>
+        <div class="pressure"><span id="psi">—</span><small>psi</small></div>
+        <div id="gauge" class="status"></div>
+        <div class="stats two">
+          <div><span class="label">Low</span><b id="low">—</b></div>
+          <div><span class="label">High</span><b id="high">—</b></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="label">Official test</div>
+        <div id="official"></div>
+      </section>
+      <section class="card" id="notesCard" hidden>
+        <div class="label">Notes</div>
+        <ul id="marks" class="marks"></ul>
+      </section>
+    </aside>
+
+    <section class="card record">
+      <div class="card-head"><h2>15-minute record</h2></div>
+      <table>
+        <thead><tr><th>Date</th><th>Time</th><th>Pressure</th><th>Remarks</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="chart.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html>

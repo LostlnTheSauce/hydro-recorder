@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS marks (
   text TEXT NOT NULL DEFAULT '', pressure REAL, strokes REAL
 );
 CREATE INDEX IF NOT EXISTS marks_test ON marks(test_id, at);
+CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 """
 
 
@@ -39,6 +40,17 @@ class DB:
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=FULL")  # a reading on screen is a reading on disk
         self.conn.executescript(SCHEMA)
+        have = {r["name"] for r in self.conn.execute("PRAGMA table_info(tests)")}
+        for name, kind in (("share_token", "TEXT"), ("share_rev", "INTEGER NOT NULL DEFAULT 1")):
+            if name not in have:
+                self.conn.execute(f"ALTER TABLE tests ADD COLUMN {name} {kind}")
+
+    def get(self, key: str, default: str = "") -> str:
+        row = self.one("SELECT value FROM kv WHERE key=?", (key,))
+        return row["value"] if row else default
+
+    def put(self, key: str, value: str) -> None:
+        self.run("INSERT INTO kv (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
 
     def run(self, sql: str, args: tuple = ()) -> int:
         with self.lock:

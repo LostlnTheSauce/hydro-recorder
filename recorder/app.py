@@ -4,15 +4,18 @@ from __future__ import annotations
 import csv
 import io
 import json
+import secrets
 from datetime import datetime
 
 from . import core
 from .db import DB, now_ms
 from .gauges import DEMO, Gauges, list_ports
+from .share import Uploader, post
 
 NEAR_MS = 30_000  # a 15-minute row is left blank rather than filled from a reading further away than this
 STEPS = {15, 60, 300, 600, 900}  # seconds; what the on-screen record can be stepped by
 SCREEN_ROWS = 240  # finer steps show only the latest rows
+DEFAULT_SITE = "https://grantgsolutions.com/live"
 EDITABLE = {"name": str, "offset": float, "chart_max": float, "window_low": float, "window_high": float,
             "duration_hours": float, "official_start": int, "official_end": int}
 CLEARABLE = {"window_low", "window_high", "official_start", "official_end"}
@@ -33,6 +36,8 @@ class App:
         # A reboot or crash mid-test picks the gauges back up with nobody touching anything.
         for row in self.db.all("SELECT id, port FROM tests WHERE closed_at IS NULL AND port IS NOT NULL"):
             self.gauges.start(row["id"], row["port"])
+        self.uploader = Uploader(self)
+        self.uploader.start()
 
     def _reading(self, test_id: int, raw: float, unit: str) -> None:
         self.db.run("INSERT OR REPLACE INTO readings (test_id, at, raw, unit) VALUES (?,?,?,?)", (test_id, now_ms(), raw, unit))
@@ -71,6 +76,9 @@ class App:
                 raise Problem("Chart maximum must be above zero.")
             if key == "name" and not value:
                 continue
+            if key == "offset" and value != t["offset"]:
+                # Every shared pressure changes with the offset, so viewers get the whole trace again.
+                self.db.run("UPDATE tests SET share_rev=share_rev+1 WHERE id=?", (test_id,))
             self.db.run(f"UPDATE tests SET {key}=? WHERE id=?", (value, test_id))
         if isinstance(data.get("details"), dict):
             details = {**t["details"], **{k: str(v).strip() for k, v in data["details"].items()}}
@@ -99,6 +107,44 @@ class App:
         found = [{**p, "used_by": names.get(used.get(p["port"]))} for p in list_ports()]
         return found + [{"port": DEMO, "label": "Practice gauge (simulated pressure)", "used_by": None}]
 
+    # ---- live viewing through the website
+    def site(self) -> str:
+        return self.db.get("site_url", DEFAULT_SITE)
+
+    def share_start(self, test_id: int, url: str) -> None:
+        t = self._need(test_id)
+        url = (url or "").strip().rstrip("/")
+        if not url.startswith(("https://", "http://localhost", "http://127.0.0.1")):
+            raise Problem("The website address must start with https://")
+        self.db.put("site_url", url)
+        if not self.db.get("site_key"):
+            self.db.put("site_key", secrets.token_hex(32))
+        if not t["share_token"]:
+            self.db.run("UPDATE tests SET share_token=? WHERE id=?", (secrets.token_urlsafe(16), test_id))
+        problem = self.uploader.push(self.db.test(test_id))
+        if problem:
+            self.db.run("UPDATE tests SET share_token=NULL WHERE id=?", (test_id,))
+            raise Problem(problem)
+
+    def share_stop(self, test_id: int) -> None:
+        t = self._need(test_id)
+        if not t["share_token"]:
+            return
+        with self.uploader.lock:  # no upload may land after the link is removed
+            self.db.run("UPDATE tests SET share_token=NULL WHERE id=?", (test_id,))
+            self.uploader.forget(test_id)
+            try:
+                post(self.site(), "stop", {"key": self.db.get("site_key"), "token": t["share_token"]})
+            except Exception:
+                pass  # the site drops a link by itself after 30 days without updates
+
+    def share_meta(self, t: dict) -> dict:
+        """What viewers see besides the trace."""
+        keep = ("name", "details", "chart_max", "window_low", "window_high", "duration_hours", "official_start", "official_end", "closed_at")
+        gauge = self.gauges.info(t["id"])
+        return {**{k: t[k] for k in keep}, "gauge": gauge["status"] if gauge else None,
+                "record": self.official(t), "notes": [m for m in self.marks(t["id"]) if m["kind"] == "note"]}
+
     # ---- readings
     def latest(self, t: dict) -> dict | None:
         row = self.db.one("SELECT at, raw, unit FROM readings WHERE test_id=? ORDER BY at DESC LIMIT 1", (t["id"],))
@@ -114,7 +160,8 @@ class App:
         row = self.db.one("SELECT MIN(raw) lo, MAX(raw) hi, COUNT(*) n FROM readings WHERE test_id=? AND at BETWEEN ? AND ?", (t["id"], lo, hi))
         low, high = (core.adjust(row[k], t["offset"]) for k in ("lo", "hi")) if row["n"] else (None, None)
         gauge = self.gauges.info(t["id"])
-        return {**t, "gauge": gauge, "latest": self.latest(t), "low": low, "high": high, "count": row["n"]}
+        share = {"link": f"{self.site()}/?t={t['share_token']}", **self.uploader.status(t["id"])} if t["share_token"] else None
+        return {**t, "gauge": gauge, "latest": self.latest(t), "low": low, "high": high, "count": row["n"], "share": share}
 
     def official(self, t: dict) -> list[dict]:
         """The 15-minute record that goes on paperwork."""
@@ -181,7 +228,7 @@ class App:
     # ---- what the screen asks for every second
     def state(self, selected: int | None, since: int, step: int = 900) -> dict:
         open_tests = [self.summary(self.db.test(r["id"])) for r in self.db.all("SELECT id FROM tests WHERE closed_at IS NULL ORDER BY id")]
-        out = {"now": now_ms(), "tests": open_tests, "selected": None}
+        out = {"now": now_ms(), "tests": open_tests, "selected": None, "site": self.site()}
         t = self.db.test(selected) if selected else None
         if t:
             out["selected"] = {**self.summary(t), "points": self.trace(t, since), "marks": self.marks(t["id"]),

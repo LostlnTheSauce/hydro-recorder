@@ -4,6 +4,7 @@
   const STALE_MS = 30000;
   let selected = Number(localStorage.getItem('selected')) || null;
   const prefs = Object.assign({ window: true, lift: true, step: 900 }, JSON.parse(localStorage.getItem('prefs') || '{}'));
+  let site = '';
   let points = [], cursor = 0, current = null, openTests = [], editing = null, beeped = false, busy = false;
 
   // ---- helpers
@@ -52,6 +53,7 @@
     try {
       const state = await call(`/api/state?test=${selected || ''}&since=${cursor}&step=${prefs.step}`);
       openTests = state.tests;
+      site = state.site;
       if (!state.selected && openTests.length) { busy = false; return select(openTests[0].id); }
       current = state.selected;
       if (current) {
@@ -92,6 +94,7 @@
     $('high').textContent = whole(t.high);
     $('offsetBtn').textContent = (t.offset > 0 ? '+' : '') + t.offset;
     renderGauge(t, closed);
+    renderShare(t);
     renderOfficial(t, now, closed);
     renderMarks(t, closed);
     renderRows(t);
@@ -142,6 +145,43 @@
     box.replaceChildren(el('span', { className: `dot ${t.gauge.status}` }), el('span', {}, text),
       el('button', { className: 'link', onclick: () => post(`/api/tests/${t.id}/disconnect`, {}) }, 'Disconnect'));
   }
+
+  function shareText(share) {
+    if (share.error) return `Shared, but the website cannot be reached right now. ${share.pending.toLocaleString()} readings waiting; they send by themselves when the internet is back.`;
+    return share.pending > 5 ? `Shared. Sending ${share.pending.toLocaleString()} earlier readings.` : 'Shared. Viewers are up to date.';
+  }
+  function renderShare(t) {
+    $('shareBtn').textContent = t.share ? 'Sharing…' : 'Share live';
+    $('shareLine').hidden = !t.share;
+    if (!t.share) return;
+    $('shareLine').textContent = shareText(t.share);
+    $('shareLine').classList.toggle('behind', !!t.share.error);
+    $('shareStatus').textContent = shareText(t.share);
+  }
+  function openShare() {
+    const share = current.share;
+    $('shareOff').hidden = !!share;
+    $('shareOn').hidden = !share;
+    $('shareError').textContent = '';
+    if (share) $('shareLink').value = share.link; else $('shareSite').value = site;
+    $('shareDlg').open || $('shareDlg').showModal();
+  }
+  $('shareBtn').onclick = openShare;
+  $('shareStart').onclick = async () => {
+    $('shareStart').disabled = true;
+    try { await call(`/api/tests/${current.id}/share`, { site: $('shareSite').value }); await tick(); openShare(); } catch (e) { $('shareError').textContent = e.message; }
+    $('shareStart').disabled = false;
+  };
+  $('shareStop').onclick = async () => {
+    if (!confirm('Stop sharing? The link stops working for everyone.')) return;
+    await post(`/api/tests/${current.id}/unshare`, {});
+    $('shareDlg').close();
+  };
+  $('shareCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('shareLink').value); } catch (e) { $('shareLink').select(); document.execCommand('copy'); }
+    $('shareCopy').textContent = 'Copied';
+    setTimeout(() => { $('shareCopy').textContent = 'Copy link'; }, 1500);
+  };
 
   function renderOfficial(t, now, closed) {
     const box = $('official'), start = t.official_start, end = t.official_end;

@@ -115,6 +115,45 @@ class Recorder(unittest.TestCase):
         self.assertEqual(len(text.strip().splitlines()), 20 * 60 + 2)
         self.assertEqual(len(self.app.history()), 1)
 
+    def test_sharing_sends_backlog_then_resends_on_offset_change(self):
+        site = {"rev": None, "rows": {}, "meta": None, "stopped": False}
+
+        def fake_post(url, action, body):
+            if action == "stop":
+                site.update(stopped=True, rows={}, meta=None)
+                return {"ok": True}
+            if site["rev"] != body["rev"]:
+                site.update(rev=body["rev"], rows={})
+            else:
+                site["rows"].update({at: psi for at, psi in body["readings"]})
+            site["meta"] = body["meta"] or site["meta"]
+            return {"ok": True, "last": max(site["rows"], default=0), "has_meta": site["meta"] is not None}
+
+        from recorder import app as app_module, share
+        real = share.post
+        share.post = app_module.post = fake_post
+        try:
+            t = self.app.create({"name": "A"})
+            self.fill(t, now_ms() - 2 * Q, 5, psi=900)
+            self.app.share_start(t, "https://example.test/live/")
+            self.assertEqual(self.app.site(), "https://example.test/live")
+            while self.app.uploader.status(t)["pending"]:
+                self.assertIsNone(self.app.uploader.push(self.app.db.test(t)))
+            self.assertEqual(len(site["rows"]), 301)
+            self.assertEqual(site["meta"]["name"], "A")
+            self.app.update(t, {"offset": -2})
+            for _ in range(3):
+                self.app.uploader.push(self.app.db.test(t))
+            self.assertEqual(set(site["rows"].values()), {898.0})
+            self.app.share_stop(t)
+            self.assertTrue(site["stopped"])
+            self.assertIsNone(self.app.uploader.push({"id": t}))  # a late upload must not revive the link
+            self.assertEqual(site["rows"], {})
+            with self.assertRaises(Problem):
+                self.app.share_start(t, "ftp://nope")
+        finally:
+            share.post = app_module.post = real
+
     def test_bad_numbers_are_refused(self):
         t = self.app.create({"name": "A"})
         with self.assertRaises(Problem):

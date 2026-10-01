@@ -34,8 +34,10 @@
         <div>
           <h1 id="name"></h1>
           <p id="jobLine" class="muted"></p>
+          <p id="shareLine" class="share-line no-print" hidden></p>
         </div>
         <div class="row no-print">
+          <button id="shareBtn">Share live</button>
           <button id="detailsBtn">Test details</button>
           <button id="printBtn">Print chart</button>
         </div>
@@ -145,6 +147,22 @@
         <button class="primary">Save</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="shareDlg">
+    <h2>Share live</h2>
+    <div id="shareOff">
+      <p class="muted">Anyone with the link can watch this test from a phone or computer. They cannot change anything.</p>
+      <label>Website address<input id="shareSite"></label>
+      <p class="error" id="shareError"></p>
+      <div class="row end"><button data-close>Cancel</button><button class="primary" id="shareStart">Start sharing</button></div>
+    </div>
+    <div id="shareOn">
+      <p class="muted">Send this link to anyone who should watch.</p>
+      <div class="copy-row"><input id="shareLink" readonly><button class="primary" id="shareCopy">Copy link</button></div>
+      <p class="hint" id="shareStatus"></p>
+      <div class="row end"><button class="danger" id="shareStop">Stop sharing</button><button data-close>Close</button></div>
+    </div>
   </dialog>
 
   <dialog id="pastDlg">

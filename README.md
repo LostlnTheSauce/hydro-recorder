@@ -17,6 +17,7 @@ A small program for the trailer computer. It reads the Crystal gauges over USB, 
 | `recorder/gauges.py` | Serial reader, one per test. Sends `?PRE` once a second at 9600 baud, reconnects by itself. Port `DEMO` is the practice gauge. |
 | `recorder/db.py` | SQLite. The untouched gauge reading is stored; the offset is applied when shown or exported. |
 | `recorder/app.py` | Tests, notes, stroke counts, the 15-minute record, CSV downloads. |
+| `recorder/share.py` | Uploads shared tests to the website. |
 | `recorder/server.py` | Local-only web server (127.0.0.1). |
 | `recorder/web/` | The screen. `chart.js` is the circular chart. `calculator.html` is the old calculator, unchanged. |
 
@@ -28,10 +29,17 @@ A small program for the trailer computer. It reads the Crystal gauges over USB, 
 - The calculator's formulas are not to be changed.
 - Google Sheet layout stays as it is, and writing to a Sheet only ever happens on a button press.
 
+## Live viewing
+
+`Share live` on a test gives a link anyone can open to watch it. The recorder pushes readings to the website every couple of seconds; if the internet drops, recording carries on and the backlog uploads by itself afterwards. `Stop sharing` kills the link.
+
+- Website side: `site/` (one PHP file with its own SQLite database, plus the viewer page). cPanel's Git deploy runs `.cpanel.yml`, which copies it to `public_html/live`.
+- The first recorder to share to a fresh site is paired with it; no other recorder can publish there afterwards. To pair a different computer, delete `~/hydro-live-data/live.db` on the host.
+- Try it without the real site: serve a folder holding `site/*` plus `recorder/web/chart.js` and `style.css` with `php -S 127.0.0.1:8750`, and share to `http://localhost:8750`.
+
 ## Not built yet
 
-1. Live viewing for other people (upload to grantgsolutions.com and a viewer page).
-2. Temperatures from the MadgeTech field laptop.
-3. Atmos design PDF import.
-4. Google Sheet fill-in.
-5. A single installer so the trailer laptop does not need Python.
+1. Temperatures from the MadgeTech field laptop (with a multi-day history).
+2. Atmos design PDF import.
+3. Google Sheet fill-in.
+4. A single installer so the trailer laptop does not need Python.
