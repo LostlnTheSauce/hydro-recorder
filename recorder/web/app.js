@@ -16,7 +16,7 @@
   async function call(path, body) {
     const response = await fetch(path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Something went wrong.');
+    if (!response.ok) throw Object.assign(new Error(data.error || 'Something went wrong.'), { data });
     return data;
   }
   const time = (ms, seconds) => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: seconds ? '2-digit' : undefined });
@@ -163,14 +163,33 @@
     $('shareOff').hidden = !!share;
     $('shareOn').hidden = !share;
     $('shareError').textContent = '';
+    $('sharePassRow').hidden = true;
+    $('sharePass').value = '';
     if (share) { $('shareLink').value = share.link; $('shareQr').src = `/api/tests/${current.id}/qr.svg?${encodeURIComponent(share.link)}`; } else $('shareSite').value = site;
     $('shareDlg').open || $('shareDlg').showModal();
   }
   $('shareBtn').onclick = openShare;
   $('shareStart').onclick = async () => {
     $('shareStart').disabled = true;
-    try { await call(`/api/tests/${current.id}/share`, { site: $('shareSite').value }); await tick(); openShare(); } catch (e) { $('shareError').textContent = e.message; }
+    $('shareStart').textContent = 'Connecting…';
+    try {
+      await call(`/api/tests/${current.id}/share`, { site: $('shareSite').value, password: $('sharePass').value });
+      await tick();
+      openShare();
+    } catch (e) {
+      const asked = !$('sharePassRow').hidden;
+      if (e.data && e.data.password) {
+        $('sharePassRow').hidden = false;
+        $('sharePassLabel').textContent = e.data.fresh ? 'Choose a host password (at least 6 characters)' : 'Host password';
+        $('sharePassHelp').textContent = e.data.fresh
+          ? 'Nobody has set one yet. Whatever you type becomes the password every computer needs, once, before it can share.'
+          : 'Needed once on each computer before it can share.';
+        $('sharePass').focus();
+      }
+      $('shareError').textContent = e.data && e.data.password && !asked ? '' : e.message;
+    }
     $('shareStart').disabled = false;
+    $('shareStart').textContent = 'Start sharing';
   };
   $('shareStop').onclick = async () => {
     if (!confirm('Stop sharing? The link stops working for everyone.')) return;

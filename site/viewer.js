@@ -3,7 +3,8 @@
   const $ = (id) => document.getElementById(id);
   const token = new URLSearchParams(location.search).get('t') || '';
   const STALE_MS = 30000;
-  let points = [], cursor = 0, rev = 0, busy = false, skew = 0;
+  let points = [], cursor = 0, rev = 0, busy = false, skew = 0, step = 900;
+  try { step = Number(localStorage.getItem('step')) || 900; } catch (e) { /* private browsing */ }
 
   function el(tag, props, ...kids) {
     const node = Object.assign(document.createElement(tag), props || {});
@@ -32,7 +33,7 @@
     if (busy) return;
     busy = true;
     try {
-      const response = await fetch(`api.php?a=view&t=${encodeURIComponent(token)}&since=${cursor}&rev=${rev}`);
+      const response = await fetch(`api.php?a=view&t=${encodeURIComponent(token)}&since=${cursor}&rev=${rev}&step=${step}`);
       const data = await response.json();
       if (!response.ok) gone(data.error || 'This test is not available.', 'Ask the person running the test for a new link.');
       else {
@@ -87,11 +88,13 @@
     $('notesCard').hidden = !notes.length;
     if (fresh($('marks'), JSON.stringify(notes))) $('marks').replaceChildren(...notes.map((n) => el('li', {}, el('time', {}, time(n.at)), el('span', {}, n.text))));
 
-    const record = m.record || [];
+    const fine = Array.isArray(data.rows), record = fine ? data.rows.slice().reverse() : (m.record || []);
     if (fresh($('rows'), JSON.stringify(record))) {
-      const rows = record.map((r) => el('tr', {}, el('td', {}, date(r.at)), el('td', {}, time(r.at)),
-        el('td', { className: r.pressure == null ? 'blank' : '' }, r.pressure == null ? 'No reading' : `${whole(r.pressure)} psi`), el('td', {}, r.remark)));
-      $('rows').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { colSpan: 4, className: 'muted' }, 'Rows appear every 15 minutes.'))]));
+      const psi = (p) => (fine ? p.toFixed(1) : whole(p));
+      const rows = record.map((r) => el('tr', {}, el('td', {}, date(r.at)), el('td', {}, time(r.at, step < 60)),
+        el('td', { className: r.pressure == null ? 'blank' : '' }, r.pressure == null ? 'No reading' : `${psi(r.pressure)} psi`), el('td', {}, r.remark)));
+      $('rows').replaceChildren(...(rows.length ? rows : [el('tr', {}, el('td', { colSpan: 4, className: 'muted' }, 'Rows appear once readings arrive.'))]));
+      $('rowsNote').textContent = fine ? `Newest first, latest ${record.length} rows. The official record is the 15-minute one.` : '';
     }
 
     RecorderChart.draw($('chart'), points, {
@@ -101,6 +104,13 @@
   }
 
   setInterval(() => { $('clock').textContent = time(Date.now() + skew, true); }, 1000);
-  if (!/^[A-Za-z0-9_-]{20,40}$/.test(token)) gone('This link is not valid.', 'Ask the person running the test for a new link.');
-  else { tick(); setInterval(tick, 2000); }
+  $('step').value = String(step);
+  $('step').onchange = (e) => {
+    step = Number(e.target.value);
+    try { localStorage.setItem('step', step); } catch (err) { /* private browsing */ }
+    tick();
+  };
+  if (!token) gone('Live hydrotest viewing', 'Open the link, or scan the QR code, sent by the person running the test.');
+  else if (!/^[A-Za-z0-9_-]{20,40}$/.test(token)) gone('This link is not valid.', 'Ask the person running the test for a new link.');
+  else { tick(); setInterval(tick, 1000); }
 })();

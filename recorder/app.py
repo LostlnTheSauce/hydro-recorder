@@ -10,7 +10,7 @@ from datetime import datetime
 from . import core
 from .db import DB, now_ms
 from .gauges import DEMO, Gauges, list_ports
-from .share import Uploader, post
+from .share import NeedsPassword, Uploader, post
 
 NEAR_MS = 30_000  # a 15-minute row is left blank rather than filled from a reading further away than this
 STEPS = {15, 60, 300, 600, 900}  # seconds; what the on-screen record can be stepped by
@@ -22,7 +22,9 @@ CLEARABLE = {"window_low", "window_high", "official_start", "official_end"}
 
 
 class Problem(Exception):
-    pass
+    def __init__(self, message: str, **extra):
+        super().__init__(message)
+        self.extra = extra
 
 
 def stamp(ms: int, fmt: str = "%m/%d/%Y %I:%M %p") -> str:
@@ -111,7 +113,7 @@ class App:
     def site(self) -> str:
         return self.db.get("site_url", DEFAULT_SITE)
 
-    def share_start(self, test_id: int, url: str) -> None:
+    def share_start(self, test_id: int, url: str, password: str = "") -> None:
         t = self._need(test_id)
         url = (url or "").strip().rstrip("/")
         if not url.startswith(("https://", "http://localhost", "http://127.0.0.1")):
@@ -119,12 +121,23 @@ class App:
         self.db.put("site_url", url)
         if not self.db.get("site_key"):
             self.db.put("site_key", secrets.token_hex(32))
-        if not t["share_token"]:
+        fresh = not t["share_token"]
+        if fresh:
             self.db.run("UPDATE tests SET share_token=? WHERE id=?", (secrets.token_urlsafe(16), test_id))
-        problem = self.uploader.push(self.db.test(test_id))
+        try:
+            if password:
+                # The password itself is not kept here; the site just remembers this computer from now on.
+                post(url, "pair", {"key": self.db.get("site_key"), "password": password})
+            problem = self.uploader.push(self.db.test(test_id))
+        except RuntimeError as e:
+            problem = e
         if problem:
-            self.db.run("UPDATE tests SET share_token=NULL WHERE id=?", (test_id,))
-            raise Problem(problem)
+            if fresh:
+                self.db.run("UPDATE tests SET share_token=NULL WHERE id=?", (test_id,))
+                self.uploader.forget(test_id)
+            if isinstance(problem, NeedsPassword):
+                raise Problem(str(problem), password=True, fresh=problem.fresh)
+            raise Problem(str(problem))
 
     def share_stop(self, test_id: int) -> None:
         t = self._need(test_id)

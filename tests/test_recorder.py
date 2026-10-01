@@ -119,6 +119,13 @@ class Recorder(unittest.TestCase):
         site = {"rev": None, "rows": {}, "meta": None, "stopped": False}
 
         def fake_post(url, action, body):
+            if action == "pair":
+                if body["password"] != "open sesame":
+                    raise share.NeedsPassword("That host password is not correct.")
+                site["paired"] = True
+                return {"ok": True}
+            if not site.get("paired"):
+                raise share.NeedsPassword("Enter the host password to let this computer share.", fresh=True)
             if action == "stop":
                 site.update(stopped=True, rows={}, meta=None)
                 return {"ok": True}
@@ -135,7 +142,14 @@ class Recorder(unittest.TestCase):
         try:
             t = self.app.create({"name": "A"})
             self.fill(t, now_ms() - 2 * Q, 5, psi=900)
-            self.app.share_start(t, "https://example.test/live/")
+            with self.assertRaises(Problem) as asked:
+                self.app.share_start(t, "https://example.test/live/")
+            self.assertEqual(asked.exception.extra, {"password": True, "fresh": True})
+            with self.assertRaises(Problem):
+                self.app.share_start(t, "https://example.test/live/", "wrong")
+            self.assertIsNone(self.app.db.test(t)["share_token"])
+            self.app.share_start(t, "https://example.test/live/", "open sesame")
+            self.assertNotIn("open sesame", [r["value"] for r in self.app.db.all("SELECT value FROM kv")])
             self.assertEqual(self.app.site(), "https://example.test/live")
             while self.app.uploader.status(t)["pending"]:
                 self.assertIsNone(self.app.uploader.push(self.app.db.test(t)))

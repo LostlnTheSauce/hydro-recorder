@@ -34,7 +34,7 @@ A small program for the trailer computer. It reads the Crystal gauges over USB, 
 `Share live` on a test gives a link anyone can open to watch it. The recorder pushes readings to the website every couple of seconds; if the internet drops, recording carries on and the backlog uploads by itself afterwards. `Stop sharing` kills the link.
 
 - Website side: `site/` (one PHP file with its own SQLite database, plus the viewer page). cPanel's Git deploy runs `.cpanel.yml`, which copies it to `public_html/watch`.
-- The first recorder to share to a fresh site is paired with it; no other recorder can publish there afterwards. To pair a different computer, delete `~/hydro-live-data/live.db` on the host.
+- Host password: the first time a computer shares, it asks for the host password and the site remembers that computer from then on. The first password ever entered becomes the host password. It is stored only as a hash in `~/hydro-live-data/live.db` on the host; delete that file to start over.
 - Try it without the real site: serve a folder holding `site/*` plus `recorder/web/chart.js` and `style.css` with `php -S 127.0.0.1:8750`, and share to `http://localhost:8750`.
 
 ## Not built yet

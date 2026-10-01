@@ -14,6 +14,14 @@ BATCH = 2000
 HEARTBEAT = 10.0
 
 
+class NeedsPassword(RuntimeError):
+    """The website does not know this computer yet (or the host password was wrong)."""
+
+    def __init__(self, message: str, fresh: bool = False):
+        super().__init__(message)
+        self.fresh = fresh  # nobody has set a host password on the site yet
+
+
 def post(site: str, action: str, body: dict) -> dict:
     request = urllib.request.Request(f"{site}/api.php?a={action}", data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json", "User-Agent": "HydroRecorder/1.0"})
@@ -22,9 +30,12 @@ def post(site: str, action: str, body: dict) -> dict:
             return json.loads(response.read())
     except urllib.error.HTTPError as e:
         try:
-            message = json.loads(e.read()).get("error")
+            answer = json.loads(e.read())
         except Exception:
-            message = None
+            answer = {}
+        message = answer.get("error")
+        if answer.get("pair"):
+            raise NeedsPassword(message or "Enter the host password.", bool(answer.get("fresh")))
         raise RuntimeError(message or f"The website answered with error {e.code}. Check the website address.")
     except (urllib.error.URLError, TimeoutError, OSError):
         raise RuntimeError("Could not reach the website. Check the internet connection and the address.")
@@ -53,8 +64,8 @@ class Uploader(threading.Thread):
     def _mark(meta: dict) -> str:
         return hashlib.sha1(json.dumps(meta, sort_keys=True).encode()).hexdigest()
 
-    def push(self, t: dict) -> str | None:
-        """One round trip. Returns a message if it failed."""
+    def push(self, t: dict) -> RuntimeError | None:
+        """One round trip. Returns the problem if it failed."""
         with self.lock:
             tid, db = t["id"], self.app.db
             t = db.test(tid)  # sharing may have been stopped while this upload was waiting its turn
@@ -71,7 +82,7 @@ class Uploader(threading.Thread):
                 answer = post(self.app.site(), "push", body)
             except RuntimeError as e:
                 self.errors[tid] = str(e)
-                return str(e)
+                return e
             self.acked[tid] = int(answer.get("last") or 0)
             self.meta[tid] = mark if answer.get("has_meta") else ""
             self.errors.pop(tid, None)
@@ -80,7 +91,7 @@ class Uploader(threading.Thread):
 
     def run(self) -> None:
         while True:
-            time.sleep(2.0)
+            time.sleep(1.0)
             try:
                 for row in self.app.db.all("SELECT id FROM tests WHERE share_token IS NOT NULL"):
                     t = self.app.db.test(row["id"])

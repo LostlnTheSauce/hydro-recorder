@@ -53,11 +53,23 @@
     </aside>
 
     <section class="card record">
-      <div class="card-head"><h2>15-minute record</h2></div>
+      <div class="card-head">
+        <div class="row">
+          <h2>Pressure record</h2>
+          <select id="step" aria-label="Time between rows">
+            <option value="15">Every 15 seconds</option>
+            <option value="60">Every minute</option>
+            <option value="300">Every 5 minutes</option>
+            <option value="600">Every 10 minutes</option>
+            <option value="900">Every 15 minutes</option>
+          </select>
+        </div>
+      </div>
       <table>
         <thead><tr><th>Date</th><th>Time</th><th>Pressure</th><th>Remarks</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
+      <p class="hint" id="rowsNote"></p>
     </section>
   </main>
 

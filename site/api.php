@@ -30,6 +30,7 @@ function store(): PDO
     $db = new PDO("sqlite:$dir/live.db", null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
     $db->exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
     $db->exec('CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS recorders (key_hash TEXT PRIMARY KEY, paired INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS shares (token TEXT PRIMARY KEY, rev INTEGER NOT NULL, meta TEXT, updated INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS readings (token TEXT NOT NULL, at INTEGER NOT NULL, psi REAL NOT NULL, PRIMARY KEY (token, at)) WITHOUT ROWID;');
     return $db;
@@ -40,17 +41,73 @@ function valid_token($token): bool
     return is_string($token) && preg_match('/^[A-Za-z0-9_-]{20,40}$/', $token) === 1;
 }
 
-// Only the first recorder to connect may publish here; its key is remembered from then on.
-function require_recorder(PDO $db, array $body): void
+function recorder_key(array $body): string
 {
     $key = $body['key'] ?? '';
     if (!is_string($key) || !preg_match('/^[a-f0-9]{64}$/', $key)) out(['error' => 'This recorder is not set up for sharing.'], 400);
-    $saved = $db->query("SELECT value FROM kv WHERE key='recorder'")->fetchColumn();
-    if ($saved === false) {
-        $db->prepare("INSERT OR IGNORE INTO kv (key, value) VALUES ('recorder', ?)")->execute([hash('sha256', $key)]);
-        $saved = $db->query("SELECT value FROM kv WHERE key='recorder'")->fetchColumn();
+    return hash('sha256', $key);
+}
+
+function host_password(PDO $db)
+{
+    return $db->query("SELECT value FROM kv WHERE key='host_password'")->fetchColumn();
+}
+
+// A computer may publish once someone has typed the host password on it.
+function require_recorder(PDO $db, array $body): void
+{
+    $known = $db->prepare('SELECT 1 FROM recorders WHERE key_hash = ?');
+    $known->execute([recorder_key($body)]);
+    if (!$known->fetchColumn()) {
+        out(['error' => 'Enter the host password to let this computer share.', 'pair' => true, 'fresh' => host_password($db) === false], 403);
     }
-    if (!hash_equals((string) $saved, hash('sha256', $key))) out(['error' => 'This website is already paired with a different recorder.'], 403);
+}
+
+// The first password anyone sets becomes the host password; after that it must match.
+function pair_recorder(PDO $db, array $body): void
+{
+    $hash = recorder_key($body);
+    $password = $body['password'] ?? '';
+    if (!is_string($password) || strlen($password) < 6) out(['error' => 'The host password needs at least 6 characters.', 'pair' => true], 400);
+    $saved = host_password($db);
+    if ($saved === false) {
+        $db->prepare("INSERT OR IGNORE INTO kv (key, value) VALUES ('host_password', ?)")->execute([password_hash($password, PASSWORD_DEFAULT)]);
+        $saved = host_password($db);
+    }
+    if (!password_verify($password, (string) $saved)) {
+        usleep(700000);
+        out(['error' => 'That host password is not correct.', 'pair' => true], 403);
+    }
+    $db->prepare('INSERT OR IGNORE INTO recorders (key_hash, paired) VALUES (?, ?)')->execute([$hash, now_ms()]);
+    out(['ok' => true]);
+}
+
+const STEPS = [15, 60, 300, 600];
+const SCREEN_ROWS = 240;
+
+// Rows for a viewer who picked a finer step than the 15-minute record. Same rule as the recorder:
+// a row stays blank unless a reading sits within half a step of it.
+function rows_for(PDO $db, string $token, array $meta, int $step): array
+{
+    $span = $db->prepare('SELECT MIN(at) AS first, MAX(at) AS last FROM readings WHERE token = ?');
+    $span->execute([$token]);
+    $have = $span->fetch();
+    if ($have['first'] === null) return [];
+    $ms = $step * 1000;
+    $start = (int) ($meta['official_start'] ?? 0) ?: (int) (ceil($have['first'] / $ms) * $ms);
+    $stop = min((int) ($meta['official_end'] ?? 0) ?: PHP_INT_MAX, (int) $have['last']);
+    if ($stop < $start) return [];
+    $count = intdiv($stop - $start, $ms) + 1;
+    $near = (int) min(30000, $ms / 2);
+    $find = $db->prepare('SELECT psi FROM readings WHERE token = ? AND at BETWEEN ? AND ? ORDER BY ABS(at - ?) LIMIT 1');
+    $rows = [];
+    for ($i = max(0, $count - SCREEN_ROWS); $i < $count; $i++) {
+        $at = $start + $i * $ms;
+        $find->execute([$token, $at - $near, $at + $near, $at]);
+        $psi = $find->fetchColumn();
+        $rows[] = ['at' => $at, 'pressure' => $psi === false ? null : round((float) $psi, 1), 'remark' => $psi === false ? 'no gauge reading' : ''];
+    }
+    return $rows;
 }
 
 // Keep each bucket's low and high so a short spike still shows on a thinned trace.
@@ -91,13 +148,17 @@ try {
         $query = $db->prepare('SELECT at, psi FROM readings WHERE token = ? AND at > ? ORDER BY at');
         $query->execute([$token, $floor]);
         $points = array_map(fn($r) => [(int) $r['at'], (float) $r['psi']], $query->fetchAll());
-        out(['rev' => $rev, 'fresh' => $since === 0, 'meta' => json_decode($share['meta'], true), 'points' => thin($points),
+        $meta = json_decode($share['meta'], true);
+        $step = (int) ($_GET['step'] ?? 900);
+        out(['rev' => $rev, 'fresh' => $since === 0, 'meta' => $meta, 'points' => thin($points),
+            'rows' => in_array($step, STEPS, true) ? rows_for($db, $token, $meta, $step) : null,
             'updated' => (int) $share['updated'], 'now' => now_ms()]);
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') out(['error' => 'Not found.'], 404);
     $body = json_decode(file_get_contents('php://input') ?: '', true);
     if (!is_array($body)) out(['error' => 'That request could not be read.'], 400);
+    if ($action === 'pair') pair_recorder($db, $body);
     require_recorder($db, $body);
     $token = $body['token'] ?? '';
     if (!valid_token($token)) out(['error' => 'Invalid share link.'], 400);

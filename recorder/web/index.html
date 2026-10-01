@@ -154,6 +154,10 @@
     <div id="shareOff">
       <p class="muted">Anyone with the link can watch this test from a phone or computer. They cannot change anything.</p>
       <label>Website address<input id="shareSite"></label>
+      <div id="sharePassRow" hidden>
+        <label><span id="sharePassLabel">Host password</span><input id="sharePass" type="password" autocomplete="off"></label>
+        <p class="hint" id="sharePassHelp"></p>
+      </div>
       <p class="error" id="shareError"></p>
       <div class="row end"><button data-close>Cancel</button><button class="primary" id="shareStart">Start sharing</button></div>
     </div>

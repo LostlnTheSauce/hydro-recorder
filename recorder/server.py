@@ -62,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, target.read_bytes(), mimetypes.guess_type(target.name)[0] or "application/octet-stream")
             self._json({"error": "Not found."}, 404)
         except Problem as e:
-            self._json({"error": str(e)}, 400)
+            self._json({"error": str(e), **e.extra}, 400)
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
@@ -82,7 +82,7 @@ class Handler(BaseHTTPRequestHandler):
                 elif action == "finish":
                     self.app.finish(test_id)
                 elif action == "share":
-                    self.app.share_start(test_id, str(data.get("site") or ""))
+                    self.app.share_start(test_id, str(data.get("site") or ""), str(data.get("password") or ""))
                 elif action == "unshare":
                     self.app.share_stop(test_id)
                 elif action == "marks":
@@ -96,7 +96,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True})
             self._json({"error": "Not found."}, 404)
         except Problem as e:
-            self._json({"error": str(e)}, 400)
+            self._json({"error": str(e), **e.extra}, 400)
         except (ValueError, TypeError):
             self._json({"error": "That request could not be read."}, 400)
 
