@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <link rel="stylesheet" href="assets/workspace.css?v=2">
   <link rel="stylesheet" href="assets/field-power.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=7">
+  <link rel="stylesheet" href="assets/control-room.css?v=8">
 </head>
 <body>
 <?php if (!is_host_signed_in()): ?>

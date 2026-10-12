@@ -13,7 +13,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/viewer-workspace.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=7">
+  <link rel="stylesheet" href="assets/control-room.css?v=8">
 </head>
 <body>
 <?php if (!$validId): ?>
@@ -86,7 +86,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
                 <button class="temp-return-live" type="button" disabled>Return to live</button>
               </div>
             </div>
-            <details class="temperature-round-panel"><summary><span>Round temperature chart</span><small>Pipe, soil and ambient on a 0–150 °F recorder chart, last 24 hours. Tap the chart for full screen.</small></summary><label class="temperature-round-mode">Show<select class="temperature-round-select"><option value="all">All 3 on one chart</option><option value="separate">Separate chart for each probe</option></select></label><div class="temperature-round-charts"><div class="chart-wrap" data-round-key="all"><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round temperature recorder chart"></canvas></div><div class="chart-wrap" data-round-key="ambient" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round ambient temperature chart"></canvas></div><div class="chart-wrap" data-round-key="pipe" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round pipe temperature chart"></canvas></div><div class="chart-wrap" data-round-key="soil" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round soil temperature chart"></canvas></div></div></details>
+            <details class="temperature-round-panel" open><summary><span>Round temperature chart</span><small>Pipe, soil and ambient on a 0–150 °F recorder chart, last 24 hours. Tap the chart for full screen. Tap here to hide it.</small></summary><label class="temperature-round-mode">Show<select class="temperature-round-select"><option value="all">All 3 on one chart</option><option value="separate">Separate chart for each probe</option></select></label><div class="temperature-round-charts"><div class="chart-wrap" data-round-key="all"><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round temperature recorder chart"></canvas></div><div class="chart-wrap" data-round-key="ambient" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round ambient temperature chart"></canvas></div><div class="chart-wrap" data-round-key="pipe" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round pipe temperature chart"></canvas></div><div class="chart-wrap" data-round-key="soil" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round soil temperature chart"></canvas></div></div></details>
           </section>
         </article>
         <?php endforeach; ?>
