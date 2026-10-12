@@ -114,6 +114,8 @@ if ($action === 'list_devices') {
     require_csrf();
     require_once __DIR__ . '/inc/field-power.php';
     $fieldPower = list_field_power();
+    $powerHistory = list_field_power_history((int) round(microtime(true) * 1000) - 2 * 86400000);
+    foreach ($fieldPower as $id => $power) $fieldPower[$id]['history'] = $powerHistory[$id] ?? [];
     $query = db()->query('SELECT d.id, d.serial, d.ready, d.last_seen_at, d.source_id, s.slot, s.session_id,
         s.sample_interval_seconds, s.whole_degrees,
         r.stopped_at, sa.session_id AS pending_session_id, sa.slot AS pending_slot

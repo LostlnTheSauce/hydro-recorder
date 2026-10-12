@@ -12,6 +12,7 @@ final class FixtureDb {
         return $this->pdo->prepare($sql);
     }
     public function query(string $sql): PDOStatement { return $this->pdo->query($sql); }
+    public function exec(string $sql): int|false { return $this->pdo->exec($sql); }
     public function beginTransaction(): bool { return $this->pdo->beginTransaction(); }
     public function commit(): bool { return $this->pdo->commit(); }
     public function rollBack(): bool { return $this->pdo->rollBack(); }
@@ -27,7 +28,8 @@ function check(bool $ok,string $message): void { if (!$ok) throw new RuntimeExce
 $scenario = $argv[1] ?? 'fresh'; $fixture = new FixtureDb();
 $fixture->pdo->exec('CREATE TABLE live_sessions (id TEXT PRIMARY KEY,publisher_token_hash TEXT,viewer_password_hash TEXT);
 CREATE TABLE temperature_devices (id TEXT PRIMARY KEY,serial TEXT,token_hash TEXT,active INTEGER DEFAULT 1,ready INTEGER,last_seen_at INTEGER,source_id TEXT,created_at INTEGER);
-CREATE TABLE temperature_device_power (device_id TEXT PRIMARY KEY,battery_percent INTEGER,on_ac INTEGER,charging INTEGER,has_battery INTEGER,reported_at INTEGER);
+CREATE TABLE temperature_device_power (device_id TEXT PRIMARY KEY,battery_percent INTEGER,on_ac INTEGER,charging INTEGER,has_battery INTEGER,laptop_temp_f INTEGER,reported_at INTEGER);
+CREATE TABLE temperature_device_power_log (device_id TEXT,reported_at INTEGER,battery_percent INTEGER,on_ac INTEGER,PRIMARY KEY(device_id,reported_at));
 CREATE TABLE temperature_sources (id TEXT PRIMARY KEY,session_id TEXT,slot TEXT,serial TEXT,token_hash TEXT,active INTEGER,sample_interval_seconds INTEGER,whole_degrees INTEGER,created_at INTEGER);
 CREATE TABLE temperature_device_runs (source_id TEXT PRIMARY KEY,device_id TEXT,stopped_at INTEGER);
 CREATE TABLE temperature_readings (id INTEGER PRIMARY KEY AUTOINCREMENT,source_id TEXT,session_id TEXT,slot TEXT,captured_at INTEGER,received_at INTEGER,pipe REAL,soil REAL,ambient REAL,aux REAL,UNIQUE(source_id,captured_at));');
@@ -68,7 +70,8 @@ if ($scenario==='heartbeat-power') {
 }
 if ($scenario==='list-power') {
     $_GET['action']='list_devices';
-    $fixture->prepare('INSERT INTO temperature_device_power VALUES (?,?,?,?,?,?)')->execute([$device,84,1,1,1,$now]);
+    $fixture->prepare('INSERT INTO temperature_device_power VALUES (?,?,?,?,?,?,?)')->execute([$device,84,1,1,1,null,$now]);
+    $fixture->prepare('INSERT INTO temperature_device_power_log VALUES (?,?,?,?)')->execute([$device,$now-60000,85,0]);
 }
 $code=str_replace(["<?php", "declare(strict_types=1);", "require __DIR__ . '/inc/bootstrap.php';"], '', $code);
 try { eval($code); throw new RuntimeException('Endpoint did not return a response'); }
@@ -77,7 +80,9 @@ catch (ResponseSent $response) {
     check($response->status===$expected,"$scenario: expected HTTP $expected, got {$response->status}");
     $assigned=$fixture->query('SELECT source_id FROM temperature_devices')->fetchColumn();
     if($scenario==='heartbeat-power') check($fixture->query('SELECT battery_percent FROM temperature_device_power')->fetchColumn()===84,'Heartbeat stores power');
+    if($scenario==='heartbeat-power') check($fixture->query('SELECT battery_percent FROM temperature_device_power_log')->fetchColumn()===84,'Heartbeat logs battery history');
     if($scenario==='list-power') check($response->body['devices'][0]['power']['battery_percent']===84 && $response->body['devices'][0]['power']['charging']===true,'Host receives power');
+    if($scenario==='list-power') { $history=$response->body['devices'][0]['power']['history']; check(count($history)===1 && $history[0]['percent']===85 && $history[0]['on_ac']===false,'Host receives battery history'); }
     if(in_array($scenario,['fresh','finishing','transfer'],true)) {
         check($assigned!==null&&$assigned!==$old,'New source assigned');
         $run=$fixture->query("SELECT * FROM temperature_sources WHERE id='$assigned'")->fetch();

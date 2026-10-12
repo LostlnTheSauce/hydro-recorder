@@ -154,10 +154,20 @@
     }
   }
 
+  // Snap to the closest pressure or temperature reading. Temperatures keep
+  // arriving from the field laptop after the host page (and its gauge) closes,
+  // so Live must follow whichever feed is newest, not pressure alone.
+  function nearestEither(meta, at) {
+    const pressure = nearest(meta.pressure, at);
+    const temperature = nearest(meta.temperatures, at);
+    if (!pressure) return temperature;
+    if (!temperature) return pressure;
+    return Math.abs(Number(temperature.at) - at) < Math.abs(Number(pressure.at) - at) ? temperature : pressure;
+  }
+
   function updateMetaSelection(meta, requestedAt) {
     const targetAt = Number.isFinite(Number(requestedAt)) ? Math.max(meta.start, Math.min(meta.end, Number(requestedAt))) : meta.end;
-    const anchorReadings = meta.pressure.length ? meta.pressure : meta.temperatures;
-    const anchor = nearest(anchorReadings, targetAt);
+    const anchor = nearestEither(meta, targetAt);
     meta.selectedAt = meta.replay ? targetAt : Math.max(meta.start, Math.min(meta.end, Number(anchor?.at) || targetAt));
     meta.selectedPressure = nearest(meta.pressure, meta.selectedAt);
     meta.selectedTemperature = nearest(meta.temperatures, meta.selectedAt);
@@ -531,7 +541,7 @@
       const state = panel._temperatureSelection || { followLive: true, at: null };
       state.followLive = value >= maximum && !meta.zoomed && !meta.replay;
       const requestedAt = meta.start + value / maximum * (meta.end - meta.start);
-      const anchor = nearest(meta.pressure.length ? meta.pressure : meta.temperatures, requestedAt);
+      const anchor = nearestEither(meta, requestedAt);
       state.at = meta.replay ? requestedAt : Number(anchor?.at) || requestedAt;
       panel._temperatureSelection = state;
       if (scrubberFrame !== null) return;
