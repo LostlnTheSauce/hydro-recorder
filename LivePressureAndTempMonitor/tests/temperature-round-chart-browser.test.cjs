@@ -1,6 +1,7 @@
 // Round temperature recorder chart: folded away on the Temperatures view, draws
 // pipe, soil and ambient on a 0–150 °F scale, leaves unplugged (-300 °F)
-// readings out, and opens the same full-screen zoom as the pressure chart.
+// readings out, opens the same full-screen zoom as the pressure chart, and can
+// switch to a separate chart for each probe.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -49,15 +50,17 @@ async function main() {
     assert.equal(await page.locator('[data-view-gauge="A"] .temperature-chart').isVisible(), true, 'line graph still shown');
 
     await section.locator('summary').click();
-    const canvas = section.locator('.temperature-round-chart');
+    const canvas = section.locator('[data-round-key="all"] canvas');
     await canvas.waitFor();
     await page.waitForFunction(() => document.querySelector('[data-view-gauge="A"] .temperature-round-chart').width > 700);
-    const colours = await canvas.evaluate((el) => {
+    const colourCount = (el) => {
       const data = el.getContext('2d').getImageData(0, 0, el.width, el.height).data, found = {};
       const want = { ambient: [0x3f, 0x7f, 0xbe], pipe: [0xe0, 0x78, 0x32], soil: [0x77, 0x62, 0x4c], aux: [0x8a, 0x55, 0xae] };
       for (let i = 0; i < data.length; i += 4) for (const [key, rgb] of Object.entries(want)) if (Math.abs(data[i] - rgb[0]) < 6 && Math.abs(data[i + 1] - rgb[1]) < 6 && Math.abs(data[i + 2] - rgb[2]) < 6) found[key] = (found[key] || 0) + 1;
       return found;
-    });
+    };
+    const colours = await canvas.evaluate(colourCount);
+    assert.equal(await section.locator('.chart-wrap:visible').count(), 1, 'one combined chart by default');
     assert.ok(colours.ambient > 50 && colours.pipe > 50 && colours.soil > 50, `pipe, soil and ambient drawn: ${JSON.stringify(colours)}`);
     assert.ok(!colours.aux, 'auxiliary probe left off the round chart');
     await canvas.screenshot({ path: process.env.ROUND_SHOT || path.join(require('node:os').tmpdir(), 'round-temp.png') });
@@ -69,6 +72,27 @@ async function main() {
     if (process.env.ROUND_ZOOM_SHOT) await page.screenshot({ path: process.env.ROUND_ZOOM_SHOT });
     await dialog.locator('.chart-zoom-close').click();
     await dialog.waitFor({ state: 'detached' });
+
+    // Separate charts: one per probe, each with only its own line.
+    await section.locator('.temperature-round-select').selectOption('separate');
+    for (const key of ['ambient', 'pipe', 'soil']) {
+      const own = section.locator(`[data-round-key="${key}"] canvas`);
+      await own.waitFor();
+      await page.waitForFunction((k) => document.querySelector(`[data-view-gauge="A"] [data-round-key="${k}"] canvas`).width > 700, key);
+      const found = await own.evaluate(new Function('el', `return (${colourCount.toString()})(el)`));
+      const others = ['ambient', 'pipe', 'soil'].filter((other) => other !== key);
+      assert.ok(found[key] > 50 && others.every((other) => !found[other]), `${key} chart shows only ${key}: ${JSON.stringify(found)}`);
+    }
+    assert.equal(await section.locator('[data-round-key="all"]').isVisible(), false, 'combined chart hidden in separate mode');
+    if (process.env.ROUND_SEPARATE_SHOT) await section.screenshot({ path: process.env.ROUND_SEPARATE_SHOT });
+    await page.reload();
+    await page.locator('#viewerLoginPassword').fill('pw').catch(() => {});
+    await page.locator('#viewerLogin button').first().click().catch(() => {});
+    await page.locator('[data-dashboard-tab="temperature"]:not(.hidden)').waitFor();
+    await page.locator('[data-dashboard-tab="temperature"]').click();
+    assert.equal(await section.locator('.temperature-round-select').inputValue(), 'separate', 'choice remembered');
+    await section.locator('summary').click();
+    await section.locator('[data-round-key="pipe"] canvas').waitFor();
 
     // Folding it away again stops drawing it but keeps the log untouched.
     await section.locator('summary').click();

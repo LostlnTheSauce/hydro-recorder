@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <link rel="stylesheet" href="assets/workspace.css?v=2">
   <link rel="stylesheet" href="assets/field-power.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=6">
+  <link rel="stylesheet" href="assets/control-room.css?v=7">
 </head>
 <body>
 <?php if (!is_host_signed_in()): ?>
@@ -286,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
               <button class="temp-return-live" type="button" disabled>Return to live</button>
             </div>
           </div>
-          <details class="temperature-round-panel"><summary><span>Round temperature chart</span><small>Pipe, soil and ambient on a 0–150 °F recorder chart, last 24 hours. Tap the chart for full screen.</small></summary><div class="chart-wrap"><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round temperature recorder chart"></canvas></div></details>
+          <details class="temperature-round-panel"><summary><span>Round temperature chart</span><small>Pipe, soil and ambient on a 0–150 °F recorder chart, last 24 hours. Tap the chart for full screen.</small></summary><label class="temperature-round-mode">Show<select class="temperature-round-select"><option value="all">All 3 on one chart</option><option value="separate">Separate chart for each probe</option></select></label><div class="temperature-round-charts"><div class="chart-wrap" data-round-key="all"><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round temperature recorder chart"></canvas></div><div class="chart-wrap" data-round-key="ambient" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round ambient temperature chart"></canvas></div><div class="chart-wrap" data-round-key="pipe" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round pipe temperature chart"></canvas></div><div class="chart-wrap" data-round-key="soil" hidden><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round soil temperature chart"></canvas></div></div></details>
         </section>
         <div class="error-box hidden gauge-error"></div>
         <div class="gauge-actions">
@@ -358,7 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
     </div>
   </main>
   <script src="assets/chart.js?v=16"></script>
-<script src="assets/temperature.js?v=27"></script>
+<script src="assets/temperature.js?v=28"></script>
   <script src="assets/qrcode.js?v=7"></script>
   <script src="assets/test-design-parser.js?v=4"></script>
   <script src="assets/test-design.js?v=2"></script>
