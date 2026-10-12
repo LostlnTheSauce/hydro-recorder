@@ -200,8 +200,9 @@
     officialRows(at = Date.now()) {
       return W.officialTimes(this.state(), at).map(time => {
         const row = this.g.sheetLogRow(time, null, '');
-        const missing = [row.pressure === '' ? 'pressure' : '', ...['ambient', 'pipe', 'ground'].filter(k => row[k] === '')].filter(Boolean);
-        row.status = missing.length ? `Missing: ${missing.join(', ')}` : 'Recorded';
+        const faulty = row.faultyTemperatures || [];
+        const missing = [row.pressure === '' ? 'pressure' : '', ...['ambient', 'pipe', 'ground'].filter(k => row[k] === '' && !faulty.includes(k))].filter(Boolean);
+        row.status = [missing.length ? `Missing: ${missing.join(', ')}` : '', faulty.length ? `Probe out of range: ${faulty.join(', ')}` : ''].filter(Boolean).join(' · ') || 'Recorded';
         return row;
       });
     }
@@ -228,7 +229,8 @@
       const stats = [];
       for (const [key, label, readings] of [['pressure', 'Pressure PSI', this.g.readings], ['ambient', 'Ambient °F', this.g.temperatureReadings], ['pipe', 'Pipe °F', this.g.temperatureReadings], ['soil', 'Soil °F', this.g.temperatureReadings]]) {
         let min = Infinity, max = -Infinity;
-        if (s.officialStart) for (const r of readings) if (r.at >= s.officialStart && r.at <= through && W.number(r[key]) !== null) { min = Math.min(min, r[key]); max = Math.max(max, r[key]); }
+        const value = key === 'pressure' ? W.number : W.plausibleTemperature;
+        if (s.officialStart) for (const r of readings) if (r.at >= s.officialStart && r.at <= through && value(r[key]) !== null) { min = Math.min(min, r[key]); max = Math.max(max, r[key]); }
         stats.push(`<div><span>${label} · official min / max</span><strong>${min === Infinity ? '—' : `${min.toFixed(key === 'pressure' ? 0 : 1)} / ${max.toFixed(key === 'pressure' ? 0 : 1)}`}</strong></div>`);
       }
       this.records.querySelector('.workflow-official-stats').innerHTML = stats.join('');

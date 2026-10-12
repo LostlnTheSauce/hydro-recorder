@@ -75,6 +75,8 @@ One-time setup: follow `google-apps-script/SETUP.md`, then add `google_apps_scri
 - **Sync to Sheet** writes the current values. It is always a button press with a confirmation; nothing is written automatically.
 - Pressures in the Sheet are the offset-adjusted value nearest each row time (within 30 seconds), rounded to whole psi.
 - **Official test starts on LOG row** (next to Sync to Sheet) picks where the official test goes. Left on Auto, pre-test entries fill from row 23 and the official test follows right after them. With a row chosen, the official test and post-test entries start on that row, and rows above it that the site's pre-test entries don't use are never touched, so they can be filled in by hand. The LOG has 63 rows (23–48 and 51–87); the site says so before syncing a test that will not fit.
+- Temperatures go to the Sheet as whole degrees. A probe reading outside −60 to 200 °F (an unplugged probe reads about −300 °F) is treated as no reading: it is left blank in the Sheet, kept out of the official min/max, and the Records row says "Probe out of range".
+- **Sync these columns** switches let pressure, ambient, pipe, soil or remarks be left out of a sync. A switched-off column is left exactly as it is in the Sheet. The time column is always written.
 - Temperatures typed in the Sheet stay with their time, even when rows move. A temperature corrected or cleared in the Sheet stays that way on the next sync.
 - Temperatures typed into the Sheet's LOG columns are pulled back into the site on the next sync.
 - The template holds 4 pre-test, 33 official and 26 post-test rows. If a test needs more, the sync stops and says so rather than dropping rows.

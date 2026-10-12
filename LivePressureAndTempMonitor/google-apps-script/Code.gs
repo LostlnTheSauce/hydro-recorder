@@ -1,7 +1,9 @@
 const HYDRO_TEMPLATE_ID = 'REDACTED';
 const HYDRO_SECRET_PROPERTY = 'HYDRO_SYNC_SECRET';
 const HYDRO_ALLOWED_PREFIX = 'HYDRO_SHEET_';
-const HYDRO_LAYOUT_VERSION = 2;
+const HYDRO_LAYOUT_VERSION = 3;
+// Log columns the site can switch off; those cells are left as the operator typed them.
+const HYDRO_LOG_COLUMNS = { pressure: 1, ambient: 2, pipe: 3, ground: 4, comments: 5 };
 // LOG data rows: 23-48 on the first page, 51-87 on the second (49 is blank, 50 repeats the header).
 const HYDRO_LOG_ROWS = [
   ...Array.from({ length: 26 }, (_, index) => 23 + index),
@@ -167,9 +169,12 @@ function hydroLayout_(snapshot) {
   pre.forEach((row, index) => { entries[index] = row; owned[index] = true; });
   [...official, ...post].forEach((row, index) => { entries[startIndex + index] = row; });
   for (let index = startIndex; index < capacity; index++) owned[index] = true;
+  const skipped = (Array.isArray(snapshot.sheetSkipColumns) ? snapshot.sheetSkipColumns : [])
+    .map((name) => HYDRO_LOG_COLUMNS[name]).filter((column) => column !== undefined);
   return {
     entries,
     owned,
+    skipped,
     officialCount: official.length,
     officialFirstRow: official.length ? HYDRO_LOG_ROWS[startIndex] : 0,
     officialLastRow: official.length ? HYDRO_LOG_ROWS[startIndex + official.length - 1] : 0
@@ -182,7 +187,7 @@ function hydroWriteLog_(log, layout) {
     ...log.getRange(51, 1, 37, 6).getValues()
   ];
   const values = existing.map((row, index) => layout.owned[index]
-    ? hydroMergeRow_(layout.entries[index], row, existing)
+    ? hydroMergeRow_(layout.entries[index], row, existing, layout.skipped)
     : row);
   // Write each run of rows the site owns; rows left to the operator are not touched.
   let index = 0;
@@ -197,7 +202,7 @@ function hydroWriteLog_(log, layout) {
 
 // C:E are operator-owned temperature cells. A site value wins; otherwise the
 // temperature typed for the same time is kept, wherever that row has moved to.
-function hydroMergeRow_(entry, current, existing) {
+function hydroMergeRow_(entry, current, existing, skipped = []) {
   const values = entry ? hydroLogRow_(entry) : ['', '', '', '', '', ''];
   const at = entry ? hydroTime_(values[0]) : NaN;
   const sameTime = Number.isFinite(at) ? existing.find((row) => Math.abs(hydroTime_(row[0]) - at) <= 30000) : null;
@@ -205,6 +210,7 @@ function hydroMergeRow_(entry, current, existing) {
   [2, 3, 4].forEach((column) => {
     if (values[column] === '') values[column] = source ? source[column] : '';
   });
+  skipped.forEach((column) => { values[column] = current[column]; });
   return values;
 }
 
@@ -264,9 +270,9 @@ function hydroLogRow_(row) {
   return [
     hydroDate_(row.at),
     hydroWholeNumberOrBlank_(row.pressure),
-    hydroNumberOrBlank_(row.ambient),
-    hydroNumberOrBlank_(row.pipe),
-    hydroNumberOrBlank_(row.ground),
+    hydroWholeNumberOrBlank_(row.ambient),
+    hydroWholeNumberOrBlank_(row.pipe),
+    hydroWholeNumberOrBlank_(row.ground),
     hydroSafeCellValue_(String(row.comments || ''))
   ];
 }

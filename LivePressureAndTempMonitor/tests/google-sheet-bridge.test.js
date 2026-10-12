@@ -20,7 +20,7 @@ function sync(snapshot, typedByOperator = () => {}) {
 {
   const pre = [entry(0, 'Pressure is at 0 psi / Begin pressurizing', 0), entry(20, 'Reached 75%'), entry(50, 'Reached test pressure')];
   const { log, summary, result } = sync({ preTestRows: pre, officialRows: officialRows(33), postTestRows: [entry(600, 'Begin depressurizing')] });
-  assert.equal(result.layoutVersion, 2);
+  assert.equal(result.layoutVersion, 3);
   assert.equal(log.cell('F23'), 'Pressure is at 0 psi / Begin pressurizing');
   assert.equal(log.cell('F26'), 'Begin test', 'official test starts right after three pre-test rows');
   assert.equal(log.cell('B26'), 4150, 'pressure is written');
@@ -89,8 +89,29 @@ function sync(snapshot, typedByOperator = () => {}) {
   const run = sync({ officialRows: officialRows(1) });
   run.log.getRange('C23').setValue(70);
   run.again({ officialRows: [{ ...officialRows(1)[0], pressure: 4150.4, ambient: 72.5 }] });
-  assert.equal(run.log.cell('C23'), 72.5);
+  assert.equal(run.log.cell('C23'), 73, 'site value wins, rounded to a whole degree');
   assert.equal(run.log.cell('B23'), 4150, 'pressure is rounded to whole psi');
 }
 
-console.log('Google Sheet bridge: auto and chosen start rows, page break, capacity errors, operator rows and moving temperatures passed.');
+// Temperatures are written as whole degrees.
+{
+  const run = sync({ officialRows: [{ ...officialRows(1)[0], ambient: 72.5, pipe: 68.4, ground: 69.49 }] });
+  assert.deepEqual([run.log.cell('C23'), run.log.cell('D23'), run.log.cell('E23')], [73, 68, 69]);
+}
+
+// Columns switched off on the site are left exactly as typed in the Sheet.
+{
+  const run = sync({ officialRows: officialRows(2) });
+  run.log.getRange('B24').setValue(4999);
+  run.log.getRange('F24').setValue('Typed remark');
+  run.log.getRange('C24').setValue(88);
+  run.again({ sheetSkipColumns: ['pressure', 'comments', 'ambient'], officialRows: officialRows(2).map((row) => ({ ...row, pressure: 4100, ambient: 50, comments: 'Site remark' })) });
+  assert.equal(run.log.cell('B24'), 4999, 'pressure column left alone');
+  assert.equal(run.log.cell('F24'), 'Typed remark', 'remarks column left alone');
+  assert.equal(run.log.cell('C24'), 88, 'ambient column left alone');
+  assert.equal(time(run.log.cell('A24')), base + 75 * minute, 'time column still written');
+  run.again({ officialRows: officialRows(2).map((row) => ({ ...row, pressure: 4100 })) });
+  assert.equal(run.log.cell('B24'), 4100, 'pressure written again once switched back on');
+}
+
+console.log('Google Sheet bridge: auto and chosen start rows, page break, capacity errors, operator rows and moving temperatures, whole-degree temperatures and switched-off columns passed.');
