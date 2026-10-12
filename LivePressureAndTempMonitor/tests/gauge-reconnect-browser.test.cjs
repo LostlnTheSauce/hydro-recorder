@@ -79,9 +79,11 @@ async function main() {
     await page.waitForTimeout(1500);
     assert.equal(await count(), before, 'no readings while unplugged');
 
-    await page.evaluate(() => window.__gauge.plugIn());
+    await page.evaluate(() => { window.testGauges[0].reconnectNoticeMs = 1500; window.__gauge.plugIn(); });
     await waitFor(async () => /Reconnected/.test(await status()), 'automatic reconnect');
     await waitFor(async () => await count() > before, 'readings after reconnect');
+    assert.match(await page.locator('[data-gauge="A"] .gauge-error').innerText(), /reconnected automatically/);
+    await waitFor(async () => (await page.locator('[data-gauge="A"] .gauge-error').innerText()) === '', 'reconnect notice clears itself');
 
     await page.evaluate(() => window.__gauge.setReply('85.0 BAR'));
     await waitFor(async () => /not PSI/.test(await page.locator('[data-gauge="A"] .gauge-error').innerText()), 'unit warning');

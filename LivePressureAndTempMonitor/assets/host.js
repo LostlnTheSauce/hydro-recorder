@@ -624,9 +624,9 @@
         if (activeTest && next !== previous) this.addTestEvent('configuration', `Pressure offset changed from ${previous} psi to ${next} psi`, this.latestPressure());
         this.saveTestState();
       });
-      this.root.querySelector('.download-atmos-log').addEventListener('click', () => this.downloadAtmosLog());
-      this.root.querySelector('.download-test-backup').addEventListener('click', () => this.downloadTestBackup());
-      this.root.querySelector('.restore-test-backup').addEventListener('change', (event) => this.restoreTestBackup(event.target.files[0]));
+      this.root.querySelector('.download-atmos-log').addEventListener('click', (event) => this.downloadAtmosLog(event.currentTarget));
+      this.root.querySelector('.download-test-backup').addEventListener('click', (event) => this.downloadTestBackup(event.currentTarget));
+      this.root.querySelector('.restore-test-backup').addEventListener('change', (event) => this.restoreTestBackup(event.target.files[0], event.target));
 
     }
 
@@ -894,7 +894,7 @@
     }
 
     async createGoogleSheet() {
-      if (demo?.enabled) return this.showError('Demo mode cannot create or sync Google Sheets.');
+      if (demo?.enabled) return this.renderSheetStatus('Demo mode cannot create or sync Google Sheets.', 'error');
       if (this.sheetSyncInFlight) return;
       if (this.testState.sheet?.spreadsheetId && !window.confirm('Create a new replacement Sheet for this test? The current Sheet will remain in Google Drive.')) return;
       const opened = window.open('about:blank', '_blank');
@@ -923,7 +923,7 @@
     }
 
     async syncGoogleSheet() {
-      if (demo?.enabled) return this.showError('Demo mode cannot create or sync Google Sheets.');
+      if (demo?.enabled) return this.renderSheetStatus('Demo mode cannot create or sync Google Sheets.', 'error');
       if (!this.testState.sheet?.spreadsheetId || this.sheetSyncInFlight) return;
       if (!window.confirm('Sync to Google Sheet now? This will rewrite generated Sheet fields, including times, pressures, and comments. Temperatures in columns C–E are preserved when no site value is present. Continue?')) return;
       this.sheetSyncInFlight = true;
@@ -1236,15 +1236,15 @@
       return reading && Math.abs(Number(reading.at) - Number(at)) <= allowedGap ? reading : null;
     }
 
-    downloadAtmosLog() {
-      if (demo?.enabled) return this.showError('Demo records are for practice only; exports are disabled.');
+    downloadAtmosLog(anchor) {
+      if (demo?.enabled) return this.showActionError(anchor, 'Demo records are for practice only; exports are disabled.');
       const startEvent = [...this.testState.events].reverse().find((event) => event.type === 'official-start');
       const endEvent = [...this.testState.events].reverse().find((event) => event.type === 'official-end');
       const start = startEvent ? Number(startEvent.at) : this.testState.officialStart ? new Date(this.testState.officialStart).getTime() : 0;
       const end = endEvent ? Number(endEvent.at) : this.testState.officialEnd ? new Date(this.testState.officialEnd).getTime() : 0;
       const endedByOperator = this.testState.events.some((event) => event.type === 'official-end');
       if (!start || !end || end <= start || !endedByOperator) {
-        this.showError('Enter and save the actual test start and end under Records before downloading the Atmos log rows.');
+        this.showActionError(anchor, 'Enter and save the actual test start and end under Records before downloading the Atmos log rows.');
         return;
       }
       const rowFor = (at, pressure, comment) => {
@@ -1269,11 +1269,11 @@
         rows.push(rowFor(at, reading.pressure, comment));
       });
       if (missingTimes.length) {
-        this.showError(`No gauge reading was found within 30 seconds of ${missingTimes.slice(0, 4).join(', ')}${missingTimes.length > 4 ? ` and ${missingTimes.length - 4} more time${missingTimes.length - 4 === 1 ? '' : 's'}` : ''}. The log was not exported.`);
+        this.showActionError(anchor, `No gauge reading was found within 30 seconds of ${missingTimes.slice(0, 4).join(', ')}${missingTimes.length > 4 ? ` and ${missingTimes.length - 4} more time${missingTimes.length - 4 === 1 ? '' : 's'}` : ''}. The log was not exported.`);
         return;
       }
       if (rows.length > 38) {
-        this.showError(`This test needs ${rows.length} log rows, but the locked Atmos form has 38. No rows were omitted.`);
+        this.showActionError(anchor, `This test needs ${rows.length} log rows, but the locked Atmos form has 38. No rows were omitted.`);
         return;
       }
       const content = [['Time', 'Pressure', 'Ambient', 'Pipe', 'Ground', 'Comments / Remarks'], ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
@@ -1285,11 +1285,11 @@
       link.download = `${name}_Atmos_LOG_rows.csv`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      this.showError('');
+      this.showActionError(anchor, '');
     }
 
-    downloadTestBackup() {
-      if (demo?.enabled) return this.showError('Demo records cannot be exported as a real test backup.');
+    downloadTestBackup(anchor) {
+      if (demo?.enabled) return this.showActionError(anchor, 'Demo records cannot be exported as a real test backup.');
       const selectedEquipment = Object.values(this.testState.equipment)
         .map((id) => equipmentInventory.find((item) => item.id === id))
         .filter(Boolean);
@@ -1307,9 +1307,9 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    async restoreTestBackup(file) {
-      if (demo?.enabled) return this.showError('Backup imports are disabled in demo mode.');
-      if (this.jobTransition || this.connected()) return this.showError('Finish the current operation and disconnect the gauge before restoring.');
+    async restoreTestBackup(file, anchor) {
+      if (demo?.enabled) return this.showActionError(anchor, 'Backup imports are disabled in demo mode.');
+      if (this.jobTransition || this.connected()) return this.showActionError(anchor, 'Finish the current operation and disconnect the gauge before restoring.');
       if (!file) return;
       this.restoringBackup = true;
       try {
@@ -1335,9 +1335,9 @@
         this.updateUi();
         this.draw();
         maybeRenderHostLog(true);
-        this.showError('');
+        this.showActionError(anchor, '');
       } catch (error) {
-        this.showError(error.message || String(error));
+        this.showActionError(anchor, error.message || String(error));
       } finally {
         this.restoringBackup = false;
         this.root.querySelector('.restore-test-backup').value = '';
@@ -1502,7 +1502,13 @@
       try {
         const port = await findGaugePort(this);
         if (port && await this.openPort(port, true)) {
-          this.showError(afterReload ? '' : `Gauge reconnected automatically at ${new Date().toLocaleTimeString()}. Readings resumed; the gap stays blank in the record.`);
+          const notice = afterReload ? '' : `Gauge reconnected automatically at ${new Date().toLocaleTimeString()}. Readings resumed; the gap stays blank in the record.`;
+          this.showError(notice);
+          // The reconnect notice is informational: clear it after a minute unless something newer replaced it.
+          clearTimeout(this.reconnectNoticeTimer);
+          if (notice) this.reconnectNoticeTimer = setTimeout(() => {
+            if (this.root.querySelector('.gauge-error').textContent === notice) this.showError('');
+          }, this.reconnectNoticeMs ?? 60000);
         }
       } finally {
         this.reconnecting = false;
@@ -1702,6 +1708,12 @@
       const button = this.root.querySelector('.connect-button');
       button.textContent = connected ? 'Disconnect' : 'Connect gauge';
       button.classList.toggle('primary', !connected);
+    }
+
+    // A message about a button low on the page shows under that button, where the operator is looking.
+    showActionError(anchor, message) {
+      if (anchor && window.HydroFeedback) window.HydroFeedback.near(anchor, message);
+      else this.showError(message);
     }
 
     showError(message) {

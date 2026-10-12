@@ -10,6 +10,20 @@
     const url = URL.createObjectURL(new Blob([[headers, ...rows].map(row => row.map(csv).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  // Shows a message directly under the row of buttons the operator just used, so a
+  // refusal low on the page is not hidden in a status box at the top.
+  function feedbackNear(anchor, text) {
+    const row = anchor?.closest('.finish-actions,.workflow-record-actions,.ramp-actions') || anchor?.parentElement;
+    if (!row) return;
+    let note = row.nextElementSibling;
+    if (!note?.classList.contains('action-feedback')) {
+      if (!text) return;
+      note = document.createElement('p'); note.className = 'action-feedback'; note.setAttribute('role', 'status');
+      row.after(note);
+    }
+    note.textContent = text; note.hidden = !text;
+  }
+  window.HydroFeedback = { near: feedbackNear };
   class Controller {
     constructor(gauge, helpers) {
       this.g = gauge; this.helpers = helpers; this.lastRecords = 0;
@@ -61,10 +75,11 @@
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (error) { previous.querySelector('.previous-jobs').textContent = error.message; }
       });
-      this.root.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) this.action(b.dataset.act); });
+      this.root.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) { this.useAnchor(b); this.action(b.dataset.act); } });
       this.q('[data-input="now"]').addEventListener('change', e => { this.q('[data-input="at"]').disabled = e.target.checked; });
       this.records.addEventListener('click', e => {
         const b = e.target.closest('[data-export]'); if (!b) return;
+        this.useAnchor(b);
         try { this.export(b.dataset.export); } catch (error) { this.message(error.message); }
       });
       this.card.querySelectorAll('button').forEach(b => b.addEventListener('click', () => helpers.unlockAudio()));
@@ -89,12 +104,18 @@
       if (!reading || Math.abs(reading.at - at) > 30000) throw new Error('No gauge reading within 30 seconds of that event. Connect the gauge or choose the actual recorded time.');
       return reading.pressure;
     }
+    // Buttons outside the Live test card (Setup, Records) have no status box of their
+    // own nearby, so their messages also appear right under them.
+    useAnchor(button) {
+      const anchor = this.card.contains(button) || button.closest('.test-period') ? null : button;
+      if (this.anchor && this.anchor !== anchor) feedbackNear(this.anchor, '');
+      this.anchor = anchor;
+    }
     message(text) {
       this.q('.workflow-message').textContent = text;
       const periodMessage = this.q('.period-message');
       if (periodMessage) periodMessage.textContent = text;
-      const setupMessage = this.root.querySelector('.setup-message');
-      if (setupMessage) { setupMessage.textContent = text; setupMessage.hidden = !text; }
+      if (this.anchor) feedbackNear(this.anchor, text);
     }
     event(event) {
       this.g.testState.events.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, ...event });

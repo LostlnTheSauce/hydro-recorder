@@ -55,7 +55,7 @@ small { font-size:.8rem; }
 #hostApp[data-dashboard-view="setup"] .current-readout,#hostApp[data-dashboard-view="logs"] .current-readout,#hostApp[data-dashboard-view="temperature"] .current-readout { display:none; }
 .connection-status { margin-left:auto; } .current-readout+.connection-status { margin-left:0; }
 #hostApp:not([data-dashboard-view="pressure"]) .connection-status { display:none; }
-.setup-message { border-left:3px solid var(--accent); padding:12px 16px; background:var(--accent-soft); color:var(--ink); border-radius:6px; }
+.action-feedback { margin-top:12px; font-size:.9rem; border-left:3px solid var(--accent); padding:12px 16px; background:var(--accent-soft); color:var(--ink); border-radius:6px; }
 .workspace-page { display:grid; gap:20px; }
 .workflow-card,.pressure-deck,.temperature-panel,.test-operations,.settings-panel,.workflow-config,.workflow-restart,.workflow-records,.equipment-library,.event-notes,.pressure-log,.remote-panel,.tools-workspace { background:white; border:1px solid var(--line); border-radius:12px; padding:24px; min-width:0; }
 .workflow-card { border-top:3px solid var(--accent); }
