@@ -47,5 +47,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
 <section class="replay-event-log" data-history-section="events" hidden><h3>Complete event log</h3><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Event / note</th><th>Pressure PSI</th><th>Entry details</th></tr></thead><tbody id="replayEvents"></tbody></table></div></section>
 </section>
 <dialog id="historyEdit" aria-labelledby="historyEditTitle" aria-describedby="historyEditHelp"><form id="historyEditForm"><span class="eyebrow">MANAGE RECORDING</span><h2 id="historyEditTitle"></h2><p id="historyEditHelp"></p><label id="historyEditField"><span id="historyEditLabel"></span><input id="historyEditValue" maxlength="200" autocomplete="off"><datalist id="historyFolderNames"></datalist></label><p id="historyEditError" role="alert"></p><div class="dialog-actions"><button type="button" id="historyEditCancel">Cancel</button><button type="submit" id="historyEditSave" class="primary">Save</button></div></form></dialog>
-</main><script src="assets/temperature.js?v=26"></script><script src="assets/history-log.js?v=1"></script><script src="assets/history.js?v=4"></script>
+</main><script src="assets/temperature.js?v=27"></script><script src="assets/history-log.js?v=1"></script><script src="assets/history.js?v=4"></script>
 <?php endif; ?></body></html>

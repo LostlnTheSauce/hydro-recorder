@@ -13,7 +13,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/viewer-workspace.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=5">
+  <link rel="stylesheet" href="assets/control-room.css?v=6">
 </head>
 <body>
 <?php if (!$validId): ?>
@@ -86,6 +86,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
                 <button class="temp-return-live" type="button" disabled>Return to live</button>
               </div>
             </div>
+            <details class="temperature-round-panel"><summary><span>Round temperature chart</span><small>Pipe, soil and ambient on a 0–150 °F recorder chart, last 24 hours. Tap the chart for full screen.</small></summary><div class="chart-wrap"><canvas class="temperature-round-chart" width="700" height="700" aria-label="Round temperature recorder chart"></canvas></div></details>
           </section>
         </article>
         <?php endforeach; ?>
@@ -101,8 +102,8 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
       <footer><span>Remote chart updates approximately every second.</span><span>Displayed pressure includes the offset selected on the host laptop.</span></footer>
     </div>
   </main>
-  <script src="assets/chart.js?v=15"></script>
-<script src="assets/temperature.js?v=26"></script>
+  <script src="assets/chart.js?v=16"></script>
+<script src="assets/temperature.js?v=27"></script>
   <script src="assets/jobs.js?v=1"></script>
   <script src="assets/logbook.js?v=2"></script>
   <script src="assets/viewer.js?v=25"></script>

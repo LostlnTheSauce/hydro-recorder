@@ -66,6 +66,33 @@
     ctx.stroke();
   }
 
+  // A trace whose readings are { at, value } (value null breaks the line). Long
+  // gaps between readings follow the chart's curve instead of cutting across it,
+  // and gaps over three hours are left open.
+  function strokeTrace(ctx, readings, chartMax, color, thickness) {
+    const STEP = 300000;
+    ctx.beginPath();
+    let previous = null;
+    readings.forEach((reading) => {
+      const at = Number(reading.at), value = reading.value;
+      if (value === null || !Number.isFinite(at) || !Number.isFinite(value)) { previous = null; return; }
+      if (previous && at - previous.at > 3 * 3600000) previous = null;
+      if (!previous) { const p = point(at, value, chartMax); ctx.moveTo(p.x, p.y); }
+      else {
+        const steps = Math.max(1, Math.ceil((at - previous.at) / STEP));
+        for (let index = 1; index <= steps; index += 1) {
+          const fraction = index / steps;
+          const p = point(previous.at + (at - previous.at) * fraction, previous.value + (value - previous.value) * fraction, chartMax);
+          ctx.lineTo(p.x, p.y);
+        }
+      }
+      previous = { at, value };
+    });
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(.1, Math.min(5, Number(thickness) || 1)) * lineFactor;
+    ctx.stroke();
+  }
+
   // `view` is only passed by the full-screen viewer: { k, e, f, lineFactor } is the
   // device-pixel transform for the current pinch zoom and pan.
   function draw(canvas, readings, settings, view) {
@@ -96,7 +123,7 @@
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    const intervals = pressureIntervals(chartMax);
+    const intervals = settings.gridStep ? { major: settings.gridStep, minor: settings.gridStep / 5 } : pressureIntervals(chartMax);
     const pressureStep = intervals.major;
     const minorStep = intervals.minor;
     for (let pressure = minorStep; pressure <= chartMax + 0.001; pressure += minorStep) {
@@ -157,7 +184,9 @@
       if (settings.windowBottom !== '') strokeArc(ctx, Number(settings.windowBottom), settings.testStart, settings.testEnd, chartMax, '#1688c8', settings.windowThickness);
     }
 
-    if (readings.length) {
+    if (Array.isArray(settings.traces)) {
+      settings.traces.forEach((trace) => strokeTrace(ctx, trace.readings, chartMax, trace.color, settings.traceThickness));
+    } else if (readings.length) {
       ctx.beginPath();
       readings.forEach((reading, index) => {
         const p = point(reading.at, reading.pressure, chartMax);
@@ -177,7 +206,7 @@
     ctx.stroke();
     ctx.fillStyle = '#176c54';
     ctx.font = '900 9px system-ui';
-    ctx.fillText('PRESSURE RECORDER', CX, CY - 34);
+    ctx.fillText(settings.title || 'PRESSURE RECORDER', CX, CY - 34);
     ctx.fillStyle = '#18342c';
     ctx.beginPath();
     ctx.arc(CX, CY, 17, 0, Math.PI * 2);
@@ -187,7 +216,21 @@
     ctx.fillText('24-HOUR LIVE RECORD', CX, CY + 36);
     ctx.fillStyle = '#176c54';
     ctx.font = '800 8px system-ui';
-    ctx.fillText(`0–${Math.round(chartMax).toLocaleString()} PSI`, CX, CY + 50);
+    ctx.fillText(settings.scaleLabel || `0–${Math.round(chartMax).toLocaleString()} PSI`, CX, CY + 50);
+    (settings.legend || []).forEach((item, index) => {
+      const y = CY + 63 + index * 10;
+      ctx.beginPath();
+      ctx.moveTo(CX - 30, y);
+      ctx.lineTo(CX - 18, y);
+      ctx.strokeStyle = item.color;
+      ctx.lineWidth = 2.5 * lineFactor;
+      ctx.stroke();
+      ctx.fillStyle = '#18342c';
+      ctx.font = '700 7.5px system-ui';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(item.name).slice(0, 14), CX - 13, y);
+      ctx.textAlign = 'center';
+    });
     ctx.beginPath();
     ctx.arc(CX, CY, OUTER, 0, Math.PI * 2);
     ctx.strokeStyle = '#14654f';
@@ -227,7 +270,7 @@
     if (zoomed || !latest.has(source)) return;
     const dialog = document.createElement('dialog');
     dialog.className = 'chart-zoom-dialog';
-    dialog.setAttribute('aria-label', 'Full-screen pressure chart');
+    dialog.setAttribute('aria-label', `Full-screen ${latest.get(source)?.settings.zoomName || 'pressure chart'}`);
     dialog.innerHTML = '<header class="chart-zoom-header"><div><strong>Recorder chart</strong><small>Pinch or scroll to zoom. Drag to move. Double-tap to zoom in or reset.</small></div><div class="chart-zoom-actions"><button type="button" data-chart-zoom="out" aria-label="Zoom out">−</button><button type="button" data-chart-zoom="in" aria-label="Zoom in">+</button><button type="button" data-chart-zoom="reset">Fit</button><button type="button" class="chart-zoom-close">Close</button></div></header><canvas class="chart-zoom-canvas"></canvas>';
     document.body.append(dialog);
     const canvas = dialog.querySelector('canvas');
