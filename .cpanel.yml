@@ -1,7 +1,7 @@
 ---
-# cPanel Git Version Control runs these tasks on "Deploy HEAD Commit"
-# (the GitHub Action in .github/workflows/deploy.yml triggers that on every
-# push to main).
+# cPanel Git Version Control runs these tasks on "Deploy HEAD Commit".
+# deploy/cron-deploy.sh, run by a cPanel cron job, triggers that whenever
+# main on GitHub has a new commit.
 #
 # 1. The current website, LivePressureAndTempMonitor/, goes to public_html/hydro.
 #    Only the site's runtime files are copied. config.php is never in git, so it

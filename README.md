@@ -18,22 +18,22 @@ Start with [CURRENT_PROJECT.md](CURRENT_PROJECT.md). It lists the decisions the 
 
 ## Deploying to the live site
 
-Merging into `main` publishes the website. A GitHub Action (`.github/workflows/deploy.yml`) asks cPanel to pull `main` and run `.cpanel.yml`, which copies `LivePressureAndTempMonitor/` into `public_html/hydro`. It never overwrites `config.php`, and every deploy stamps new `?v=` numbers so Cloudflare and browsers load the new scripts. Work happens on other branches and goes live only when its pull request is merged.
+Merging into `main` publishes the website. A cPanel cron job runs `deploy/cron-deploy.sh` every 5 minutes: it pulls `main` from GitHub and, when there is a new commit, runs cPanel's **Deploy HEAD Commit**, which follows `.cpanel.yml` and copies `LivePressureAndTempMonitor/` into `public_html/hydro`. It never overwrites `config.php`, and every deploy stamps new `?v=` numbers so Cloudflare and browsers load the new scripts. Work happens on other branches and goes live only when its pull request is merged. No passwords or tokens are stored on GitHub; the repository is public, so cPanel can read it directly.
 
 Deploy between tests. An operator page that is already open keeps running the version it loaded; it picks up the new one when it is reloaded.
 
-One-time setup:
+One-time setup, after this deploy setup is merged into `main`:
 
-1. **cPanel → Git Version Control.** If `hydro-recorder` is not listed, choose **Create**, turn on **Clone a Repository**, and use `https://github.com/LostlnTheSauce/hydro-recorder.git`. Note the **Repository Path** it shows.
-2. **cPanel → Security → Manage API Tokens → Create.** Name it `github-deploy` and copy the token.
-3. **GitHub → this repository → Settings → Secrets and variables → Actions → New repository secret**, four times:
-   - `CPANEL_HOST`: your cPanel address and port, for example `grantgsolutions.com:2083`
-   - `CPANEL_USER`: your cPanel username
-   - `CPANEL_TOKEN`: the token from step 2
-   - `CPANEL_REPO_PATH`: the Repository Path from step 1
-4. **GitHub → Actions → Deploy to website → Run workflow** to test it. A green check means the site was updated.
+1. **cPanel → Git Version Control.** If `hydro-recorder` is not listed, choose **Create**, turn on **Clone a Repository**, use `https://github.com/LostlnTheSauce/hydro-recorder.git`, and keep the suggested Repository Path (`/home/<user>/repositories/hydro-recorder`). If it is already listed, open **Manage → Pull or Deploy → Update from Remote**.
+2. **cPanel → Cron Jobs → Add New Cron Job.** Common setting: *Once Per Five Minutes*. Command:
 
-Without the Action you can still deploy by hand: cPanel → Git Version Control → Manage → Pull or Deploy → **Update from Remote**, then **Deploy HEAD Commit**.
+   ```
+   /bin/bash $HOME/repositories/hydro-recorder/deploy/cron-deploy.sh >> $HOME/hydro-deploy.log 2>&1
+   ```
+
+   If step 1 showed a different Repository Path, use that path instead of `$HOME/repositories/hydro-recorder`. The first run (within five minutes) deploys the current `main`.
+
+`hydro-deploy.log` in your cPanel home folder lists each deploy and any problem; nothing is written when there is nothing new. To deploy by hand instead: cPanel → Git Version Control → Manage → Pull or Deploy → **Update from Remote**, then **Deploy HEAD Commit**.
 
 ## Try the website locally
 
