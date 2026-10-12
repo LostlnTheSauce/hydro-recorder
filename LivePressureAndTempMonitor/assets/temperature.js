@@ -410,14 +410,15 @@
   }
 
   // Optional round recorder chart (0–150 °F, last 24 hours) for the pipe, soil
-  // and ambient probes, drawn only while its section is open. Unplugged probes
-  // read about -300 °F; those readings leave a gap here and stay in the log.
+  // and ambient probes, all on one chart or one chart each, drawn only while
+  // its section is open. Unplugged probes read about -300 °F; those readings
+  // leave a gap here and stay in the log.
   const ROUND_KEYS = ['ambient', 'pipe', 'soil'];
   const ROUND_MAX = 150;
   function drawRoundChart(panel, readings, channelConfig) {
     const section = panel.querySelector('.temperature-round-panel');
-    const canvas = section?.querySelector('.temperature-round-chart');
-    if (!canvas || !section.open || !window.PressureChartRenderer) return;
+    if (!section || !section.open || !window.PressureChartRenderer) return;
+    const separate = section.querySelector('.temperature-round-select')?.value === 'separate';
     const keys = ROUND_KEYS.filter((key) => !panel.querySelector(`.temp-toggle input[value="${key}"]`)?.disabled);
     const sorted = [...readings].sort((a, b) => Number(a.at) - Number(b.at));
     const end = sorted.length ? Number(sorted.at(-1).at) : Date.now();
@@ -430,21 +431,33 @@
       lastKept = at;
     });
     const shown = channelConfig.filter((channel) => keys.includes(channel.key));
-    window.PressureChartRenderer.draw(canvas, [], {
-      chartMax: ROUND_MAX,
-      gridStep: 10,
-      title: 'TEMPERATURE RECORDER',
-      scaleLabel: `0–${ROUND_MAX} °F`,
-      zoomName: 'temperature chart',
-      traceThickness: 1.6,
-      legend: shown,
-      traces: shown.map((channel) => ({
-        color: channel.color,
-        readings: recent.map((reading) => {
-          const value = validNumber(reading[channel.key]);
-          return { at: reading.at, value: value === null || value < -50 ? null : value };
-        }),
-      })),
+    const trace = (channel) => ({
+      color: channel.color,
+      readings: recent.map((reading) => {
+        const value = validNumber(reading[channel.key]);
+        return { at: reading.at, value: value === null || value < -50 ? null : value };
+      }),
+    });
+    const draw = (key, title, zoomName, list) => {
+      const wrap = section.querySelector(`.chart-wrap[data-round-key="${key}"]`);
+      if (!wrap) return;
+      wrap.hidden = !list;
+      if (!list) return;
+      window.PressureChartRenderer.draw(wrap.querySelector('canvas'), [], {
+        chartMax: ROUND_MAX,
+        gridStep: 10,
+        title,
+        scaleLabel: `0–${ROUND_MAX} °F`,
+        zoomName,
+        traceThickness: 1.6,
+        legend: list,
+        traces: list.map(trace),
+      });
+    };
+    draw('all', 'TEMPERATURE RECORDER', 'temperature chart', separate ? null : shown);
+    ROUND_KEYS.forEach((key) => {
+      const channel = shown.find((item) => item.key === key);
+      draw(key, `${String(channel?.name || key).slice(0, 18).toUpperCase()} TEMPERATURE`, `${channel?.name || key} temperature chart`, separate && channel ? [channel] : null);
     });
   }
 
@@ -493,6 +506,14 @@
     panel.dataset.temperatureBound = 'true';
     bindZoom(panel, onChange);
     panel.querySelector('.temperature-round-panel')?.addEventListener('toggle', () => onChange());
+    const roundMode = panel.querySelector('.temperature-round-select');
+    if (roundMode) {
+      try { if (localStorage.getItem('grantg-round-temp-mode') === 'separate') roundMode.value = 'separate'; } catch (_) {}
+      roundMode.addEventListener('change', () => {
+        try { localStorage.setItem('grantg-round-temp-mode', roundMode.value); } catch (_) {}
+        onChange();
+      });
+    }
     panel.querySelectorAll('.temp-toggle input,.temp-official-only,.temp-show-notes,.temp-history-range').forEach((input) => input.addEventListener('change', () => {
       if (input.matches('.temp-history-range,.temp-official-only')) {
         panel._temperatureZoom = null;
