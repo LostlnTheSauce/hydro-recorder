@@ -16,7 +16,7 @@ This is the October 11, 2026 source of the PHP website used at `https://grantgso
 - `LandingPageUpdate/index.html`: main landing-page source, separate from the recorder.
 - `recordings/index.json`: catalog of ten exported online snapshots with names, folders and sample counts. `recordings/online/*.json` are complete JSON backups; `recordings/field/*.jsonl` contains the local temperature journal. These are snapshots, not ongoing GitHub synchronization.
 
-Paths abbreviated as `assets/` above are under `LivePressureAndTempMonitor/`. The older root `recorder/`, `site/`, Python launcher and `.cpanel.yml` belong to a different implementation and remain unchanged.
+Paths abbreviated as `assets/` above are under `LivePressureAndTempMonitor/`. The older Python recorder is in `archive/python-recorder/`; it is a different implementation. The root `.cpanel.yml` deploys only that version's `/watch` viewer.
 
 ## Local UI preview
 
@@ -29,7 +29,7 @@ Install Node.js and run `npm install`, then `npm run preview` from the repositor
 
 `npm run test:log` runs interval-sampling checks. Browser tests need installed Chrome and Playwright; for example `node LivePressureAndTempMonitor/tests/cloud-history-browser.test.cjs` and `node LivePressureAndTempMonitor/tests/workspace-browser.test.cjs`. Other tests live beside them. The original Python tests are separate.
 
-For a real PHP installation, create `config.php` from `config.example.php`, set independent development credentials and database, and follow the SQL/install instructions in the app README. `REDACTED` values are not working production credentials. Do not connect a redesign preview to the real database or Google Sheet. The app README contains older appended instructions; current UI behavior below takes precedence over obsolete timer/stage instructions.
+For a real PHP installation, create `config.php` from `config.example.php`, set independent development credentials and database, and follow the SQL/install instructions in the app README. `REDACTED` values are not working production credentials. Do not connect a redesign preview to the real database or Google Sheet.
 
 ## User decisions to preserve
 

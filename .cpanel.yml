@@ -1,9 +1,11 @@
 ---
+# Deploys the archived Python recorder's viewer to /watch. The current
+# website (LivePressureAndTempMonitor/) is uploaded separately.
 deployment:
   tasks:
     - export DEST=$HOME/public_html/watch
     - /bin/mkdir -p $DEST
-    - /bin/cp site/viewer.js site/api.php $DEST/
-    - /bin/cp recorder/web/chart.js recorder/web/style.css $DEST/
+    - /bin/cp archive/python-recorder/site/viewer.js archive/python-recorder/site/api.php $DEST/
+    - /bin/cp archive/python-recorder/recorder/web/chart.js archive/python-recorder/recorder/web/style.css $DEST/
     # Cloudflare caches scripts for hours; a new version stamp makes viewers load the new files.
-    - /bin/sed "s/__V__/$(date +%s)/g" site/index.html > $DEST/index.html
+    - /bin/sed "s/__V__/$(date +%s)/g" archive/python-recorder/site/index.html > $DEST/index.html

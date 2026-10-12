@@ -4,14 +4,11 @@
     {
       "name": "current-hydro-website",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "preview"],
+      "runtimeArgs": [
+        "run",
+        "preview"
+      ],
       "port": 49328
-    },
-    {
-      "name": "recorder",
-      "runtimeExecutable": ".venv/Scripts/python.exe",
-      "runtimeArgs": ["-m", "recorder", "--no-browser", "--port", "8731", "--data", "data/dev.db"],
-      "port": 8731
     }
   ]
 }
