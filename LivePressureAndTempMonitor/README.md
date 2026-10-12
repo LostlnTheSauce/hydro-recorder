@@ -10,7 +10,7 @@ The physical charts stay the primary paperwork. The site records and helps fill 
 
 ## Screens on the operator page
 
-- **Live test**: a large current-pressure readout with its change over the last five minutes, the gauge connection, inside/outside the pressure window, the circular chart, and the field log ("What happened, and when?"). Log entries can be added in any order, at any time, with the actual event time. Nothing has to be done in sequence and nothing is timed. Tick **Show to remote viewers** to also show an entry on the viewer page; it goes to the Sheet exactly as any other field-log entry.
+- **Live test**: a large current-pressure readout with its change over the last five minutes, the gauge connection, inside/outside the pressure window, the circular chart, and the field log ("What happened, and when?"). Log entries can be added in any order, at any time, with the actual event time. Nothing has to be done in sequence and nothing is timed. Tick **Show to remote viewers** to also show an entry on the viewer page; it goes to the Sheet exactly as any other field-log entry. The **log book** below lists pressure, its change since the row before, and the temperatures at the interval you pick (5 sec, 15 sec, 1, 5, 15 or 30 min, 1 hr).
 - **Temperatures**: start and stop the website's temperature recording, choose which probes viewers see, the combined pressure and temperature chart, and manual temperature entry.
 - **Setup**: job details, Atmos design PDF import, equipment, pressure offset, chart scale and window, probe names, then **Start new test** and **Archive attempt** at the bottom. The equipment library is folded away at the end.
 - **Records**: official start and end times, the 15-minute official record, Google Sheet buttons, downloads and the field log. Stroke counts, archived attempts, local backups, imports and the detailed pressure history are folded away below.
@@ -28,6 +28,20 @@ Use **Add second test** to run a second, fully independent test on its own gauge
 - **Laptop storage fails** (disk full, storage cleared): a red banner appears instead of failing silently. Recording continues on screen and online, and the missed readings are saved again once storage works. Download a full backup from Records if you see it.
 - The screen is kept awake while a gauge is connected. Keep the laptop plugged in, and set Windows not to sleep during a test.
 - Missing data stays missing. Nothing is filled in, carried forward or averaged across a gap.
+
+## Alerts in the trailer
+
+A red bar under the tabs, with a double ding every 20 seconds, appears when:
+
+- a test's gauge is disconnected, or sends nothing for 30 seconds;
+- the field laptop is unplugged, plugged in but not charging (below 95%), or below 75% battery;
+- a test's temperature feed has sent nothing for over a minute (longer if the recording interval is long).
+
+**Silence** stops the ding for that alert; the bar stays until the problem is fixed. When it clears and happens again, it dings again. Browsers only play sound after one click on the page, so click anywhere once after opening it.
+
+## Log book
+
+On the Live test page (one per test) and on the viewer's Logbook tab. Each row is the actual reading nearest that time, never an average; hover a value to see exactly when it was recorded. A gap shows "—". The top row is the latest reading. Older rows load with **Show older rows**. Viewers see only the probes ticked under **Probes used for this test** on the Temperatures page, and only once **Show temperatures to viewers** is on.
 
 ## Pressure offset
 

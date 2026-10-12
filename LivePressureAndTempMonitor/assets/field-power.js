@@ -14,8 +14,9 @@
       : `${percent} · ${supply}`;
     const fresh = device.bridge_online === true && Number.isFinite(power.reported_at) && now - power.reported_at >= -5000 && now - power.reported_at <= 30000;
     if (!fresh) return { text: `Field laptop: status stale — last reported ${label}.`, state: 'stale' };
-    const low = power.has_battery !== false && Number.isInteger(power.battery_percent) && power.battery_percent <= 20 && power.on_ac === false;
-    return { text: `Field laptop: ${label}${low ? ' · Low battery — connect power.' : ''}`, state: low ? 'low' : 'current' };
+    // Matches the host alert: below 75% is flagged whether or not it is plugged in.
+    const low = power.has_battery !== false && Number.isInteger(power.battery_percent) && power.battery_percent < 75;
+    return { text: `Field laptop: ${label}${low ? ' · Below 75% — keep it plugged in and charging.' : ''}`, state: low ? 'low' : 'current' };
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { describe };
   else root.HydroFieldPower = { describe };

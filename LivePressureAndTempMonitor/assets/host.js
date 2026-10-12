@@ -2344,6 +2344,11 @@
     return result;
   }
 
+  function attachedTemperatureDevice(gauge) {
+    return temperatureDevices.find((device) => remote && device.session_id === remote.session_id && device.slot === gauge.slot
+      && (!Array.isArray(gauge.testState.temperatureSourceIds) || gauge.testState.temperatureSourceIds.includes(device.source_id)));
+  }
+
   function renderTemperatureDevices() {
     document.querySelectorAll('[data-gauge]').forEach((root) => {
       const select = root.querySelector('.temperature-device-select');
@@ -2351,8 +2356,7 @@
       const slot = root.dataset.gauge;
       const gauge = gauges.find(g => g.slot === slot);
       const selectedBefore = select.value;
-      const attached = temperatureDevices.find((device) => remote && device.session_id === remote.session_id && device.slot === slot
-        && (!Array.isArray(gauge.testState.temperatureSourceIds) || gauge.testState.temperatureSourceIds.includes(device.source_id)));
+      const attached = attachedTemperatureDevice(gauge);
       select.replaceChildren();
       const placeholder = document.createElement('option');
       placeholder.value = '';
@@ -2675,5 +2679,101 @@
     if (event.key?.startsWith(testStoragePrefix)) gauges.forEach(g => g.checkJobCurrent());
     if (event.key === notesStorageKey) loadHostNotes();
   });
+  // Log book on the Live test page: pressure and the probes in use, at a chosen interval.
+  function logbookData(gauge) {
+    const all = gauge.temperatureReadings;
+    const cache = gauge.logbookCache || {};
+    if (cache.source !== all || cache.length !== all.length || cache.lastAt !== all.at(-1)?.at) {
+      const temperatures = [...all].sort((a, b) => Number(a.at) - Number(b.at));
+      const present = new Set(['ambient', 'pipe', 'soil', 'aux'].filter((key) => temperatures.some((row) => Number.isFinite(Number(row[key])) && row[key] !== null && row[key] !== '')));
+      gauge.logbookCache = { source: all, length: all.length, lastAt: all.at(-1)?.at, temperatures, present };
+    }
+    const enabled = gauge.testState.enabledProbes || ['ambient', 'pipe', 'soil', 'aux'];
+    return {
+      pressure: gauge.readings,
+      temperatures: gauge.logbookCache.temperatures,
+      channels: gauge.temperatureChannels().filter((channel) => enabled.includes(channel.key) && gauge.logbookCache.present.has(channel.key)),
+      wholeDegrees: gauge.temperatureRecordingOptions?.().wholeDegrees === true,
+    };
+  }
+  const logbooks = window.HydroLogbook ? gauges.map((gauge) => {
+    const card = document.createElement('section');
+    card.className = 'logbook-card';
+    (gauge.root.querySelector('.page-pressure') || gauge.root).append(card);
+    return window.HydroLogbook.mount(card, { getData: () => logbookData(gauge), storageKey: `grantg-logbook-interval-${gauge.slot}` });
+  }) : [];
+  gaugeTicker.add(() => gauges.forEach((gauge, index) => { if (gauge.active) logbooks[index]?.refresh(); }));
+
+  // Trailer alerts: a banner that stays up while the problem lasts, with a ding
+  // every 20 seconds until it is silenced. A cleared problem re-alerts next time.
+  const BATTERY_ALERT_PERCENT = 75;
+  const alertBar = document.getElementById('hostAlerts');
+  const silencedAlerts = new Set();
+  let lastAlertDingAt = 0;
+  const minutesAgo = (ms) => ms < 90000 ? `${Math.round(ms / 1000)} seconds` : `${Math.round(ms / 60000)} minutes`;
+
+  function activeAlerts() {
+    const now = Date.now();
+    const alerts = [];
+    for (const gauge of gauges.filter((item) => item.active)) {
+      const name = gauge.settings().name || testNameForSlot(gauge.slot);
+      if (gauge.reconnectWanted && !gauge.port) alerts.push({ id: `gauge-lost-${gauge.slot}`, text: `${name}: gauge disconnected. Check the USB cable; it reconnects by itself when the gauge is back.` });
+      else if (gauge.port && gauge.staleAlerted) alerts.push({ id: `gauge-stale-${gauge.slot}`, text: `${name}: no reading from the gauge for over 30 seconds.` });
+      const device = demo?.enabled ? null : attachedTemperatureDevice(gauge);
+      if (!device) continue;
+      let latest = null;
+      for (let i = gauge.temperatureReadings.length - 1; i >= 0; i--) {
+        const row = gauge.temperatureReadings[i];
+        if (row.source === 'live' && (!device.source_id || row.sourceId === device.source_id)) { latest = row; break; }
+      }
+      const limit = Math.max(60000, (Number(device.sample_interval_seconds) || 2) * 2000 + 10000);
+      if (latest && now - Number(latest.at) > limit) alerts.push({ id: `temps-stopped-${gauge.slot}`, text: `${name}: temperature feed stopped. Last reading ${minutesAgo(now - Number(latest.at))} ago. Check the field laptop, MadgeTech and the bridge.` });
+      const power = device.power;
+      const fresh = power && device.bridge_online === true && Number.isFinite(power.reported_at) && now - power.reported_at <= 60000;
+      if (!fresh || power.has_battery === false) continue;
+      const percent = Number.isInteger(power.battery_percent) ? power.battery_percent : null;
+      const level = percent === null ? '' : ` (${percent}%)`;
+      if (power.on_ac === false) alerts.push({ id: 'field-unplugged', text: `Field laptop is unplugged and running on battery${level}.` });
+      else if (power.on_ac === true && power.charging === false && percent !== null && percent < 95) alerts.push({ id: 'field-not-charging', text: `Field laptop is plugged in but not charging${level}.` });
+      if (percent !== null && percent < BATTERY_ALERT_PERCENT) alerts.push({ id: 'field-battery-low', text: `Field laptop battery is at ${percent}%.` });
+    }
+    return [...new Map(alerts.map((alert) => [alert.id, alert])).values()];
+  }
+
+  function renderAlerts() {
+    if (!alertBar) return;
+    const alerts = activeAlerts();
+    const ids = new Set(alerts.map((alert) => alert.id));
+    silencedAlerts.forEach((id) => { if (!ids.has(id)) silencedAlerts.delete(id); });
+    alertBar.replaceChildren(...alerts.map((alert) => {
+      const row = document.createElement('div');
+      row.className = `host-alert${silencedAlerts.has(alert.id) ? ' silenced' : ''}`;
+      const text = document.createElement('span'); text.textContent = alert.text;
+      row.append(text);
+      if (!silencedAlerts.has(alert.id)) {
+        const silence = document.createElement('button');
+        silence.type = 'button'; silence.textContent = 'Silence'; silence.dataset.silenceAlert = alert.id;
+        row.append(silence);
+      }
+      return row;
+    }));
+    alertBar.hidden = !alerts.length;
+    document.title = `${alerts.length ? '⚠ ' : ''}${document.title.replace(/^⚠ /, '')}`;
+    const loud = alerts.some((alert) => !silencedAlerts.has(alert.id));
+    if (loud && Date.now() - lastAlertDingAt >= 20000) { lastAlertDingAt = Date.now(); staleDing(); setTimeout(staleDing, 450); }
+    if (!loud) lastAlertDingAt = 0;
+  }
+  alertBar?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-silence-alert]');
+    if (!button) return;
+    silencedAlerts.add(button.dataset.silenceAlert);
+    renderAlerts();
+  });
+  // Browsers only play sound after a click on the page; any click unlocks it.
+  document.addEventListener('pointerdown', () => {
+    try { audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)(); audioContext.resume(); } catch (_) {}
+  }, { passive: true });
+  gaugeTicker.add(renderAlerts);
+
   window.addEventListener('beforeunload', () => { if (publishTimer) clearInterval(publishTimer); });
 })();

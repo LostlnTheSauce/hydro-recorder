@@ -271,6 +271,38 @@ table td { background:#ffffff55; }
 .login-shell { display:grid; place-items:center; min-height:100vh; padding:24px; }
 .login-card { max-width:420px; display:grid; gap:18px; padding:32px; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
 
+/* Log book */
+.logbook-card { grid-column:1/-1; border:1px solid var(--line); border-radius:10px; padding:20px; background:var(--paper); min-width:0; }
+.logbook-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; }
+.logbook-intervals { display:flex; flex-wrap:wrap; gap:4px; padding:3px; border:1px solid var(--line); border-radius:8px; background:#f3f6f9; }
+.logbook-intervals button { min-height:34px; padding:5px 12px; font-size:.8rem; border-color:transparent; background:transparent; }
+.logbook-intervals button.active { background:var(--paper); border-color:var(--line); color:var(--accent); }
+.logbook-help { font-size:.78rem; margin-top:8px; }
+.logbook .log-table-wrap { max-height:560px; overflow:auto; margin-top:12px; border:1px solid var(--line); border-radius:8px; }
+.logbook-table { font-variant-numeric:tabular-nums; }
+.logbook-table thead th { position:sticky; top:0; z-index:1; }
+.logbook-table td { padding:7px 12px; white-space:nowrap; }
+.logbook-table .logbook-pressure,.logbook-table .logbook-temp,.logbook-table .logbook-change { font-family:var(--mono); }
+.logbook-table .logbook-pressure { font-weight:650; }
+.logbook-table .logbook-change { color:var(--muted); }
+.logbook-table .logbook-change.up { color:#1f5b85; }
+.logbook-table .logbook-change.down { color:var(--bad); }
+.logbook-table td[title] { text-decoration:underline dotted #a3b4c2; text-underline-offset:3px; }
+.logbook-table .logbook-latest td { background:var(--accent-soft); }
+.logbook-table .logbook-day td { background:#f3f6f9; font-size:.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:5px 12px; }
+.logbook-more { margin-top:10px; font-size:.82rem; }
+.viewer-logbooks { display:grid; gap:16px; border:0; padding:0; background:none; }
+
+/* Trailer alerts, pinned under the tabs */
+.host-alerts { display:grid; gap:6px; padding:8px 0 10px; }
+.host-alerts[hidden] { display:none; }
+.host-alert { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 12px; border-radius:8px; background:var(--bad-soft); border:1px solid #eba899; color:#7a1f12; font-weight:650; font-size:.9rem; }
+.host-alert::before { content:"⚠"; margin-right:4px; }
+.host-alert span { flex:1; }
+.host-alert button { min-height:32px; padding:4px 12px; font-size:.8rem; }
+.host-alert.silenced { background:var(--warn-soft); border-color:#e8cf8f; color:var(--warn); font-weight:500; }
+@media(max-width:760px) { .logbook-card { padding:14px; } .logbook-table td { padding:6px 8px; } .logbook-help { display:none; } }
+
 @media(min-width:1400px) { .page-pressure { grid-template-columns:minmax(0,1fr) 380px; } }
 @media(max-width:1150px) { .controlroom-temperature-body { grid-template-columns:1fr; }.controlroom-devices { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:20px; }.controlroom-devices .temperature-bridge-body { grid-template-columns:1fr 1fr; }.controlroom-devices .temperature-bridge-body>p,.controlroom-devices .temperature-bridge-body>small { grid-column:1/-1; }.replay-layout { grid-template-columns:1fr; }.replay-heading { align-items:flex-start; flex-direction:column; gap:16px; }.page-pressure { grid-template-columns:minmax(0,1fr) 320px; } }
 @media(max-width:900px) {
