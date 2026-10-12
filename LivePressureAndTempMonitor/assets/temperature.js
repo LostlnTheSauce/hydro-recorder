@@ -91,18 +91,6 @@
     return { min: low, max: high, decimals: 1 };
   }
 
-  function analysis(pressureReadings, temperatureReadings, channelKey, testPeriod) {
-    let pressure = pressureReadings.filter((item) => Number.isFinite(Number(item.at)) && Number.isFinite(Number(item.pressure)));
-    let temperatures = temperatureReadings.filter((item) => Number.isFinite(Number(item.at)) && validNumber(item[channelKey]) !== null);
-    if (testPeriod) {
-      pressure = pressure.filter((item) => item.at >= testPeriod.start && item.at <= testPeriod.end);
-      temperatures = temperatures.filter((item) => item.at >= testPeriod.start && item.at <= testPeriod.end);
-    }
-    const pressureChange = pressure.length > 1 ? Number(pressure.at(-1).pressure) - Number(pressure[0].pressure) : null;
-    const temperatureChange = temperatures.length > 1 ? Number(temperatures.at(-1)[channelKey]) - Number(temperatures[0][channelKey]) : null;
-    return { pressureChange, temperatureChange };
-  }
-
   function chartHeight(canvas) {
     return canvas.closest('.temp-chart-dialog[open]') ? Math.max(240, canvas.getBoundingClientRect().height) : 330;
   }
@@ -435,9 +423,7 @@
       if (current) current.classList.toggle('inactive', value === null);
     });
     const visibleKeys = Array.from(panel.querySelectorAll('.temp-toggle input:checked')).map((input) => input.value).filter((key) => channelConfig.some((channel) => channel.key === key));
-    const analysisKey = 'pipe';
     const testPeriod = period(options.testStart, options.testEnd);
-    const analysisResult = analysis(pressureReadings, temperatureReadings, analysisKey, testPeriod);
     const canvas = panel.querySelector('.temperature-chart');
     const selectionState = panel._temperatureSelection || { followLive: true, at: null };
     if (options.replay && selectionState.followLive) { selectionState.followLive = false; selectionState.at = null; }
@@ -448,7 +434,6 @@
       temperatureReadings,
       channelConfig,
       visibleKeys,
-      analysisKey,
       testPeriod,
       historyRange: panel.querySelector('.temp-history-range')?.value,
       officialOnly: panel.querySelector('.temp-history-range') ? panel.querySelector('.temp-history-range').value === 'official' : panel.querySelector('.temp-official-only')?.checked !== false,
@@ -461,10 +446,6 @@
     drawTimeline(canvas, chartOptions);
     updateZoomControls(panel, canvas._temperatureMeta);
     refreshSelection(panel, selectionState, channelConfig);
-    const selectedChannel = channelConfig.find((item) => item.key === analysisKey) || channelConfig[1];
-    setPanelText(panel, '.temp-pressure-change', analysisResult.pressureChange === null ? '—' : `${analysisResult.pressureChange >= 0 ? '+' : ''}${analysisResult.pressureChange.toFixed(1)} psi`);
-    setPanelText(panel, '.temp-temperature-change', analysisResult.temperatureChange === null ? '—' : `${analysisResult.temperatureChange >= 0 ? '+' : ''}${analysisResult.temperatureChange.toFixed(options.wholeDegrees ? 0 : 1)}°F`);
-    setPanelText(panel, '.temp-analysis-name', selectedChannel.name);
   }
 
   function bindPanel(panel, onChange) {
@@ -689,5 +670,5 @@
     observer.observe(wrap);
   }
 
-  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, analyze: analysis, clampZoom };
+  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, clampZoom };
 })();

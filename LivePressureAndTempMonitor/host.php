@@ -271,10 +271,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
             <label class="temperature-notes-toggle"><input class="temp-show-notes" type="checkbox"> Show notes</label>
           </div>
           <div class="temperature-canvas-wrap"><canvas class="temperature-chart" width="900" height="330"></canvas><canvas class="temperature-selection-overlay" width="900" height="330" aria-hidden="true"></canvas><div class="temperature-tooltip hidden"></div></div>
-          <div class="temperature-analysis">
-            <div><span>Pressure change</span><strong class="temp-pressure-change">—</strong></div>
-            <div><span><b class="temp-analysis-name">Pipe</b> change</span><strong class="temp-temperature-change">—</strong></div>
-          </div>
           <div class="temperature-inspector">
             <div class="temperature-inspector-readout">
               <div class="inspector-time"><span>Selected time</span><strong class="temp-inspector-time">Live</strong></div>
