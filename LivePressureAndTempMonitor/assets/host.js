@@ -60,7 +60,7 @@
     return {
       jobNumber: '', poAfe: '', location: '', owner: 'Atmos Energy', contractor: 'Bobcat Contracting', ownerRep: '',
       displayName: testNameForSlot(slot), offset: 0, rampProfile: 'normal', equipment: {}, events: [], officialStart: '', officialEnd: '',
-      chartMax: '1000', traceThickness: '1.0', windowBottom: '', windowTop: '', design: null, sheet: null, sheetStartRow: '', sheetColumns: null, manualTemperatures: [], slot,
+      chartMax: '1000', traceThickness: '1.0', windowBottom: '', windowTop: '', design: null, sheet: null, sheetStartRow: '', sheetColumns: { comments: false }, manualTemperatures: [], slot,
     };
   }
 
@@ -74,6 +74,8 @@
         equipment: { ...fallback.equipment, ...(saved.equipment || {}) },
         events: Array.isArray(saved.events) ? saved.events : [],
         manualTemperatures: Array.isArray(saved.manualTemperatures) ? saved.manualTemperatures.slice(-5000) : [],
+        // Remarks start switched off only for new tests; a test saved before that keeps every column on.
+        sheetColumns: 'sheetColumns' in saved ? saved.sheetColumns : null,
       };
     } catch (_) {}
     return fallback;

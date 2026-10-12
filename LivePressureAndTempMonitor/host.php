@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
               <label><input type="checkbox" data-sheet-column="ambient" checked> Ambient</label>
               <label><input type="checkbox" data-sheet-column="pipe" checked> Pipe</label>
               <label><input type="checkbox" data-sheet-column="ground" checked> Soil</label>
-              <label><input type="checkbox" data-sheet-column="comments" checked> Remarks</label>
+              <label><input type="checkbox" data-sheet-column="comments"> Remarks</label>
             </div>
             <div class="sheet-sync-message">Manual-only: the site will not update this Sheet until you press Sync to Sheet. Local gauge recording continues independently.</div>
           </section>
@@ -373,7 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/workspace.js?v=6"></script>
   <script src="assets/field-power.js?v=2"></script>
   <script src="assets/logbook.js?v=2"></script>
-  <script src="assets/host.js?v=54"></script>
+  <script src="assets/host.js?v=55"></script>
 <?php endif; ?>
 </body>
 </html>
