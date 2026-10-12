@@ -35,8 +35,8 @@
 
     // Hide hardware/import controls and disable all paperwork/export buttons.
     // API, serial and storage guards in host.js enforce isolation independently of UI.
-    app.querySelectorAll('.connect-button,.demo-button,.bleed-demo-button,.paste-test-button,.backup-import-button').forEach(el => { el.hidden = true; });
-    const blocked = '.paperwork-sync-panel button,.paperwork-sync-panel a,[data-export],.download-button,.download-test-backup,.download-atmos-log,.temperature-device-connect,.temperature-device-disconnect';
+    app.querySelectorAll('.connect-button,.backup-import-button').forEach(el => { el.hidden = true; });
+    const blocked = '.paperwork-sync-panel button,.paperwork-sync-panel a,[data-export],.download-atmos-log,.temperature-device-connect,.temperature-device-disconnect';
     app.addEventListener('click', event => {
       if (event.target.closest(blocked)) {
         event.preventDefault(); event.stopImmediatePropagation();

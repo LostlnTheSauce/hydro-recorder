@@ -10,7 +10,6 @@ Start with [CURRENT_PROJECT.md](CURRENT_PROJECT.md). It lists the decisions the 
 | --- | --- |
 | `LivePressureAndTempMonitor/` | The website: operator page, read-only viewer, test history and replay. PHP and MySQL on cPanel. See its [README](LivePressureAndTempMonitor/README.md). |
 | `MadgeTechFieldBridge/` | The field-laptop app that reads the RTDTempX4 through MadgeTech 4 and uploads temperatures. See its [README](MadgeTechFieldBridge/README.md). |
-| `MadgeTechProbe/` | An earlier MadgeTech diagnostic tool. |
 | `LandingPageUpdate/` | The main `grantgsolutions.com` landing page. |
 | `recordings/` | Ten exported online test snapshots and a field temperature journal, published with the owner's approval. Snapshots, not a live sync. |
 | `dev/preview.cjs` | Offline preview of the website. |
