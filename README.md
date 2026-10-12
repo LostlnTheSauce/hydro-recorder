@@ -13,7 +13,6 @@ Start with [CURRENT_PROJECT.md](CURRENT_PROJECT.md). It lists the decisions the 
 | `LandingPageUpdate/` | The main `grantgsolutions.com` landing page. |
 | `recordings/` | Ten exported online test snapshots and a field temperature journal, published with the owner's approval. Snapshots, not a live sync. |
 | `dev/preview.cjs` | Offline preview of the website. |
-| `archive/python-recorder/` | An earlier Python rebuild. Not what runs `/hydro`. Kept for reference; its viewer still deploys to `/watch`. |
 
 ## Deploying to the live site
 
