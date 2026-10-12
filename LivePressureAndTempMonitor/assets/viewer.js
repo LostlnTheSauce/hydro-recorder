@@ -21,8 +21,6 @@
   let temperatureTimer = null;
   let temperatureInFlight = false;
   let temperatureCursor = 0;
-  let lastLogBucket = -1;
-  let logIntervalMs = 15000;
   const state = { A: { readings: [], liveTemperatures: [], config: {} }, B: { readings: [], liveTemperatures: [], config: {} }, notes: [] };
 
   const defaults = {
@@ -186,39 +184,35 @@
     } finally { temperatureInFlight = false; }
   }
 
+  // Log book per test: pressure plus only the probes the host shares with viewers.
+  const viewerLogbooks = {};
+  function viewerLogbookData(slot) {
+    const config = configFor(slot), temperature = config.temperature || {};
+    const enabled = temperature.viewerVisible === true ? temperature.enabledProbes || ['ambient','pipe','soil','aux'] : [];
+    const manual = enabled.length && Array.isArray(temperature.readings) ? temperature.readings : [];
+    const live = state[slot].liveTemperatures;
+    const key = `${live.length}:${live.at(-1)?.at}:${manual.length}:${manual.at(-1)?.at}`;
+    if (state[slot].logbookCache?.key !== key || state[slot].logbookCache.live !== live) {
+      const temperatures = [...live, ...manual].sort((a, b) => Number(a.at) - Number(b.at));
+      const present = new Set(['ambient','pipe','soil','aux'].filter(name => temperatures.some(row => row[name] !== null && row[name] !== '' && row[name] !== undefined && Number.isFinite(Number(row[name])))));
+      state[slot].logbookCache = { key, live, temperatures, present };
+    }
+    const names = Array.isArray(temperature.channels) ? temperature.channels : [];
+    const channels = TemperatureChartRenderer.DEFAULT_CHANNELS
+      .filter(channel => enabled.includes(channel.key) && state[slot].logbookCache.present.has(channel.key))
+      .map(channel => ({ key: channel.key, name: names.find(item => item.key === channel.key)?.name || channel.name }));
+    return { pressure: state[slot].readings, temperatures: enabled.length ? state[slot].logbookCache.temperatures : [], channels, wholeDegrees: temperature.wholeDegrees === true };
+  }
+
   function renderPressureLog(force = false) {
-    const body = document.getElementById('viewerPressureLog'), table = body.closest('table');
-    const slots = secondTestIsActive() ? ['A','B'] : ['A'], columns = [], buckets = new Map();
-    const signature = JSON.stringify(slots.map(slot => [configFor(slot), Math.floor((state[slot].readings.at(-1)?.at || 0)/logIntervalMs), Math.floor((state[slot].liveTemperatures.at(-1)?.at || 0)/logIntervalMs)]));
-    if (!force && signature === lastLogBucket) return;
-    lastLogBucket = signature;
-    for (const slot of slots) {
-      const config = configFor(slot), temperature = config.temperature || {};
-      columns.push({ slot, key:'pressure', label:`${config.name} PSI`, whole:true });
-      const enabled = temperature.viewerVisible === true ? temperature.enabledProbes || ['ambient','pipe','soil','aux'] : [];
-      for (const channel of TemperatureChartRenderer.DEFAULT_CHANNELS) if (enabled.includes(channel.key)) {
-        columns.push({ slot, key:channel.key, label:`${config.name} ${channel.name} °F`, whole:temperature.wholeDegrees === true });
-      }
-      const all = [...state[slot].readings, ...(enabled.length ? [...state[slot].liveTemperatures,...(temperature.readings || [])] : [])].sort((a,b) => a.at-b.at);
-      for (const reading of all) {
-        const at = Math.floor(reading.at/logIntervalMs)*logIntervalMs;
-        if (!buckets.has(at)) buckets.set(at, {});
-        const values = buckets.get(at);
-        for (const col of columns.filter(c => c.slot === slot)) if (reading[col.key] !== null && reading[col.key] !== undefined && Number.isFinite(Number(reading[col.key]))) values[`${slot}:${col.key}`] = Number(reading[col.key]);
-      }
+    if (!window.HydroLogbook) return;
+    for (const slot of ['A', 'B']) {
+      const container = document.querySelector(`[data-viewer-logbook="${slot}"]`);
+      if (!container) continue;
+      if (!viewerLogbooks[slot]) viewerLogbooks[slot] = window.HydroLogbook.mount(container, { getData: () => viewerLogbookData(slot), storageKey: 'grantg-viewer-logbook-interval' });
+      container.querySelector('.logbook-header h3').textContent = `${configFor(slot).name} log book`;
+      viewerLogbooks[slot].refresh(force);
     }
-    const head = document.createElement('tr');
-    for (const title of ['Date','Time interval',...columns.map(c => c.label)]) { const th = document.createElement('th'); th.textContent = title; head.append(th); }
-    table.tHead.replaceChildren(head); body.replaceChildren();
-    const selected = [...buckets.entries()].sort((a,b) => b[0]-a[0]).slice(0,2000);
-    for (const [at, values] of selected) {
-      const row = document.createElement('tr');
-      for (const value of [new Date(at).toLocaleDateString(),new Date(at).toLocaleTimeString(),...columns.map(c => values[`${c.slot}:${c.key}`] === undefined ? '—' : values[`${c.slot}:${c.key}`].toFixed(c.whole ? 0 : 1))]) {
-        const cell = document.createElement('td'); cell.textContent = value; row.append(cell);
-      }
-      body.append(row);
-    }
-    if (!selected.length) { const row = body.insertRow(), cell = row.insertCell(); cell.colSpan = columns.length+2; cell.textContent = 'Waiting for pressure or temperature readings.'; }
   }
 
   function renderViewerNotes() {
@@ -291,7 +285,6 @@
     showLoginError('');
     try {
       lastId = 0;
-      lastLogBucket = -1;
       state.A.readings = [];
       state.B.readings = [];
       state.A.liveTemperatures = [];
@@ -308,7 +301,6 @@
   setInterval(updateFeedStatus, 1000);
 
   const viewerGrid = document.getElementById('viewerGaugeGrid');
-  const viewerLogDescription = document.getElementById('viewerLogDescription');
 
   function setViewerLayout(mode) {
     const allowedMode = !secondTestIsActive() && mode !== 'A' ? 'A' : mode;
@@ -349,16 +341,6 @@
   }
   document.querySelectorAll('[data-view-gauge]').forEach((root) => {
     window.TemperatureChartRenderer.bindPanel(root.querySelector('[data-temperature-panel]'), () => renderGauge(root.dataset.viewGauge));
-  });
-  document.querySelectorAll('[data-viewer-log-interval]').forEach((button) => {
-    button.addEventListener('click', () => {
-      logIntervalMs = Number(button.dataset.viewerLogInterval) || 15000;
-      document.querySelectorAll('[data-viewer-log-interval]').forEach((item) => item.classList.toggle('active', item === button));
-      const label = logIntervalMs === 15000 ? '15 seconds' : logIntervalMs === 60000 ? '1 minute' : logIntervalMs === 300000 ? '5 minutes' : '15 minutes';
-      viewerLogDescription.textContent = `Latest value in each ${label} interval · newest first · latest 2,000 rows · missing values stay blank`;
-      lastLogBucket = -1;
-      renderPressureLog(true);
-    });
   });
   document.querySelectorAll('[data-layout-mode]').forEach((button) => {
     button.addEventListener('click', () => {

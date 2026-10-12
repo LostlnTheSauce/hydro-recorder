@@ -13,7 +13,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/viewer-workspace.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=2">
+  <link rel="stylesheet" href="assets/control-room.css?v=3">
 </head>
 <body>
 <?php if (!$validId): ?>
@@ -98,26 +98,18 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
         <summary><span>Test notes</span><small>Updates entered by the test operator</small></summary>
         <div class="event-note-list" id="viewerNotesList"><p class="note-empty">No notes have been added.</p></div>
       </details>
-      <details class="pressure-log" open>
-        <summary><span>Pressure &amp; temperature log</span><small id="viewerLogDescription">Latest value in each 15-second interval · newest first · latest 2,000 rows · missing values stay blank</small></summary>
-        <div class="log-interval-controls" aria-label="Viewer pressure log interval">
-          <span>Show recordings every</span>
-          <button class="active" type="button" data-viewer-log-interval="15000">15 sec</button>
-          <button type="button" data-viewer-log-interval="60000">1 min</button>
-          <button type="button" data-viewer-log-interval="300000">5 min</button>
-          <button type="button" data-viewer-log-interval="900000">15 min</button>
-        </div>
-        <div class="log-table-wrap">
-          <table><thead><tr><th>Date</th><th>Time</th><th>Test 1</th><th>Test 2</th></tr></thead><tbody id="viewerPressureLog"><tr><td class="log-empty" colspan="4">Waiting for pressure readings.</td></tr></tbody></table>
-        </div>
-      </details>
+      <section class="pressure-log viewer-logbooks">
+        <div class="logbook-card" data-viewer-logbook="A"></div>
+        <div class="logbook-card second-test-control hidden" data-viewer-logbook="B"></div>
+      </section>
       <footer><span>Remote chart updates approximately every second.</span><span>Displayed pressure includes the offset selected on the host laptop.</span></footer>
     </div>
   </main>
   <script src="assets/chart.js?v=13"></script>
 <script src="assets/temperature.js?v=26"></script>
   <script src="assets/jobs.js?v=1"></script>
-  <script src="assets/viewer.js?v=23"></script>
+  <script src="assets/logbook.js?v=1"></script>
+  <script src="assets/viewer.js?v=24"></script>
 <?php endif; ?>
 </body>
 </html>

@@ -117,7 +117,8 @@
     const practice = document.createElement('p'); practice.className = 'practice-sharing-note'; practice.dataset.workspacePanel = 'sharing';
     practice.textContent = 'Sharing is turned off in the practice demo.';
     main.append(practice);
-    app.querySelector('.pressure-log').dataset.workspacePanel = 'logs';
+    // Replaced by the log book on the Live test page.
+    app.querySelector('.pressure-log').dataset.workspacePanel = 'retired';
     app.querySelectorAll('[data-dashboard-tab]').forEach(button => button.addEventListener('click', render));
     render();
   }
