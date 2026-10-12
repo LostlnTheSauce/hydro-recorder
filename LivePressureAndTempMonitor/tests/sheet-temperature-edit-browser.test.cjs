@@ -45,6 +45,12 @@ async function main() {
     await page.goto(`${base}/host.php`);
     await page.waitForFunction(() => window.testGauges && window.testGauges[0]);
 
+    // New tests start with the Remarks column switched off; this test syncs remarks too.
+    assert.equal(await page.locator('[data-sheet-column="comments"]').first().isChecked(), false, 'Remarks off by default');
+    assert.deepEqual(await page.evaluate(() => window.testGauges[0].sheetColumnsOff()), ['comments']);
+    await page.evaluate(() => { const box = document.querySelector('[data-sheet-column="comments"]'); box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true })); });
+    assert.deepEqual(await page.evaluate(() => window.testGauges[0].sheetColumnsOff()), []);
+
     // Official test started 20 minutes ago: rows at start and start + 15 min.
     const start = await page.evaluate(() => {
       const g = window.testGauges[0];
@@ -141,6 +147,16 @@ async function main() {
     assert.equal(log.cell('D30'), 55, 'switched-off column is not overwritten');
     assert.equal(log.cell('E30'), 70, 'other columns still sync');
     assert.equal(await page.evaluate(() => window.testGauges[0].testState.sheetColumns.pipe), false, 'switch is saved with the test');
+
+    // A test saved before the Remarks default existed keeps every column on after a reload.
+    await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => k.endsWith('A') && JSON.parse(localStorage.getItem(k) || 'null')?.sheetColumns);
+      const saved = JSON.parse(localStorage.getItem(key)); delete saved.sheetColumns; localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await page.reload();
+    await page.waitForFunction(() => window.testGauges && window.testGauges[0]);
+    assert.deepEqual(await page.evaluate(() => window.testGauges[0].sheetColumnsOff()), [], 'older saved test keeps Remarks on');
+    assert.equal(await page.locator('[data-sheet-column="comments"]').first().isChecked(), true);
 
     assert.deepEqual(errors, []);
     console.log('Google Sheet temperature edits: correction, deletion and replacement Sheet passed.');
