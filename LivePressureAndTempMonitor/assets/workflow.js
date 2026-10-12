@@ -12,6 +12,7 @@
   };
   const steps = profile => profile === 'staged' ? [0, 25, 50, 75, 100] : profile === 'half' ? [0, 50, 75, 100] : [0, 75, 100];
   const number = value => value === '' || value === null || value === undefined || !Number.isFinite(Number(value)) ? null : Number(value);
+  const SHEET_COLUMNS = ['pressure', 'ambient', 'pipe', 'ground', 'comments'];
   function create(test = {}) {
     const events = test.events || [];
     const last = type => [...events].reverse().find(e => e.type === type);
@@ -192,5 +193,5 @@
       officialLastRow: official ? sheetLogRows[startIndex + official - 1] : 0,
     };
   }
-  return { stages, steps, number, create, nextQuarter, nextStart, deadline, advance, recordEvent, setBaseline, observe, saveStroke, officialTimes, archive, sheetCapacity, validatePeriod, manualStroke };
+  return { stages, steps, number, SHEET_COLUMNS, create, nextQuarter, nextStart, deadline, advance, recordEvent, setBaseline, observe, saveStroke, officialTimes, archive, sheetCapacity, validatePeriod, manualStroke };
 });

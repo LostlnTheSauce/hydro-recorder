@@ -60,7 +60,7 @@
     return {
       jobNumber: '', poAfe: '', location: '', owner: 'Atmos Energy', contractor: 'Bobcat Contracting', ownerRep: '',
       displayName: testNameForSlot(slot), offset: 0, rampProfile: 'normal', equipment: {}, events: [], officialStart: '', officialEnd: '',
-      chartMax: '1000', traceThickness: '1.0', windowBottom: '', windowTop: '', design: null, sheet: null, sheetStartRow: '', manualTemperatures: [], slot,
+      chartMax: '1000', traceThickness: '1.0', windowBottom: '', windowTop: '', design: null, sheet: null, sheetStartRow: '', sheetColumns: null, manualTemperatures: [], slot,
     };
   }
 
@@ -733,6 +733,12 @@
         if (this.testState.sheet?.url) window.open(this.testState.sheet.url, '_blank', 'noopener');
       });
       this.root.querySelector('.sync-google-sheet').addEventListener('click', () => this.syncGoogleSheet());
+      this.root.querySelectorAll('[data-sheet-column]').forEach((box) => box.addEventListener('change', () => {
+        this.testState.sheetColumns = Object.fromEntries([...this.root.querySelectorAll('[data-sheet-column]')].map((input) => [input.dataset.sheetColumn, input.checked]));
+        localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
+        const off = this.sheetColumnsOff();
+        this.renderSheetStatus(off.length ? `Sync to Sheet will leave the ${off.join(', ')} column${off.length === 1 ? '' : 's'} as they are in the Sheet.` : 'Sync to Sheet will fill every column.');
+      }));
       this.root.querySelector('.sheet-start-row-input').addEventListener('change', (event) => {
         const row = Math.round(Number(event.target.value));
         this.testState.sheetStartRow = event.target.value === '' || !Number.isFinite(row) ? '' : row;
@@ -764,6 +770,7 @@
       const copy = this.root.querySelector('.sheet-sync-message');
       const startRow = this.root.querySelector('.sheet-start-row-input');
       if (document.activeElement !== startRow) startRow.value = this.testState.sheetStartRow || '';
+      this.root.querySelectorAll('[data-sheet-column]').forEach((box) => { box.checked = this.testState.sheetColumns?.[box.dataset.sheetColumn] !== false; });
       const exists = Boolean(sheet?.spreadsheetId && sheet?.url);
       open.disabled = !exists;
       sync.disabled = !exists || this.sheetSyncInFlight;
@@ -832,12 +839,17 @@
       (this.testState.events || [])
         .filter((event) => ['configuration', 'note'].includes(event.type) && Math.abs(Number(event.at) - timestamp) < 7.5 * 60 * 1000)
         .forEach((event) => remarks.push(event.label));
+      // Temperatures go to the Sheet as whole degrees.
+      const degrees = (value) => {
+        const reading = window.HydroWorkflow.number(value);
+        return reading === null ? '' : Math.round(reading);
+      };
       return {
         at: timestamp,
         pressure: Number.isFinite(pressure) ? Math.round(pressure) : '',
-        ambient: window.HydroWorkflow.number(temperature.ambient) ?? '',
-        pipe: window.HydroWorkflow.number(temperature.pipe) ?? '',
-        ground: window.HydroWorkflow.number(temperature.soil) ?? '',
+        ambient: degrees(temperature.ambient),
+        pipe: degrees(temperature.pipe),
+        ground: degrees(temperature.soil),
         comments: [...new Set(remarks.filter(Boolean))].join(' / '),
       };
     }
@@ -873,8 +885,16 @@
       return { preTestRows: pre, officialRows: official, postTestRows: post };
     }
 
+    sheetColumnsOff() {
+      const columns = this.testState.sheetColumns || {};
+      return window.HydroWorkflow.SHEET_COLUMNS.filter((column) => columns[column] === false);
+    }
+
     sheetSnapshot(options = {}) {
       const rows = this.sheetRows(options);
+      // Columns switched off are sent blank, and the Sheet script leaves those cells as they are.
+      const off = this.sheetColumnsOff();
+      if (off.length) Object.values(rows).forEach((list) => list.forEach((row) => off.forEach((column) => { row[column] = ''; })));
       window.HydroWorkflow.sheetCapacity(rows, this.testState.sheetStartRow);
       const testDateMs = this.testState.officialStart
         ? new Date(this.testState.officialStart).getTime()
@@ -890,6 +910,7 @@
         equipment: this.selectedEquipmentForSheet(),
         pressureOffset: this.pressureOffset(),
         sheetStartRow: Number(this.testState.sheetStartRow) || 0,
+        sheetSkipColumns: this.sheetColumnsOff(),
         testDateMs,
         ...rows,
       };
@@ -931,10 +952,10 @@
         const importedTemperatures = this.importSheetTemperatures(result.temperatureReadings);
         this.testState.sheet = {
           spreadsheetId: result.spreadsheetId, url: result.url, title: result.title,
-          createdAt, lastSyncedAt: result.updatedAt || new Date().toISOString(), finalized: false,
+          createdAt, lastSyncedAt: result.updatedAt || new Date().toISOString(), finalized: false, scriptVersion: Number(result.layoutVersion) || 1,
         };
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
-        if (result.layoutVersion !== 2) this.renderSheetStatus(`Created ${result.title}, but the Google Sheet script is out of date, so it used the old fixed rows and ignored the start row. Paste the new Code.gs into Apps Script and deploy a new version (see SETUP.md).`, 'error');
+        if (!(result.layoutVersion >= 3)) this.renderSheetStatus(`Created ${result.title}, but the Google Sheet script is out of date. Paste the new Code.gs into Apps Script and deploy a new version (see SETUP.md).`, 'error');
         else this.renderSheetStatus(`Created ${result.title}. Future Sheet updates are manual-only; press Sync to Sheet when ready.${importedTemperatures ? ` Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'}.` : ''}`, 'complete');
         if (opened) opened.location.href = result.url;
       } catch (error) {
@@ -951,7 +972,12 @@
       if (!this.testState.sheet?.spreadsheetId || this.sheetSyncInFlight) return;
       const startRow = Number(this.testState.sheetStartRow) || 0;
       const where = startRow ? `from LOG row ${startRow} down (rows above it are only used for pre-test entries)` : 'from LOG row 23 down';
-      if (!window.confirm(`Sync to Google Sheet now? This will rewrite times, pressures and comments ${where}. Temperatures typed in columns C–E stay with their time unless the site has a reading. Continue?`)) return;
+      const off = this.sheetColumnsOff();
+      const kept = off.length ? ` Columns switched off (${off.join(', ')}) are left as they are.` : '';
+      if (!window.confirm(`Sync to Google Sheet now? This will rewrite times, pressures and comments ${where}.${kept} Temperatures typed in columns C–E stay with their time unless the site has a reading. Continue?`)) return;
+      // An older Sheet script would blank a switched-off pressure or remarks column.
+      if (off.some((column) => column === 'pressure' || column === 'comments') && !(Number(this.testState.sheet.scriptVersion) >= 3)
+        && !window.confirm('Switching off the pressure or remarks column needs the updated Google Sheet script (Code.gs). If it has not been deployed yet, press Cancel, or that column will be cleared. Continue?')) return;
       this.sheetSyncInFlight = true;
       this.renderSheetStatus('Writing the current test values to Google Sheet…', 'working');
       try {
@@ -964,11 +990,11 @@
         const importedTemperatures = this.importSheetTemperatures(result.temperatureReadings);
         this.testState.sheet = {
           ...this.testState.sheet, url: result.url || this.testState.sheet.url, title: result.title || this.testState.sheet.title,
-          lastSyncedAt: result.updatedAt || new Date().toISOString(), finalized: false,
+          lastSyncedAt: result.updatedAt || new Date().toISOString(), finalized: false, scriptVersion: Number(result.layoutVersion) || 1,
         };
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
-        if (result.layoutVersion !== 2) {
-          this.renderSheetStatus('Synced, but the Google Sheet script is out of date, so it used the old fixed rows and ignored the start row. Paste the new Code.gs into Apps Script and deploy a new version (see SETUP.md).', 'error');
+        if (!(result.layoutVersion >= 3)) {
+          this.renderSheetStatus('Synced, but the Google Sheet script is out of date, so the start row and column switches may have been ignored. Paste the new Code.gs into Apps Script and deploy a new version (see SETUP.md).', 'error');
           return;
         }
         const rows = result.officialFirstRow ? ` on ${result.officialFirstRow === result.officialLastRow ? `LOG row ${result.officialFirstRow}` : `LOG rows ${result.officialFirstRow}–${result.officialLastRow}`}` : '';

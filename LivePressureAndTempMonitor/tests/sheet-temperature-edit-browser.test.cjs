@@ -119,6 +119,29 @@ async function main() {
     assert.equal(await page.evaluate(() => window.testGauges[0].sheetRows().officialRows.length), 9, 'a start entered two hours late builds every 15-minute row back to it');
     assert.equal(await page.locator('.test-end').first().inputValue(), '', 'planned end is not saved');
 
+    // An unplugged ambient probe (-321 °F) with the Ambient switch off: the Sheet's
+    // ambient cell is left alone; other temperatures go in as whole degrees.
+    await page.evaluate((at) => {
+      const g = window.testGauges[0];
+      g.temperatureReadings.push({ at, source: 'manual', ambient: -321.754, pipe: 68.9936, soil: 69.7874 });
+      g.temperatureReadings.sort((x, y) => x.at - y.at);
+    }, lateStart);
+    log.getRange('C30').setValue(77);
+    await page.locator('[data-sheet-column="ambient"]').first().uncheck();
+    await sync();
+    assert.deepEqual([log.cell('C30'), log.cell('D30'), log.cell('E30')], [77, 69, 70], 'ambient untouched, others whole degrees');
+    await page.locator('[data-sheet-column="ambient"]').first().check();
+
+    // Pipe column switched off: the Sheet's pipe value is left as typed.
+    log.getRange('D30').setValue(55);
+    const pipeBox = page.locator('[data-sheet-column="pipe"]').first();
+    await pipeBox.uncheck();
+    assert.match(await page.locator('.sheet-sync-message').first().innerText(), /leave the pipe column/);
+    await sync();
+    assert.equal(log.cell('D30'), 55, 'switched-off column is not overwritten');
+    assert.equal(log.cell('E30'), 70, 'other columns still sync');
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.sheetColumns.pipe), false, 'switch is saved with the test');
+
     assert.deepEqual(errors, []);
     console.log('Google Sheet temperature edits: correction, deletion and replacement Sheet passed.');
   } finally { await browser.close(); server.close(); }

@@ -176,6 +176,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
               <button class="sync-google-sheet" type="button" disabled>Sync to Sheet</button>
               <label class="sheet-start-row" style="display:flex;align-items:center;gap:8px;font-size:.85rem">Official test starts on LOG row <input class="sheet-start-row-input" style="width:5.5em" type="number" min="23" max="87" step="1" inputmode="numeric" placeholder="Auto"></label>
             </div>
+            <div class="sheet-columns" style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:.85rem;margin-top:12px">
+              <span>Sync these columns:</span>
+              <label><input type="checkbox" data-sheet-column="pressure" checked> Pressure</label>
+              <label><input type="checkbox" data-sheet-column="ambient" checked> Ambient</label>
+              <label><input type="checkbox" data-sheet-column="pipe" checked> Pipe</label>
+              <label><input type="checkbox" data-sheet-column="ground" checked> Soil</label>
+              <label><input type="checkbox" data-sheet-column="comments" checked> Remarks</label>
+            </div>
             <div class="sheet-sync-message">Manual-only: the site will not update this Sheet until you press Sync to Sheet. Local gauge recording continues independently.</div>
           </section>
           <div class="operations-grid job-fields">
@@ -392,15 +400,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/qrcode.js?v=7"></script>
   <script src="assets/test-design-parser.js?v=4"></script>
   <script src="assets/test-design.js?v=2"></script>
-  <script src="assets/workflow.js?v=4"></script>
+  <script src="assets/workflow.js?v=5"></script>
   <script src="assets/demo.js?v=3"></script>
   <script src="assets/jobs.js?v=2"></script>
   <script src="assets/cloud-history.js?v=2"></script>
-  <script src="assets/workflow-ui.js?v=10"></script>
+  <script src="assets/workflow-ui.js?v=11"></script>
   <script src="assets/workspace.js?v=6"></script>
   <script src="assets/field-power.js?v=2"></script>
   <script src="assets/logbook.js?v=2"></script>
-  <script src="assets/host.js?v=53"></script>
+  <script src="assets/host.js?v=54"></script>
 <?php endif; ?>
 </body>
 </html>
