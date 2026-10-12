@@ -1,6 +1,12 @@
 const HYDRO_TEMPLATE_ID = 'REDACTED';
 const HYDRO_SECRET_PROPERTY = 'HYDRO_SYNC_SECRET';
 const HYDRO_ALLOWED_PREFIX = 'HYDRO_SHEET_';
+const HYDRO_LAYOUT_VERSION = 2;
+// LOG data rows: 23-48 on the first page, 51-87 on the second (49 is blank, 50 repeats the header).
+const HYDRO_LOG_ROWS = [
+  ...Array.from({ length: 26 }, (_, index) => 23 + index),
+  ...Array.from({ length: 37 }, (_, index) => 51 + index)
+];
 
 function setupHydroAutomation() {
   const secret = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
@@ -117,23 +123,95 @@ function hydroApply_(spreadsheet, snapshot, finalized) {
   hydroSet_(strokes, 'M14', 10);
   hydroSet_(strokes, 'M16', hydroNumberOrBlank_(pump.capacity));
 
-  const preRows = Array.isArray(snapshot.preTestRows) ? snapshot.preTestRows.slice(0, 4) : [];
-  const officialRows = Array.isArray(snapshot.officialRows) ? snapshot.officialRows.slice(0, 33) : [];
-  const postRows = Array.isArray(snapshot.postTestRows) ? snapshot.postTestRows.slice(0, 26) : [];
-  hydroWriteBlock_(log, 23, 4, preRows);
-  hydroWriteBlock_(log, 27, 22, officialRows.slice(0, 22));
-  hydroWriteBlock_(log, 51, 11, officialRows.slice(22));
-  hydroWriteBlock_(log, 62, 26, postRows);
-  hydroSummaryFormulas_(summary, officialRows.length);
+  const layout = hydroLayout_(snapshot);
+  hydroWriteLog_(log, layout);
+  hydroSummaryFormulas_(summary, layout.officialFirstRow, layout.officialLastRow);
 
   SpreadsheetApp.flush();
   return {
     updatedAt: new Date().toISOString(),
     finalized,
+    layoutVersion: HYDRO_LAYOUT_VERSION,
     adjustedOffset: Number(snapshot.pressureOffset) || 0,
-    officialRowsWritten: officialRows.length,
+    officialRowsWritten: layout.officialCount,
+    officialFirstRow: layout.officialFirstRow,
+    officialLastRow: layout.officialLastRow,
     temperatureReadings: hydroTemperatureReadings_(log)
   };
+}
+
+// Decides which LOG row each entry goes on. Auto: pre-test entries from row 23,
+// the official test right after them, post-test right after that. With a chosen
+// start row, the official test begins on that row and the rows above it that the
+// pre-test entries do not need are left exactly as the operator typed them.
+function hydroLayout_(snapshot) {
+  const pre = Array.isArray(snapshot.preTestRows) ? snapshot.preTestRows : [];
+  const official = Array.isArray(snapshot.officialRows) ? snapshot.officialRows : [];
+  const post = Array.isArray(snapshot.postTestRows) ? snapshot.postTestRows : [];
+  const capacity = HYDRO_LOG_ROWS.length;
+  const chosen = Number(snapshot.sheetStartRow) || 0;
+  let startIndex = pre.length;
+  if (chosen) {
+    startIndex = HYDRO_LOG_ROWS.indexOf(chosen);
+    if (startIndex < 0) throw new Error(`Row ${chosen} is not a log row. Pick a row from 23 to 48 or 51 to 87.`);
+    if (pre.length > startIndex) {
+      throw new Error(`The ${pre.length} pre-test entries need ${pre.length} rows above the official start, but row ${chosen} leaves room for ${startIndex}. Pick a later row or use Auto.`);
+    }
+  }
+  const needed = startIndex + official.length + post.length;
+  if (needed > capacity) {
+    throw new Error(`This test needs ${needed} log rows, but the Sheet has ${capacity} (rows 23-48 and 51-87). Pick an earlier start row or use the Records CSV for the extra entries.`);
+  }
+  const entries = new Array(capacity).fill(null);
+  const owned = new Array(capacity).fill(!chosen);
+  pre.forEach((row, index) => { entries[index] = row; owned[index] = true; });
+  [...official, ...post].forEach((row, index) => { entries[startIndex + index] = row; });
+  for (let index = startIndex; index < capacity; index++) owned[index] = true;
+  return {
+    entries,
+    owned,
+    officialCount: official.length,
+    officialFirstRow: official.length ? HYDRO_LOG_ROWS[startIndex] : 0,
+    officialLastRow: official.length ? HYDRO_LOG_ROWS[startIndex + official.length - 1] : 0
+  };
+}
+
+function hydroWriteLog_(log, layout) {
+  const existing = [
+    ...log.getRange(23, 1, 26, 6).getValues(),
+    ...log.getRange(51, 1, 37, 6).getValues()
+  ];
+  const values = existing.map((row, index) => layout.owned[index]
+    ? hydroMergeRow_(layout.entries[index], row, existing)
+    : row);
+  // Write each run of rows the site owns; rows left to the operator are not touched.
+  let index = 0;
+  while (index < HYDRO_LOG_ROWS.length) {
+    if (!layout.owned[index]) { index++; continue; }
+    let end = index;
+    while (end + 1 < HYDRO_LOG_ROWS.length && layout.owned[end + 1] && HYDRO_LOG_ROWS[end + 1] === HYDRO_LOG_ROWS[end] + 1) end++;
+    log.getRange(HYDRO_LOG_ROWS[index], 1, end - index + 1, 6).setValues(values.slice(index, end + 1));
+    index = end + 1;
+  }
+}
+
+// C:E are operator-owned temperature cells. A site value wins; otherwise the
+// temperature typed for the same time is kept, wherever that row has moved to.
+function hydroMergeRow_(entry, current, existing) {
+  const values = entry ? hydroLogRow_(entry) : ['', '', '', '', '', ''];
+  const at = entry ? hydroTime_(values[0]) : NaN;
+  const sameTime = Number.isFinite(at) ? existing.find((row) => Math.abs(hydroTime_(row[0]) - at) <= 30000) : null;
+  const source = sameTime || (Number.isFinite(hydroTime_(current[0])) ? null : current);
+  [2, 3, 4].forEach((column) => {
+    if (values[column] === '') values[column] = source ? source[column] : '';
+  });
+  return values;
+}
+
+function hydroTime_(value) {
+  if (value instanceof Date) return value.getTime();
+  const number = typeof value === 'number' ? value : NaN;
+  return Number.isFinite(number) && number > 0 ? number : NaN;
 }
 
 function hydroSheet_(spreadsheet, name) {
@@ -182,22 +260,6 @@ function hydroInsideDiameter_(segments) {
   return Number.isFinite(inside) ? Number(inside.toFixed(1)) : '';
 }
 
-function hydroWriteBlock_(sheet, startRow, capacity, rows) {
-  const range = sheet.getRange(startRow, 1, capacity, 6);
-  const existing = range.getValues();
-  const incoming = rows.slice(0, capacity).map(hydroLogRow_);
-  const values = Array.from({ length: capacity }, (_, index) => {
-    const valuesForRow = incoming[index] || ['', '', '', '', '', ''];
-    // C:E are operator-owned temperature cells. Never clear them during a
-    // pressure sync, including rows whose timestamp has not been generated yet.
-    [2, 3, 4].forEach(column => {
-      if (valuesForRow[column] === '') valuesForRow[column] = existing[index][column];
-    });
-    return valuesForRow;
-  });
-  range.setValues(values);
-}
-
 function hydroLogRow_(row) {
   return [
     hydroDate_(row.at),
@@ -211,7 +273,7 @@ function hydroLogRow_(row) {
 
 function hydroTemperatureReadings_(log) {
   const rows = [
-    ...log.getRange(23, 1, 27, 5).getValues(),
+    ...log.getRange(23, 1, 26, 5).getValues(),
     ...log.getRange(51, 1, 37, 5).getValues()
   ];
   return rows.map(row => {
@@ -225,10 +287,8 @@ function hydroTemperatureReadings_(log) {
   }).filter(row => Number.isFinite(row.at) && row.at > 0);
 }
 
-function hydroSummaryFormulas_(summary, count) {
-  if (!count) return;
-  const first = 27;
-  const last = count <= 22 ? 26 + count : 50 + (count - 22);
+function hydroSummaryFormulas_(summary, first, last) {
+  if (!first || !last) return;
   hydroFormula_(summary, 'C26', `=IF(COUNT(LOG!B${first}:B${last})=0,"",MAX(LOG!B${first}:B${last}))`);
   hydroFormula_(summary, 'G26', `=IF(COUNT(LOG!B${first}:B${last})=0,"",MIN(LOG!B${first}:B${last}))`);
   hydroFormula_(summary, 'C33', '=C26');

@@ -172,10 +172,25 @@
     return { ...create(), config: { ...state.config }, attempt: state.attempt + 1, archives,
       stage: 'setup', since: at, chartChangedAt: state.chartChangedAt };
   }
-  function sheetCapacity(rows) {
-    for (const [key, max, label] of [['preTestRows', 4, 'pre-test'], ['officialRows', 33, 'official'], ['postTestRows', 26, 'post-test']]) {
-      if ((rows[key] || []).length > max) throw new Error(`This attempt has ${rows[key].length} ${label} rows; the unchanged Sheet template has room for ${max}. No rows were merged or omitted. Use the complete Records CSV and arrange the extra entries manually.`);
+  // The Sheet's LOG data rows: 23-48, then 51-87 after the page break. Must match Code.gs.
+  const sheetLogRows = [...Array.from({ length: 26 }, (_, i) => 23 + i), ...Array.from({ length: 37 }, (_, i) => 51 + i)];
+  function sheetCapacity(rows, startRow = 0) {
+    const pre = (rows.preTestRows || []).length;
+    const official = (rows.officialRows || []).length;
+    const post = (rows.postTestRows || []).length;
+    const chosen = Number(startRow) || 0;
+    let startIndex = pre;
+    if (chosen) {
+      startIndex = sheetLogRows.indexOf(chosen);
+      if (startIndex < 0) throw new Error(`Row ${chosen} is not a log row. Pick a row from 23 to 48 or 51 to 87.`);
+      if (pre > startIndex) throw new Error(`The ${pre} pre-test entries need ${pre} rows above the official start, but row ${chosen} leaves room for ${startIndex}. Pick a later row or use Auto.`);
     }
+    const needed = startIndex + official + post;
+    if (needed > sheetLogRows.length) throw new Error(`This test needs ${needed} log rows, but the Sheet has ${sheetLogRows.length} (rows 23-48 and 51-87). No rows were merged or omitted. Pick an earlier start row or use the Records CSV for the extra entries.`);
+    return {
+      officialFirstRow: official ? sheetLogRows[startIndex] : 0,
+      officialLastRow: official ? sheetLogRows[startIndex + official - 1] : 0,
+    };
   }
   return { stages, steps, number, create, nextQuarter, nextStart, deadline, advance, recordEvent, setBaseline, observe, saveStroke, officialTimes, archive, sheetCapacity, validatePeriod, manualStroke };
 });

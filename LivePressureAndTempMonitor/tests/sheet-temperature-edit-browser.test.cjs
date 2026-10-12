@@ -1,65 +1,13 @@
 // A temperature the operator corrects in the Google Sheet must survive the next
-// Sync to Sheet. Runs the real Apps Script (Code.gs) against an in-memory workbook.
+// Sync to Sheet, and the official test can start on a LOG row the operator picks. Runs the real Apps Script (Code.gs) against an in-memory workbook.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const vm = require('node:vm');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { fixture } = require('./workflow-browser.test.cjs');
+const { fakeWorkbook, appsScript } = require('./fake-google-sheet.cjs');
 const root = path.resolve(__dirname, '..');
-
-function fakeWorkbook() {
-  const tabs = {};
-  const column = (letters) => [...letters].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0);
-  const parse = (a1) => { const m = /^([A-Z]+)(\d+)$/.exec(a1); return [Number(m[2]), column(m[1])]; };
-  const sheet = (name) => {
-    const cells = new Map();
-    const key = (r, c) => `${r},${c}`;
-    const range = (r, c, nr = 1, nc = 1) => ({
-      getValues: () => Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => cells.has(key(r + i, c + j)) ? cells.get(key(r + i, c + j)) : '')),
-      setValues: (values) => values.forEach((row, i) => row.forEach((v, j) => cells.set(key(r + i, c + j), v))),
-      setValue: (v) => cells.set(key(r, c), v),
-      setFormula: (f) => cells.set(key(r, c), f),
-      clearContent: () => { for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) cells.delete(key(r + i, c + j)); },
-    });
-    const a1Range = (a1) => {
-      const [from, to = from] = a1.split(':');
-      const [r1, c1] = parse(from); const [r2, c2] = parse(to);
-      return range(r1, c1, r2 - r1 + 1, c2 - c1 + 1);
-    };
-    return {
-      name,
-      getRange: (a, c, nr, nc) => typeof a === 'string' ? a1Range(a) : range(a, c, nr, nc),
-      getRangeList: (list) => ({ clearContent: () => list.forEach((a1) => a1Range(a1).clearContent()) }),
-      cell: (a1) => a1Range(a1).getValues()[0][0],
-    };
-  };
-  ['LOG', 'Summary', 'Test Stroke Count'].forEach((name) => { tabs[name] = sheet(name); });
-  return {
-    tabs,
-    getSheetByName: (name) => tabs[name] || null,
-    getId: () => 'S'.repeat(30), getUrl: () => 'https://docs.google.com/spreadsheets/d/fake', getName: () => 'Fake hydro sheet',
-    setSpreadsheetTimeZone() {},
-  };
-}
-
-function appsScript(workbook) {
-  const props = new Map();
-  const context = {
-    console, JSON, Date, Number, String, Math, Array, Object, Boolean,
-    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => props.get(k) || null, setProperty: (k, v) => props.set(k, v) }) },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-    DriveApp: { getFileById: () => ({ getParents: () => ({ hasNext: () => false }), makeCopy: () => ({ getId: () => workbook.getId() }) }) },
-    SpreadsheetApp: { openById: () => workbook, flush() {} },
-    Utilities: { getUuid: () => 'x' },
-    ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text) => ({ setMimeType: () => text }) },
-  };
-  vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(root, 'google-apps-script', 'Code.gs'), 'utf8'), context);
-  props.set('HYDRO_SYNC_SECRET', 'secret');
-  return (payload) => JSON.parse(context.doPost({ postData: { contents: JSON.stringify({ ...payload, secret: 'secret' }) } }));
-}
 
 async function main() {
   const workbook = fakeWorkbook();
@@ -107,7 +55,7 @@ async function main() {
     });
     await page.evaluate(() => window.testGauges[0].createGoogleSheet());
     await page.waitForFunction(() => window.testGauges[0].testState.sheet?.spreadsheetId);
-    const row = 27;
+    const row = 23; // Auto: no pre-test entries, so the official test starts on the first log row
     assert.equal(Number(log.cell(`A${row}`)), start, 'first official row is the start time');
 
     // Operator types 60 °F ambient in the Sheet, then syncs: the site picks it up.
@@ -139,6 +87,24 @@ async function main() {
     await page.evaluate(() => window.testGauges[0].createGoogleSheet());
     await page.waitForFunction(() => !window.testGauges[0].sheetSyncInFlight && /Created/.test(document.querySelector('.sheet-sync-message').textContent));
     assert.equal(log.cell(`D${row}`), 71, 'replacement Sheet keeps Sheet temperatures');
+
+    // Operator picks LOG row 30 for the official start; their own row 24 is left alone.
+    log.getRange('A24:F24').setValues([[new Date(start - 30 * 60 * 1000), 3100, 64, 72, 84, 'Typed by hand']]);
+    await page.evaluate(() => document.querySelector('[data-dashboard-tab="logs"]')?.click());
+    const startRow = page.locator('.sheet-start-row-input').first();
+    await startRow.fill('49');
+    await startRow.dispatchEvent('change');
+    assert.match(await page.locator('.sheet-sync-message').first().innerText(), /Row 49 is not a log row/);
+    await startRow.fill('30');
+    await startRow.dispatchEvent('change');
+    assert.match(await page.locator('.sheet-sync-message').first().innerText(), /official test will go on LOG rows 30–31/);
+    await sync();
+    assert.match(log.cell('F30'), /^Begin test/, 'official test starts on the chosen row');
+    assert.equal(log.cell('F24'), 'Typed by hand', 'operator row above the start row is untouched');
+    assert.equal(log.cell('D30'), 71, 'Sheet temperature followed its time to the new row');
+    assert.match(await page.locator('.sheet-sync-message').first().innerText(), /on LOG rows 30–31/);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find((k) => JSON.parse(localStorage.getItem(k) || 'null')?.sheetStartRow !== undefined))).sheetStartRow), 30, 'start row is saved with the test');
+    await page.screenshot({ path: path.join(root, '..', 'tmp', 'sheet-start-row.png'), fullPage: false });
 
     assert.deepEqual(errors, []);
     console.log('Google Sheet temperature edits: correction, deletion and replacement Sheet passed.');

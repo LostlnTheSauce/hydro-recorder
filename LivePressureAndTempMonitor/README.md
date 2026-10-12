@@ -74,6 +74,8 @@ One-time setup: follow `google-apps-script/SETUP.md`, then add `google_apps_scri
 - **Create Google Sheet** copies the clean master template and fills in the job setup. The master is never changed.
 - **Sync to Sheet** writes the current values. It is always a button press with a confirmation; nothing is written automatically.
 - Pressures in the Sheet are the offset-adjusted value nearest each row time (within 30 seconds), rounded to whole psi.
+- **Official test starts on LOG row** (next to Sync to Sheet) picks where the official test goes. Left on Auto, pre-test entries fill from row 23 and the official test follows right after them. With a row chosen, the official test and post-test entries start on that row, and rows above it that the site's pre-test entries don't use are never touched, so they can be filled in by hand. The LOG has 63 rows (23–48 and 51–87); the site says so before syncing a test that will not fit.
+- Temperatures typed in the Sheet stay with their time, even when rows move. A temperature corrected or cleared in the Sheet stays that way on the next sync.
 - Temperatures typed into the Sheet's LOG columns are pulled back into the site on the next sync.
 - The template holds 4 pre-test, 33 official and 26 post-test rows. If a test needs more, the sync stops and says so rather than dropping rows.
 

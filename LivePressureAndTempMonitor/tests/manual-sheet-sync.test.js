@@ -10,6 +10,6 @@ assert.doesNotMatch(page, /class="(?:finalize-google-sheet|toggle-sheet-sync)"/)
 assert.equal((script.match(/this\.syncGoogleSheet\(/g) || []).length, 1, 'only the button handler may call Sheet sync');
 assert.match(script, /\.sync-google-sheet'\)\.addEventListener\('click', \(\) => this\.syncGoogleSheet\(\)\)/);
 assert.doesNotMatch(script, /queueSheetSync|setInterval\([^\n]*syncGoogleSheet|setTimeout\([^\n]*syncGoogleSheet/);
-assert.match(script, /window\.confirm\('Sync to Google Sheet now\?/);
+assert.match(script, /window\.confirm\([`']Sync to Google Sheet now\?/);
 
 console.log('Google Sheet synchronization is manual-only.');
