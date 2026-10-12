@@ -60,7 +60,7 @@
     return {
       jobNumber: '', poAfe: '', location: '', owner: 'Atmos Energy', contractor: 'Bobcat Contracting', ownerRep: '',
       displayName: testNameForSlot(slot), offset: 0, rampProfile: 'normal', equipment: {}, events: [], officialStart: '', officialEnd: '',
-      chartMax: '1000', traceThickness: '1.0', windowBottom: '', windowTop: '', design: null, sheet: null, manualTemperatures: [], slot,
+      chartMax: '1000', traceThickness: '1.0', windowBottom: '', windowTop: '', design: null, sheet: null, sheetStartRow: '', manualTemperatures: [], slot,
     };
   }
 
@@ -735,6 +735,25 @@
         if (this.testState.sheet?.url) window.open(this.testState.sheet.url, '_blank', 'noopener');
       });
       this.root.querySelector('.sync-google-sheet').addEventListener('click', () => this.syncGoogleSheet());
+      this.root.querySelector('.sheet-start-row-input').addEventListener('change', (event) => {
+        const row = Math.round(Number(event.target.value));
+        this.testState.sheetStartRow = event.target.value === '' || !Number.isFinite(row) ? '' : row;
+        event.target.value = this.testState.sheetStartRow;
+        localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
+        try {
+          const layout = window.HydroWorkflow.sheetCapacity(this.sheetRows(), this.testState.sheetStartRow);
+          this.renderSheetStatus(this.sheetRowsMessage(layout, 'will go on'));
+        } catch (error) {
+          this.renderSheetStatus(error.message, 'error');
+        }
+      });
+    }
+
+    sheetRowsMessage(layout, verb) {
+      const chosen = this.testState.sheetStartRow;
+      if (!layout.officialFirstRow) return chosen ? `The official test will start on LOG row ${chosen}. Rows above it that the site doesn't fill are left as you typed them.` : 'The official test will follow the pre-test entries in the LOG.';
+      const rows = `LOG rows ${layout.officialFirstRow}–${layout.officialLastRow}`;
+      return `The official test ${verb} ${rows}${chosen ? '. Rows above it that the site doesn\'t fill are left as you typed them.' : ', right after the pre-test entries.'}`;
     }
 
     renderSheetStatus(message = '', state = '') {
@@ -745,6 +764,8 @@
       const open = this.root.querySelector('.open-google-sheet');
       const sync = this.root.querySelector('.sync-google-sheet');
       const copy = this.root.querySelector('.sheet-sync-message');
+      const startRow = this.root.querySelector('.sheet-start-row-input');
+      if (document.activeElement !== startRow) startRow.value = this.testState.sheetStartRow || '';
       const exists = Boolean(sheet?.spreadsheetId && sheet?.url);
       open.disabled = !exists;
       sync.disabled = !exists || this.sheetSyncInFlight;
@@ -856,7 +877,7 @@
 
     sheetSnapshot(options = {}) {
       const rows = this.sheetRows(options);
-      window.HydroWorkflow.sheetCapacity(rows);
+      window.HydroWorkflow.sheetCapacity(rows, this.testState.sheetStartRow);
       const testDateMs = this.testState.officialStart
         ? new Date(this.testState.officialStart).getTime()
         : Number(this.testState.sheet?.createdAt) || Date.now();
@@ -870,6 +891,7 @@
         design: clone(this.testState.design || {}),
         equipment: this.selectedEquipmentForSheet(),
         pressureOffset: this.pressureOffset(),
+        sheetStartRow: Number(this.testState.sheetStartRow) || 0,
         testDateMs,
         ...rows,
       };
@@ -915,7 +937,8 @@
           createdAt, lastSyncedAt: result.updatedAt || new Date().toISOString(), finalized: false,
         };
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
-        this.renderSheetStatus(`Created ${result.title}. Future Sheet updates are manual-only; press Sync to Sheet when ready.${importedTemperatures ? ` Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'}.` : ''}`, 'complete');
+        if (result.layoutVersion !== 2) this.renderSheetStatus(`Created ${result.title}, but the Google Sheet script is out of date, so it used the old fixed rows and ignored the start row. Paste the new Code.gs into Apps Script and deploy a new version (see SETUP.md).`, 'error');
+        else this.renderSheetStatus(`Created ${result.title}. Future Sheet updates are manual-only; press Sync to Sheet when ready.${importedTemperatures ? ` Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'}.` : ''}`, 'complete');
         if (opened) opened.location.href = result.url;
       } catch (error) {
         if (opened) opened.close();
@@ -929,7 +952,9 @@
     async syncGoogleSheet() {
       if (demo?.enabled) return this.renderSheetStatus('Demo mode cannot create or sync Google Sheets.', 'error');
       if (!this.testState.sheet?.spreadsheetId || this.sheetSyncInFlight) return;
-      if (!window.confirm('Sync to Google Sheet now? This will rewrite generated Sheet fields, including times, pressures, and comments. Temperatures in columns C–E are preserved when no site value is present. Continue?')) return;
+      const startRow = Number(this.testState.sheetStartRow) || 0;
+      const where = startRow ? `from LOG row ${startRow} down (rows above it are only used for pre-test entries)` : 'from LOG row 23 down';
+      if (!window.confirm(`Sync to Google Sheet now? This will rewrite times, pressures and comments ${where}. Temperatures typed in columns C–E stay with their time unless the site has a reading. Continue?`)) return;
       this.sheetSyncInFlight = true;
       this.renderSheetStatus('Writing the current test values to Google Sheet…', 'working');
       try {
@@ -945,7 +970,12 @@
           lastSyncedAt: result.updatedAt || new Date().toISOString(), finalized: false,
         };
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
-        const message = `Synced ${result.officialRowsWritten || 0} official row${result.officialRowsWritten === 1 ? '' : 's'} using the ${this.pressureOffset()} psi offset. Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'} from the Sheet. Manual-only mode remains on.`;
+        if (result.layoutVersion !== 2) {
+          this.renderSheetStatus('Synced, but the Google Sheet script is out of date, so it used the old fixed rows and ignored the start row. Paste the new Code.gs into Apps Script and deploy a new version (see SETUP.md).', 'error');
+          return;
+        }
+        const rows = result.officialFirstRow ? ` on ${result.officialFirstRow === result.officialLastRow ? `LOG row ${result.officialFirstRow}` : `LOG rows ${result.officialFirstRow}–${result.officialLastRow}`}` : '';
+        const message = `Synced ${result.officialRowsWritten || 0} official row${result.officialRowsWritten === 1 ? '' : 's'}${rows} using the ${this.pressureOffset()} psi offset. Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'} from the Sheet. Manual-only mode remains on.`;
         this.renderSheetStatus(message, 'complete');
       } catch (error) {
         this.renderSheetStatus(`${error?.message || 'Google Sheet synchronization failed.'} The local recording is still safe.`, 'error');

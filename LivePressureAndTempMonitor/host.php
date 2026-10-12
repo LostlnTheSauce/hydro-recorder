@@ -174,6 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
               <button class="primary create-google-sheet" type="button">Create Google Sheet</button>
               <button class="open-google-sheet" type="button" disabled>Open Google Sheet</button>
               <button class="sync-google-sheet" type="button" disabled>Sync to Sheet</button>
+              <label class="sheet-start-row" style="display:flex;align-items:center;gap:8px;font-size:.85rem">Official test starts on LOG row <input class="sheet-start-row-input" style="width:5.5em" type="number" min="23" max="87" step="1" inputmode="numeric" placeholder="Auto"></label>
             </div>
             <div class="sheet-sync-message">Manual-only: the site will not update this Sheet until you press Sync to Sheet. Local gauge recording continues independently.</div>
           </section>
@@ -404,7 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/qrcode.js?v=7"></script>
   <script src="assets/test-design-parser.js?v=4"></script>
   <script src="assets/test-design.js?v=2"></script>
-  <script src="assets/workflow.js?v=3"></script>
+  <script src="assets/workflow.js?v=4"></script>
   <script src="assets/demo.js?v=3"></script>
   <script src="assets/jobs.js?v=2"></script>
   <script src="assets/cloud-history.js?v=2"></script>
@@ -412,7 +413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/workspace.js?v=5"></script>
   <script src="assets/field-power.js?v=2"></script>
   <script src="assets/logbook.js?v=1"></script>
-  <script src="assets/host.js?v=50"></script>
+  <script src="assets/host.js?v=51"></script>
 <?php endif; ?>
 </body>
 </html>
