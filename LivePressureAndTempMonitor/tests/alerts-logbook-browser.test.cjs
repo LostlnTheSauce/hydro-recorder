@@ -96,6 +96,21 @@ async function main() {
     await waitFor(async () => /temperature feed stopped/.test(await alerts()), 'temperature alert');
     await page.evaluate(() => window.testGauges[0].temperatureReadings.push({ at: Date.now(), source: 'live', sourceId: 's'.repeat(16), pipe: 70.4 }));
     await waitFor(async () => await page.locator('#hostAlerts').isHidden(), 'temperature alert cleared');
+
+    // Auxiliary under the field laptop at 135 °F or hotter; the per-test switch turns it off.
+    await page.evaluate(() => window.testGauges[0].temperatureReadings.push({ at: Date.now(), source: 'live', sourceId: 's'.repeat(16), pipe: 70.4, aux: 134.9 }));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    assert.ok(await page.locator('#hostAlerts').isHidden(), '134.9 °F does not alert');
+    await page.evaluate(() => window.testGauges[0].temperatureReadings.push({ at: Date.now(), source: 'live', sourceId: 's'.repeat(16), pipe: 70.4, aux: 136.2 }));
+    await waitFor(async () => /Auxiliary is at 136\.2 °F/.test(await alerts()), 'aux heat alert');
+    const toggle = page.locator('.aux-heat-alert-toggle').first();
+    assert.equal(await toggle.isChecked(), true);
+    await toggle.evaluate((input) => { input.checked = false; input.dispatchEvent(new Event('change')); });
+    await waitFor(async () => await page.locator('#hostAlerts').isHidden(), 'aux heat alert switched off');
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.auxHeatAlert), false);
+    await toggle.evaluate((input) => { input.checked = true; input.dispatchEvent(new Event('change')); });
+    await page.evaluate(() => window.testGauges[0].temperatureReadings.push({ at: Date.now(), source: 'live', sourceId: 's'.repeat(16), pipe: 70.4, aux: 112 }));
+    await waitFor(async () => await page.locator('#hostAlerts').isHidden(), 'aux heat alert cleared');
     await page.screenshot({ path: path.join(root, '..', 'tmp', 'alerts-logbook-host.png'), fullPage: true });
 
     // Viewer: same log book, only the probes the host shares (Pipe, not Soil).
@@ -113,7 +128,7 @@ async function main() {
     assert.match(await viewerLog.locator('h3').innerText(), /Line 4 log book/);
     await viewer.screenshot({ path: path.join(root, '..', 'tmp', 'alerts-logbook-viewer.png'), fullPage: true });
     assert.deepEqual(errors, []);
-    console.log('Alerts and log book: gauge unplug, silence, field laptop unplugged/not charging/under 75%, stalled temperatures, host and viewer log books passed.');
+    console.log('Alerts and log book: gauge unplug, silence, field laptop unplugged/not charging/under 75%, stalled temperatures, Auxiliary laptop heat, host and viewer log books passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
