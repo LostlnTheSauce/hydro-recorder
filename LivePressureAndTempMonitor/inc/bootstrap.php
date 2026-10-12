@@ -28,11 +28,18 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 require_once __DIR__ . '/persistent-auth.php';
 
+// Settings are captured once: endpoint code reuses the name $config for test
+// settings, which must never change the site's database or password values.
 function app_config(string $key, mixed $default = null): mixed
 {
-    global $config;
-    return $config[$key] ?? $default;
+    static $settings = null;
+    if ($settings === null) {
+        global $config;
+        $settings = $config;
+    }
+    return $settings[$key] ?? $default;
 }
+app_config('db_host');
 
 function db(): PDO
 {
@@ -58,6 +65,23 @@ function verify_host_password(string $password): bool
 {
     $expected = (string) app_config('host_password', '');
     return $expected !== '' && hash_equals($expected, $password);
+}
+
+// After one password check a viewer polls with a signed token, so the server
+// does not run a slow password hash every second. The token is tied to the
+// current password hash: stopping or re-sharing the viewer invalidates it.
+function viewer_token(string $sessionId, string $passwordHash): string
+{
+    $key = hash('sha256', 'hydro-viewer-token-v1|' . (string) app_config('host_password') . '|' . (string) app_config('db_password'), true);
+    return hash_hmac('sha256', $sessionId . '|' . $passwordHash, $key);
+}
+
+function viewer_authorized(string $sessionId, string $passwordHash, array $payload): bool
+{
+    $token = (string) ($payload['viewer_token'] ?? '');
+    if ($token !== '') return hash_equals(viewer_token($sessionId, $passwordHash), $token);
+    $password = (string) ($payload['viewer_password'] ?? '');
+    return $password !== '' && password_verify($password, $passwordHash);
 }
 
 function require_host(): void

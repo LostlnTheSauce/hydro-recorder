@@ -11,6 +11,9 @@
   const feedError = document.getElementById('viewerFeedError');
   const feedStatus = document.getElementById('feedStatus');
   let password = '';
+  let viewerToken = '';
+  // Send the password once; afterwards the server's signed token is enough.
+  const viewerCredentials = () => viewerToken ? { viewer_token: viewerToken } : { viewer_password: password };
   let lastId = 0;
   let updatedAt = 0;
   let serverClockOffset = 0;
@@ -45,10 +48,11 @@
       const response = await fetch(`${apiUrl}?action=view`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, viewer_password: password, since_id: lastId }),
+        body: JSON.stringify({ session_id: sessionId, ...viewerCredentials(), since_id: lastId }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not load the live test.');
+      if (result.viewer_token) viewerToken = result.viewer_token;
       document.getElementById('viewerTitle').textContent = result.title || 'Live pressure tests';
       updatedAt = Number(result.updated_at) || 0;
       serverClockOffset = (Number(result.server_time) || Date.now()) - Date.now();
@@ -151,7 +155,7 @@
       do {
         const response = await fetch('temperature.php?action=view', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, viewer_password: password, since_id: temperatureCursor }),
+          body: JSON.stringify({ session_id: sessionId, ...viewerCredentials(), since_id: temperatureCursor }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Could not load temperatures.');
@@ -283,6 +287,7 @@
   loginForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     password = document.getElementById('viewerLoginPassword').value;
+    viewerToken = '';
     showLoginError('');
     try {
       lastId = 0;

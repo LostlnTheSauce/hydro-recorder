@@ -212,8 +212,7 @@ if ($action === 'publish') {
 
 if ($action === 'view') {
     $sessionId = (string) ($payload['session_id'] ?? '');
-    $viewerPassword = (string) ($payload['viewer_password'] ?? '');
-    if (!preg_match('/^[a-f0-9]{16}$/', $sessionId) || $viewerPassword === '') {
+    if (!preg_match('/^[a-f0-9]{16}$/', $sessionId) || (($payload['viewer_password'] ?? '') === '' && ($payload['viewer_token'] ?? '') === '')) {
         json_response(['error' => 'Enter the viewer password.'], 400);
     }
     $sessionStatement = db()->prepare(
@@ -221,7 +220,7 @@ if ($action === 'view') {
     );
     $sessionStatement->execute(['id' => $sessionId]);
     $session = $sessionStatement->fetch();
-    if (!$session || !password_verify($viewerPassword, (string) $session['viewer_password_hash'])) {
+    if (!$session || !viewer_authorized($sessionId, (string) $session['viewer_password_hash'], $payload)) {
         usleep(250000);
         json_response(['error' => 'That viewer password is not correct.'], 403);
     }
@@ -256,6 +255,7 @@ if ($action === 'view') {
         'readings' => $readings,
         'last_id' => $lastId,
         'has_more' => $hasMore,
+        'viewer_token' => viewer_token($sessionId, (string) $session['viewer_password_hash']),
     ]);
 }
 

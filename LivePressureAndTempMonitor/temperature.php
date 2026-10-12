@@ -378,10 +378,9 @@ if ($action === 'view') {
     $sessionId = (string) ($payload['session_id'] ?? '');
     $session = temperature_session($sessionId);
     $publishToken = (string) ($payload['publish_token'] ?? '');
-    $viewerPassword = (string) ($payload['viewer_password'] ?? '');
     $authorized = preg_match('/^[a-f0-9]{64}$/', $publishToken)
         && hash_equals((string) $session['publisher_token_hash'], hash('sha256', $publishToken));
-    if (!$authorized && ($viewerPassword === '' || !password_verify($viewerPassword, (string) $session['viewer_password_hash']))) {
+    if (!$authorized && !viewer_authorized($sessionId, (string) $session['viewer_password_hash'], $payload)) {
         json_response(['error' => 'Temperature access was not authorized.'], 403);
     }
     $sinceId = is_numeric($payload['since_id'] ?? null) ? max(0, (int) $payload['since_id']) : 0;
