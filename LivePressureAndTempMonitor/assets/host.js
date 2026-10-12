@@ -15,6 +15,7 @@
   }
   const localStorage = demo?.enabled ? demo.storage : window.localStorage;
   const Date = demo?.enabled ? demo.ClockDate : window.Date;
+  const AUX_HEAT_ALERT_F = 135; // Auxiliary probe placed under the field laptop.
   const apiUrl = app.dataset.api;
   const csrf = app.dataset.csrf;
   const encoder = new TextEncoder();
@@ -422,12 +423,18 @@
           const input = document.createElement('input'); input.type = 'checkbox'; input.dataset.enabledProbe = key;
           label.append(input, document.createTextNode(name)); probes.append(label);
           input.addEventListener('change', () => {
-            this.testState.enabledProbes = [...probes.querySelectorAll('input:checked')].map(el => el.dataset.enabledProbe);
+            this.testState.enabledProbes = [...probes.querySelectorAll('input[data-enabled-probe]:checked')].map(el => el.dataset.enabledProbe);
             this.saveTestState(); publish();
           });
         }
+        // Auxiliary often sits under the field laptop to watch its heat; switch off when it's used for something else.
+        const heat = document.createElement('label'); heat.className = 'temp-toggle aux-heat-alert';
+        const heatInput = document.createElement('input'); heatInput.type = 'checkbox'; heatInput.className = 'aux-heat-alert-toggle';
+        heat.append(heatInput, document.createTextNode(`Alert when Auxiliary reaches ${AUX_HEAT_ALERT_F} °F (laptop heat)`)); probes.append(heat);
+        heatInput.addEventListener('change', () => { this.testState.auxHeatAlert = heatInput.checked; this.saveTestState(); });
         this.temperaturePanel.querySelector('.temperature-controls').before(probes);
       }
+      this.root.querySelector('.aux-heat-alert-toggle').checked = this.testState.auxHeatAlert !== false;
       this.root.querySelectorAll('[data-enabled-probe]').forEach(input => {
         input.checked = (this.testState.enabledProbes || ['ambient','pipe','soil','aux']).includes(input.dataset.enabledProbe);
       });
@@ -2516,6 +2523,8 @@
         if (row.source === 'live' && (!device.source_id || row.sourceId === device.source_id)) { latest = row; break; }
       }
       const limit = Math.max(60000, (Number(device.sample_interval_seconds) || 2) * 2000 + 10000);
+      if (latest && gauge.testState.auxHeatAlert !== false && Number(latest.aux) >= AUX_HEAT_ALERT_F && now - Number(latest.at) <= limit)
+        alerts.push({ id: `aux-heat-${gauge.slot}`, text: `${name}: Auxiliary is at ${Number(latest.aux).toFixed(1)} °F. If it's under the field laptop, the laptop is getting too hot. Move it out of the sun and give it air.` });
       if (latest && now - Number(latest.at) > limit) alerts.push({ id: `temps-stopped-${gauge.slot}`, text: `${name}: temperature feed stopped. Last reading ${minutesAgo(now - Number(latest.at))} ago. Check the field laptop, MadgeTech and the bridge.` });
       const power = device.power;
       const fresh = power && device.bridge_online === true && Number.isFinite(power.reported_at) && now - power.reported_at <= 60000;
