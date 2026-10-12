@@ -22,6 +22,25 @@
     const advice = hot ? ' · Too hot — move it to shade and clear the vents.' : low ? ' · Below 75% — keep it plugged in and charging.' : '';
     return { text: `Field laptop: ${label}${advice}`, state: hot || low ? 'low' : 'current' };
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, isHot };
-  else root.HydroFieldPower = { describe, isHot };
+  // The latest stretch on battery from the saved battery history, so a
+  // run-down is readable even after the host page was closed overnight.
+  function batteryRun(power, now = Date.now(), format = (at) => new Date(at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })) {
+    const history = Array.isArray(power?.history) ? power.history.filter((row) => row && Number.isFinite(row.at)) : [];
+    let last = history.length - 1;
+    while (last >= 0 && history[last].on_ac !== false) last -= 1;
+    if (last < 0) return '';
+    let first = last;
+    while (first > 0 && history[first - 1].on_ac === false) first -= 1;
+    const level = (value) => Number.isInteger(value) ? ` at ${value}%` : '';
+    const span = (ms) => { const minutes = Math.max(0, Math.round(ms / 60000)); return `${Math.floor(minutes / 60)} h ${minutes % 60} min`; };
+    const start = history[first];
+    const plugged = history[last + 1];
+    if (plugged) return `Last battery run: ${format(start.at)}${level(start.percent)} until plugged in ${format(plugged.at)}${level(Number.isInteger(plugged.percent) ? plugged.percent : history[last].percent)} (${span(plugged.at - start.at)}).`;
+    const endAt = Number.isFinite(power.reported_at) ? power.reported_at : history[last].at;
+    const endPercent = Number.isInteger(power.battery_percent) ? power.battery_percent : history[last].percent;
+    if (now - endAt > 60000) return `Battery run: ${format(start.at)}${level(start.percent)} until last heard from ${format(endAt)}${level(endPercent)} (${span(endAt - start.at)}).`;
+    return `On battery since ${format(start.at)}${level(start.percent)} · now${level(endPercent)} (${span(endAt - start.at)}).`;
+  }
+  if (typeof module !== 'undefined' && module.exports) module.exports = { describe, isHot, batteryRun };
+  else root.HydroFieldPower = { describe, isHot, batteryRun };
 })(typeof window !== 'undefined' ? window : globalThis);

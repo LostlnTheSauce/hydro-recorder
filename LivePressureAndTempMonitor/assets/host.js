@@ -2180,6 +2180,13 @@
         const power = window.HydroFieldPower.describe(chosen);
         powerStatus.textContent = power.text;
         powerStatus.dataset.state = power.state;
+        const run = window.HydroFieldPower.batteryRun?.(chosen?.power);
+        if (run) {
+          const line = document.createElement('small');
+          line.className = 'temperature-battery-run';
+          line.textContent = run;
+          powerStatus.append(line);
+        }
       }
       const controls = temperatureOptionElements(root);
       if (attached) {
