@@ -1,6 +1,18 @@
 # Hydro Recorder
 
-Rebuild of the hydrotest field recorder. The old ChatGPT-built site is kept untouched in `reference/` on the development PC (start with `reference/HANDOFF.md`). That folder holds real job data, so it is not in git.
+## Current deployed website and UI work
+
+The current `grantgsolutions.com/hydro` website is in **`LivePressureAndTempMonitor/`**. It was added on October 11, 2026, with the Control Room UI, online test history, replay, and selectable pressure and temperature logs. Start with [CURRENT_PROJECT.md](CURRENT_PROJECT.md) when redesigning that site.
+
+**Two implementations are preserved here.** The pre-existing Python recorder in `recorder/` and its `site/` viewer are a separate rebuild. They are not the code serving `/hydro`. Their original instructions follow below. The existing `.cpanel.yml` still targets `/watch`; it has not been changed to deploy the current PHP website.
+
+Actual recorded test data is included in `recordings/` with the owner's explicit approval to publish it in this public repository. Passwords, device credentials, publishing tokens and private connection settings are not included. Historical workspace ZIPs, duplicate backups and machine-specific development runtimes are not part of this current-source import.
+
+For local UI development, run `npm install` followed by `npm run preview`. Open `http://127.0.0.1:49328` for the practice host or `/history.php` for replay of the included recordings. This preview cannot write to production, operate real instruments, or sync a Google Sheet.
+
+## Existing Python recorder rebuild
+
+The following sections describe the separate Python implementation originally in this repository. They do not describe the current PHP website's feature completeness.
 
 ## What is here now
 

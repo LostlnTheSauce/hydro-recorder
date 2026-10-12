@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#122d38">
+    <meta name="description" content="Grant G Solutions field tools, hydrotest monitoring, paperwork, and OQ study resources.">
+    <title>Grant G Solutions | Field &amp; Study</title>
+    <style>
+        :root { color-scheme:light; --ink:#122d38; --muted:#576b73; --line:#dce3e3; --paper:#f5f6f2; --accent:#b84726; }
+        * { box-sizing:border-box; }
+        body { margin:0; background:var(--paper); color:var(--ink); font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif; line-height:1.5; }
+        a { color:inherit; }
+        a:focus-visible { outline:3px solid var(--accent); outline-offset:5px; }
+        .shell { max-width:1120px; margin:0 auto; padding:0 36px; }
+        .skip { position:absolute; left:16px; top:-100px; background:white; padding:12px; z-index:2; }
+        .skip:focus { top:12px; }
+        header { border-bottom:1px solid var(--line); }
+        .header-inner { min-height:92px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+        .brand { display:flex; align-items:center; gap:13px; }
+        .mark { width:42px; height:42px; display:grid; place-items:center; border-radius:12px; background:var(--ink); color:white; font-size:26px; font-weight:750; }
+        .brand-name { font-size:17px; font-weight:750; letter-spacing:-.4px; }
+        .brand-sub { font-size:11px; color:var(--muted); letter-spacing:1.7px; text-transform:uppercase; }
+        nav { display:flex; gap:26px; font-size:14px; font-weight:600; }
+        nav a { text-decoration:none; }
+        nav a:hover { color:var(--accent); }
+        .intro { padding:42px 0 30px; }
+        .eyebrow { margin:0 0 8px; font-size:11px; font-weight:750; letter-spacing:2px; text-transform:uppercase; color:var(--accent); }
+        h1 { font-size:clamp(30px,4vw,43px); line-height:1.15; letter-spacing:-1.5px; margin:0 0 12px; font-weight:700; }
+        .intro p:last-child { margin:0; color:var(--muted); font-size:16px; }
+        section { scroll-margin-top:20px; }
+        .section-heading { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+        .section-number { color:var(--accent); font-size:11px; font-weight:750; letter-spacing:1px; }
+        h2 { margin:0; font-size:16px; font-weight:700; }
+        .section-heading::after { content:""; height:1px; background:var(--line); flex:1; margin-left:4px; }
+        .tools { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:16px; }
+        .tool { display:flex; flex-direction:column; align-items:flex-start; min-height:236px; padding:24px; background:white; border:1px solid var(--line); border-radius:16px; text-decoration:none; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+        .tool:hover { transform:translateY(-3px); border-color:#a4b8bb; box-shadow:0 10px 24px #122d380b; }
+        .tool.primary { background:var(--ink); color:white; border-color:var(--ink); }
+        .tool.primary:hover { background:#1a3b48; }
+        .icon { height:38px; width:38px; border-radius:10px; background:#eef3f2; color:#2e626a; display:grid; place-items:center; margin-bottom:18px; }
+        .primary .icon { background:#ffffff14; color:#a9d5d4; }
+        svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+        h3 { margin:0 0 7px; font-size:19px; letter-spacing:-.4px; }
+        .tool p { margin:0 0 23px; color:var(--muted); font-size:14px; max-width:28ch; }
+        .primary p { color:#c0d1d6; }
+        .action { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; margin-top:auto; font-size:13px; font-weight:700; }
+        .arrow { font-size:20px; line-height:1; }
+        .primary .action { color:#bde5df; }
+        #study { margin-top:32px; }
+        .study-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .study-card { padding:20px 24px 9px; background:white; border:1px solid var(--line); border-radius:16px; }
+        .study-label { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px; }
+        .study-label h3 { margin:0; font-size:16px; }
+        .tag { font-size:10px; font-weight:750; letter-spacing:1px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:2px 6px; }
+        .study-link { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; border-top:1px solid #edf0ef; text-decoration:none; font-size:14px; font-weight:600; }
+        .study-link small { display:block; color:var(--muted); font-size:12px; font-weight:400; margin-top:2px; }
+        .study-link .arrow { color:#658189; }
+        .study-link:hover { color:var(--accent); }
+        footer { margin:32px 0 0; padding:20px 0 26px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; color:var(--muted); font-size:12px; }
+        .footer-links { display:flex; gap:20px; }
+        .footer-links a { text-decoration:none; }
+        .footer-links a:hover { text-decoration:underline; }
+        @media (max-width:760px) {
+            .shell { padding:0 22px; }
+            .header-inner { min-height:80px; }
+            nav { gap:16px; font-size:13px; }
+            .brand-sub { letter-spacing:1px; font-size:10px; }
+            .intro { padding-top:32px; }
+            .tools { grid-template-columns:1fr 1fr; }
+            .tool.primary { grid-column:1 / -1; min-height:205px; }
+            .tool.primary p { max-width:none; }
+            .tool { padding:20px; min-height:230px; }
+            .study-grid { grid-template-columns:1fr; }
+        }
+        @media (max-width:440px) {
+            .shell { padding:0 18px; }
+            .header-inner { gap:12px; flex-wrap:wrap; padding-top:16px; padding-bottom:16px; }
+            .brand-name { font-size:15px; }
+            .mark { width:36px; height:36px; font-size:23px; }
+            .brand { gap:9px; }
+            nav { gap:12px; font-size:12px; }
+            .brand-sub { font-size:9px; }
+            .tools { grid-template-columns:1fr; gap:12px; }
+            .tool { min-height:0; }
+            .tool p { max-width:none; margin-bottom:18px; }
+            .tool .icon { margin-bottom:14px; }
+            .tool.primary { min-height:0; }
+            .study-card { padding:18px 20px 7px; }
+            #study { margin-top:28px; }
+        }
+        @media (prefers-reduced-motion:reduce) { .tool { transition:none; } .tool:hover { transform:none; } }
+    </style>
+</head>
+<body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header>
+        <div class="shell header-inner">
+            <div class="brand">
+                <span class="mark" aria-hidden="true">G</span>
+                <div><div class="brand-name">Grant G Solutions</div><div class="brand-sub">Field &amp; Study</div></div>
+            </div>
+            <nav aria-label="Page sections"><a href="#field">Field tools</a><a href="#study">OQ study</a></nav>
+        </div>
+    </header>
+    <main id="main" class="shell">
+        <div class="intro">
+            <p class="eyebrow">Your daily starting point</p>
+            <h1>Ready for the field.</h1>
+            <p>Your tests, paperwork, and study resources. All in one place.</p>
+        </div>
+        <section id="field" aria-labelledby="field-title">
+            <div class="section-heading"><span class="section-number" aria-hidden="true">01</span><h2 id="field-title">Field tools</h2></div>
+            <div class="tools">
+                <a class="tool primary" href="https://grantgsolutions.com/hydro/host.php">
+                    <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19a10 10 0 1 1 16 0Z"/><path d="m12 13 4-5M6 12H4m8-8v2m6 6h2"/><circle cx="12" cy="13" r="1.5"/></svg></span>
+                    <h3>Hydrotest Host</h3>
+                    <p>Monitor pressure, record temperatures, and manage your test.</p>
+                    <span class="action">Open host dashboard <span class="arrow" aria-hidden="true">↗</span></span>
+                </a>
+                <a class="tool" href="https://paperwork.grantgsolutions.com">
+                    <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8m-8 4h6"/></svg></span>
+                    <h3>Field Reports</h3>
+                    <p>Submit and review your crew’s paperwork.</p>
+                    <span class="action">Open reports <span class="arrow" aria-hidden="true">↗</span></span>
+                </a>
+                <a class="tool" href="job-requirements.html">
+                    <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5H5v16h14V5h-3M9 3h6v4H9Zm-1 9 2 2 4-4m-6 7h8"/></svg></span>
+                    <h3>Job Requirements</h3>
+                    <p>Find the OQ certifications required for your job role.</p>
+                    <span class="action">View requirements <span class="arrow" aria-hidden="true">→</span></span>
+                </a>
+            </div>
+        </section>
+        <section id="study" aria-labelledby="study-title">
+            <div class="section-heading"><span class="section-number" aria-hidden="true">02</span><h2 id="study-title">OQ study resources</h2></div>
+            <div class="study-grid">
+                <div class="study-card">
+                    <div class="study-label"><h3>English</h3><span class="tag" aria-hidden="true">EN</span></div>
+                    <a class="study-link" href="practice-quizzes.html"><span>Practice quizzes<small>Put your knowledge to the test</small></span><span class="arrow" aria-hidden="true">→</span></a>
+                    <a class="study-link" href="practice-study-guide.html"><span>Study guide<small>Review questions with answers</small></span><span class="arrow" aria-hidden="true">→</span></a>
+                </div>
+                <div class="study-card" lang="es">
+                    <div class="study-label"><h3>Español</h3><span class="tag" aria-hidden="true">ES</span></div>
+                    <a class="study-link" href="EWN_Practice_Quizzes_ES.html"><span>Cuestionarios de práctica<small>Pon a prueba tus conocimientos</small></span><span class="arrow" aria-hidden="true">→</span></a>
+                    <a class="study-link" href="practice-study-guide-es.html"><span>Guía de estudio<small>Repasa las preguntas con respuestas</small></span><span class="arrow" aria-hidden="true">→</span></a>
+                </div>
+            </div>
+        </section>
+        <footer>
+            <span>© 2026 Grant G Solutions</span>
+            <div class="footer-links"><a href="/ledger/">Poker ledger</a><a href="ht.html">Extras</a></div>
+        </footer>
+    </main>
+</body>
+</html>

@@ -5,3 +5,14 @@ __pycache__/
 build/
 dist/
 reference/
+
+# Current website and field-bridge credentials stay local.
+LivePressureAndTempMonitor/config.php
+**/field-device.settings
+**/interop-credentials.bin
+MadgeTechFieldBridge/Data/
+node_modules/
+tmp/
+.env
+.env.*
+!.env.example

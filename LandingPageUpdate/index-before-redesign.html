@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G's OQ STUDY</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 3rem;
+            max-width: 700px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+            padding-left: 0.5rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+        
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .link-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .link-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+        
+        .link-card.spanish {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .link-card.spanish:hover {
+            box-shadow: 0 8px 25px rgba(245, 87, 108, 0.6);
+        }
+        
+        .link-icon {
+            font-size: 2.5rem;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .link-content {
+            flex: 1;
+        }
+        
+        .link-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+        
+        .link-description {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .link-icon {
+                font-size: 2rem;
+                min-width: 50px;
+            }
+            
+            .link-title {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><a href="/ledger/" style="color:inherit;text-decoration:none;" aria-label="Open poker ledger" title="Poker ledger">📚</a> OQ Study</h1>
+        <p class="subtitle">The good times are over, it's time to study</p>
+
+        <!-- Hydrotest Host -->
+        <div class="links" style="margin-bottom: 1rem;">
+            <a href="https://grantgsolutions.com/hydro/host.php" class="link-card">
+                <div class="link-icon" aria-hidden="true">🌡️</div>
+                <div class="link-content">
+                    <div class="link-title">Hydrotest Host</div>
+                    <div class="link-description">Open your pressure and temperature testing dashboard</div>
+                </div>
+            </a>
+        </div>
+        
+                <!-- Field Reports Section -->
+        <div class="links">
+            <a href="https://paperwork.grantgsolutions.com" class="link-card">
+                <div class="link-icon">📄</div>
+                <div class="link-content">
+                    <div class="link-title">Field Reports</div>
+                    <div class="link-description">Submit and review your crew's paperwork</div>
+                </div>
+            </a>
+        </div>
+        
+<!-- Job Requirements Section -->
+        <div class="links">
+            <a href="job-requirements.html" class="link-card">
+                <div class="link-icon">📋</div>
+                <div class="link-content">
+                    <div class="link-title">Job Requirements</div>
+                    <div class="link-description">View required OQ certifications for your job role</div>
+                </div>
+            </a>
+        </div>
+        
+        <!-- English Section -->
+        <h2 class="section-title">🇺🇸 English</h2>
+        <div class="links">
+            <a href="practice-quizzes.html" class="link-card">
+                <div class="link-icon">✏️</div>
+                <div class="link-content">
+                    <div class="link-title">Practice Quizzes</div>
+                    <div class="link-description">Test your knowledge with interactive quizzes</div>
+                </div>
+            </a>
+            
+            <a href="practice-study-guide.html" class="link-card">
+                <div class="link-icon">📖</div>
+                <div class="link-content">
+                    <div class="link-title">Study Guide (with Answers)</div>
+                    <div class="link-description">Review all questions with correct answers shown</div>
+                </div>
+            </a>
+        </div>
+        
+        <!-- Spanish Section -->
+        <h2 class="section-title">Español</h2>
+        <div class="links">
+            <a href="EWN_Practice_Quizzes_ES.html" class="link-card spanish">
+                <div class="link-icon">✏️</div>
+                <div class="link-content">
+                    <div class="link-title">Cuestionarios de Práctica</div>
+                    <div class="link-description">Prueba tus conocimientos con cuestionarios interactivos</div>
+                </div>
+            </a>
+            
+            <a href="practice-study-guide-es.html" class="link-card spanish">
+                <div class="link-icon">📖</div>
+                <div class="link-content">
+                    <div class="link-title">Guía de Estudio (con Respuestas)</div>
+                    <div class="link-description">Revisa todas las preguntas con las respuestas correctas</div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="footer">
+            © 2026 Grant G Solutions | <a href="ht.html" style="color:inherit;text-decoration:none;">Ethan is gay</a>
+        </div>
+    </div>
+</body>
+</html>

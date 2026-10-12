@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grants Hydrotest Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1f2937;
+    --border: #30363d;
+    --accent: #f97316;
+    --accent2: #fb923c;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --green: #22c55e;
+    --red: #ef4444;
+    --blue: #38bdf8;
+    --yellow: #facc15;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  header span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+  }
+
+  .card-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .card-body { padding: 20px; }
+
+  .pipe-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .pipe-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .input-group label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input[type="number"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.95rem;
+    padding: 8px 10px;
+    width: 100%;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input:focus { outline: none; border-color: var(--accent); }
+
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .btn-remove {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red);
+    padding: 6px 10px;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .btn-remove:hover { background: var(--red); color: white; }
+
+  .btn-add {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .btn-add:hover { background: var(--accent); color: var(--bg); }
+
+  .btn-calc {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+    padding: 10px 20px;
+  }
+  .btn-calc:hover { background: var(--accent2); }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .results {
+    margin-top: 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .results.visible { display: flex; }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+
+  .result-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+  }
+  .result-box.highlight { border-color: var(--accent); background: rgba(249,115,22,0.08); }
+  .result-box.green { border-color: var(--green); background: rgba(34,197,94,0.07); }
+  .result-box.blue { border-color: var(--blue); background: rgba(56,189,248,0.07); }
+  .result-box.yellow { border-color: var(--yellow); background: rgba(250,204,21,0.07); }
+  .result-box.red { border-color: var(--red); background: rgba(239,68,68,0.09); }
+
+  .result-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .result-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .result-unit {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .stroke-input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    margin-top: 8px;
+  }
+
+  .breakdown-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .breakdown-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    color: var(--text);
+  }
+
+  .breakdown-table tr:last-child td { border-bottom: none; }
+  .breakdown-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .breakdown-table td.warn { color: var(--yellow); font-weight: 600; }
+  .breakdown-table td.danger { color: var(--red); font-weight: 600; }
+  .breakdown-table td.ok { color: var(--green); }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .sub-header {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin: 18px 0 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  .formula-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .formula-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px;
+  }
+
+  .formula-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .formula-eq {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .formula-note {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  .converter-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .converter-row .input-group { flex: 1; min-width: 120px; }
+
+  .error-msg {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--red);
+    margin-top: 8px;
+    display: none;
+  }
+
+  .deviation-banner {
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    line-height: 1.5;
+  }
+  .deviation-banner.pass { background: rgba(34,197,94,0.12); border: 1px solid var(--green); color: var(--green); }
+  .deviation-banner.fail { background: rgba(239,68,68,0.12); border: 1px solid var(--red); color: var(--red); }
+  .deviation-banner.warn { background: rgba(250,204,21,0.10); border: 1px solid var(--yellow); color: var(--yellow); }
+
+  .info-note {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.7;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+
+  .overflow-x {
+    overflow-x: auto;
+  }
+
+  /* ── PIG TRACKER ───────────────────────────────────────── */
+  .pig-track-wrap {
+    margin: 20px 0 8px;
+    position: relative;
+  }
+
+  .pig-track-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .pig-track-label span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .pig-track-label .pct-badge {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(249,115,22,0.12);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 2px 10px;
+  }
+
+  .pig-pipe {
+    position: relative;
+    height: 48px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 24px;
+    overflow: hidden;
+  }
+
+  .pig-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(56,189,248,0.3), rgba(56,189,248,0.15));
+    border-right: 2px solid var(--blue);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px 0 0 24px;
+  }
+
+  .pig-icon {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.6rem;
+    transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 0 6px rgba(249,115,22,0.6));
+    z-index: 2;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .pig-endcap {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    z-index: 1;
+  }
+
+  .pig-startcap {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    z-index: 1;
+  }
+
+  .wf-input-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .wf-rate-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .wf-rate-row .input-group { flex: 1; min-width: 120px; }
+
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.95rem;
+    padding: 8px 10px;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  select:focus { outline: none; border-color: var(--accent); }
+
+  .wf-update-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .wf-update-row .input-group { flex: 1; min-width: 140px; }
+
+  .btn-update {
+    background: var(--blue);
+    color: var(--bg);
+    font-weight: 700;
+    padding: 10px 20px;
+  }
+  .btn-update:hover { background: #7dd3fc; }
+
+  .btn-reset {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+  }
+  .btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+  .eta-banner {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    border-radius: 6px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .eta-banner .eta-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--green);
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  .eta-banner .eta-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .eta-banner .eta-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text);
+  }
+
+  .wf-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    margin-top: 8px;
+  }
+  .wf-history-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    text-align: left;
+    padding: 7px 10px;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .wf-history-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    color: var(--text);
+  }
+  .wf-history-table tr:last-child td { border-bottom: none; }
+  .wf-history-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .live-badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .live-badge.estimating {
+    background: rgba(250,204,21,0.15);
+    border: 1px solid var(--yellow);
+    color: var(--yellow);
+    animation: pulse-badge 1.5s ease-in-out infinite;
+  }
+  .live-badge.locked {
+    background: rgba(34,197,94,0.12);
+    border: 1px solid var(--green);
+    color: var(--green);
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .pig-icon.estimating {
+    animation: pig-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pig-pulse {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(249,115,22,0.6)); }
+    50% { filter: drop-shadow(0 0 12px rgba(250,204,21,0.9)); }
+  }
+
+  .clock-link {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    text-decoration: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .clock-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Command-center visual system */
+  :root {
+    --bg: #07131c;
+    --surface: #0d202c;
+    --surface2: #122b39;
+    --border: #254554;
+    --accent: #27b9d2;
+    --accent2: #65d6e8;
+    --blue: #27b9d2;
+  }
+  body { background: radial-gradient(circle at 82% -10%, #144657 0, var(--bg) 34rem); }
+  header { padding: 20px 26px; border-bottom-color: var(--accent); background: linear-gradient(112deg, #07131c, #0d2634); }
+  header h1 { color: #fff; font-size: 2.35rem; }
+  header span { color: #66d7e8; }
+  .container { max-width: 1080px; padding-top: 24px; gap: 20px; }
+  .card { border-color: var(--border); border-radius: 14px; box-shadow: 0 14px 34px rgba(0, 0, 0, .2); }
+  .card-header { padding: 15px 18px; background: linear-gradient(100deg, #122b39, #102530); }
+  .card-title { color: var(--accent2); }
+  input[type="number"] { min-height: 42px; border-radius: 8px; }
+  .btn { min-height: 40px; border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:baseline;gap:16px;">
+    <h1>Grant's Hydrotest Calculator</h1>
+    <span>Field calculation suite</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- CARD 01: PIPE VOLUME -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Pipe Volume Calculator</span>
+      <span class="card-num">01</span>
+    </div>
+    <div class="card-body">
+      <p class="section-label">Add one or more pipe sections — ID in inches, Length in feet</p>
+      <div class="pipe-list" id="pipeList"></div>
+      <div class="btn-row">
+        <button class="btn btn-add" onclick="addPipeRow()">+ Add Pipe Section</button>
+        <button class="btn btn-calc" onclick="calcVolume()">Calculate Volume</button>
+      </div>
+      <div class="results" id="volResults">
+        <div class="result-grid" id="volResultGrid"></div>
+        <div id="pipeBreakdown"></div>
+      </div>
+      <div class="error-msg" id="volError">Please enter valid ID and Length for all pipe sections.</div>
+    </div>
+  </div>
+
+  <!-- CARD 02: PRESSURE FILL -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Pressure Fill Calculator</span>
+      <span class="card-num">02</span>
+    </div>
+    <div class="card-body">
+      <p class="section-label">Water required to raise pressure — field constant 225,000</p>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Total Volume (gal)</label>
+          <input type="number" id="pf_volume" placeholder="e.g. 4.73" step="0.001">
+        </div>
+        <div class="input-group">
+          <label>Starting Pressure (PSI)</label>
+          <input type="number" id="pf_start" placeholder="e.g. 0" step="1">
+        </div>
+        <div class="input-group">
+          <label>Target Pressure (PSI)</label>
+          <input type="number" id="pf_target" placeholder="e.g. 2000" step="1">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-calc" onclick="calcFill()">Calculate</button>
+        <button class="btn btn-add" onclick="pushVolume()">↓ Use Volume from Card 01</button>
+      </div>
+      <div class="results" id="fillResults">
+        <div class="result-grid" id="fillResultGrid"></div>
+        <div id="fillBreakdown"></div>
+      </div>
+      <div class="error-msg" id="fillError">Please fill in all fields with valid numbers.</div>
+    </div>
+  </div>
+
+  <!-- CARD 03: STROKE COUNT & INCREMENTAL VOLUME -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Stroke Count &amp; Incremental Volume</span>
+      <span class="card-num">03</span>
+    </div>
+    <div class="card-body">
+      <div class="info-note">
+        <strong style="color:var(--text)">Calculated Incremental Volume</strong> = what the pipeline <em>should</em> take per reading (Vol ÷ 225,000 × 10 PSI).<br>
+        <strong style="color:var(--text)">Actual Incremental Volume</strong> = what was <em>actually pumped</em> per reading (Total Vol Pumped ÷ Total ΔP × 10 PSI).<br>
+        <strong style="color:var(--red)">Double Deviation</strong> = Actual &gt; 2× Calculated — investigate for leak, trapped air, or pipe expansion.
+      </div>
+
+      <div class="sub-header">Test Parameters</div>
+      <div class="stroke-input-grid">
+        <div class="input-group">
+          <label>Pipe Volume (gal)</label>
+          <input type="number" id="sc_volume" placeholder="e.g. 4.73" step="0.001">
+        </div>
+        <div class="input-group">
+          <label>Stroke Count Starts At (PSI)</label>
+          <input type="number" id="sc_start" placeholder="e.g. 1350" step="1" oninput="updatePressureDisplay()">
+        </div>
+        <div class="input-group">
+          <label>Target Test Pressure (PSI)</label>
+          <input type="number" id="sc_target" placeholder="e.g. 1800" step="1" oninput="updatePressureDisplay()">
+        </div>
+        <div class="input-group">
+          <label>Pump Capacity (gal/stroke)</label>
+          <input type="number" id="sc_pump_cap" placeholder="e.g. 0.0068" step="0.0001">
+        </div>
+      </div>
+
+      <div class="sub-header">Field Results (Actual Data)</div>
+      <div class="stroke-input-grid">
+        <div class="input-group">
+          <label>Total Strokes Pumped</label>
+          <input type="number" id="sc_total_strokes" placeholder="e.g. 391" step="1">
+        </div>
+        <div class="input-group">
+          <label>Total Pressure Increase (PSI)</label>
+          <div id="sc_pressure_display" style="font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:600; color:var(--accent); background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:8px 10px; min-height:38px;">—</div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-calc" onclick="calcStroke()">Calculate</button>
+        <button class="btn btn-add" onclick="pushVolumeToStroke()">↓ Use Volume from Card 01</button>
+      </div>
+
+      <div class="results" id="strokeResults">
+        <div class="result-grid" id="strokeResultGrid"></div>
+        <div id="strokeDeviation"></div>
+        <div class="overflow-x" id="strokeBreakdown"></div>
+      </div>
+      <div class="error-msg" id="strokeError">Please fill in all required fields with valid numbers.</div>
+    </div>
+  </div>
+
+  <!-- CARD 04: BARREL CONVERTER -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Barrel ↔ Gallon Converter</span>
+      <span class="card-num">04</span>
+    </div>
+    <div class="card-body">
+      <div class="converter-row">
+        <div class="input-group">
+          <label>Barrels (bbl)</label>
+          <input type="number" id="conv_bbl" placeholder="e.g. 2.5" step="0.001" oninput="convertBbl()">
+        </div>
+        <div class="input-group">
+          <label>Gallons (gal)</label>
+          <input type="number" id="conv_gal" placeholder="e.g. 105" step="0.001" oninput="convertGal()">
+        </div>
+      </div>
+      <p class="formula-note" style="margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:0.75rem;">1 barrel = 42 gallons</p>
+    </div>
+  </div>
+
+  <!-- CARD 05: BLEED-OFF -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Pressure Drop from Bleed-Off</span>
+      <span class="card-num">05</span>
+    </div>
+    <div class="card-body">
+      <p class="section-label">Estimate PSI drop when bleeding a small volume from a pressurized line</p>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Current Pressure (PSI)</label>
+          <input type="number" id="bd_pressure" placeholder="e.g. 2000" step="1">
+        </div>
+        <div class="input-group">
+          <label>Pipe Volume (gal)</label>
+          <input type="number" id="bd_volume" placeholder="e.g. 4.73" step="0.001">
+        </div>
+        <div class="input-group">
+          <label>Bleed Volume (fl oz)</label>
+          <input type="number" id="bd_bleed" placeholder="e.g. 0.046" step="0.001">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-calc" onclick="calcBleed()">Calculate Drop</button>
+        <button class="btn btn-add" onclick="pushVolumeToBleed()">↓ Use Volume from Card 01</button>
+      </div>
+      <div class="results" id="bleedResults">
+        <div class="result-grid" id="bleedResultGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 06: CHEAT SHEET -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Field Formulas Cheat Sheet</span>
+      <span class="card-num">06</span>
+    </div>
+    <div class="card-body">
+      <div class="formula-grid">
+        <div class="formula-box">
+          <div class="formula-name">Pipe Volume</div>
+          <div class="formula-eq">π × (ID/2)² × Length<br>÷ 231 = gallons</div>
+          <div class="formula-note">ID and Length both in inches</div>
+        </div>
+        <div class="formula-box">
+          <div class="formula-name">Gallons per PSI</div>
+          <div class="formula-eq">Volume (gal) ÷ 225,000</div>
+          <div class="formula-note">Field constant for water compressibility at test pressures</div>
+        </div>
+        <div class="formula-box">
+          <div class="formula-name">Calculated Incremental Vol</div>
+          <div class="formula-eq">(Vol ÷ 225,000) × Increment</div>
+          <div class="formula-note">Expected gal per PSI reading — your baseline</div>
+        </div>
+        <div class="formula-box">
+          <div class="formula-name">Actual Incremental Vol</div>
+          <div class="formula-eq">(Total Vol Pumped ÷ Total ΔP)<br>× Increment Size</div>
+          <div class="formula-note">From real stroke data — compare to calculated</div>
+        </div>
+        <div class="formula-box">
+          <div class="formula-name">Total Volume Pumped</div>
+          <div class="formula-eq">Total Strokes × Gal/Stroke</div>
+          <div class="formula-note">Convert pump strokes to gallons using pump capacity rating</div>
+        </div>
+        <div class="formula-box">
+          <div class="formula-name">Barrel to Gallon</div>
+          <div class="formula-eq">Barrels × 42 = Gallons</div>
+          <div class="formula-note">1 BBL = 42 US gallons</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 07: NITROGEN PURGE -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Nitrogen Bottle Estimator</span>
+      <span class="card-num">07</span>
+    </div>
+    <div class="card-body">
+      <p class="section-label">Enter OD and wall thickness — bottles are 300 cf</p>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Pipe Size OD (inches)</label>
+          <input type="number" id="n2_od" placeholder="e.g. 6" step="0.001" oninput="calcN2()">
+        </div>
+        <div class="input-group">
+          <label>Wall Thickness (inches)</label>
+          <input type="number" id="n2_wall" placeholder="e.g. 0.375" step="0.001" oninput="calcN2()">
+        </div>
+      </div>
+      <div class="results" id="n2Results">
+        <div class="result-grid" id="n2ResultGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 06: WATER FILL / PIG TRACKER -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Water Fill — Pig Tracker</span>
+      <span class="card-num">06</span>
+    </div>
+    <div class="card-body">
+
+      <p class="section-label">Line Setup — enter once at the start of the fill</p>
+      <div class="wf-input-row">
+        <div class="input-group">
+          <label>Pipe ID (inches)</label>
+          <input type="number" id="wf_id" placeholder="e.g. 12" step="0.01" oninput="wfRecalc()">
+        </div>
+        <div class="input-group">
+          <label>Total Line Length (feet)</label>
+          <input type="number" id="wf_length" placeholder="e.g. 26400" step="1" oninput="wfRecalc()">
+        </div>
+        <div class="input-group">
+          <label>Meter Starting Reading (gal) <span style="color:var(--muted);font-size:0.6rem">— your zero</span></label>
+          <input type="number" id="wf_offset" placeholder="e.g. 1264269.9" step="0.1">
+        </div>
+      </div>
+
+      <p class="section-label">Pump Rate — optional, used for initial ETA before observed data</p>
+      <div class="wf-rate-row">
+        <div class="input-group">
+          <label>Pump Rate <span style="color:var(--muted);font-size:0.6rem">— leave blank if unknown</span></label>
+          <input type="number" id="wf_rate" placeholder="Optional" step="0.1" oninput="wfRecalc()">
+        </div>
+        <div class="input-group" style="max-width:120px">
+          <label>Unit</label>
+          <select id="wf_rate_unit" onchange="wfRecalc()">
+            <option value="gpm" selected>GPM</option>
+            <option value="gph">GPH</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <p class="section-label">Meter Reading — enter raw meter number each time you check</p>
+      <div class="wf-update-row">
+        <div class="input-group">
+          <label>Current Meter Reading (gal)</label>
+          <input type="number" id="wf_gallons" placeholder="e.g. 1276720.4" step="0.1">
+        </div>
+        <button class="btn btn-update" onclick="wfUpdate()">▶ Update</button>
+        <button class="btn btn-reset" onclick="wfReset()">Reset</button>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="pig-track-wrap" id="wfTrackWrap" style="display:none">
+        <div class="pig-track-label">
+          <span>Launch Point</span>
+          <span class="pct-badge" id="wfPctBadge">0%</span>
+          <span>End of Line</span>
+        </div>
+        <div class="pig-pipe">
+          <div class="pig-fill" id="wfFill" style="width:0%"></div>
+          <div class="pig-icon" id="wfPig" style="left:4%">🐷</div>
+        </div>
+      </div>
+
+      <!-- Result grid -->
+      <div class="results" id="wfResults">
+        <div class="result-grid" id="wfResultGrid"></div>
+        <div class="eta-banner" id="wfEtaBanner" style="display:none">
+          <div>
+            <div class="eta-label">Estimated Time Remaining</div>
+            <div class="eta-time" id="wfEtaTime">—</div>
+            <div class="eta-sub" id="wfEtaSub"></div>
+          </div>
+          <div style="flex:1">
+            <div class="eta-label">ETA Basis</div>
+            <div class="eta-sub" id="wfEtaBasis" style="margin-top:4px; line-height:1.7"></div>
+          </div>
+        </div>
+
+        <!-- Update history table -->
+        <div id="wfHistoryWrap" style="display:none; margin-top:16px;">
+          <p class="section-label">Update History</p>
+          <div class="overflow-x">
+            <table class="wf-history-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Time</th>
+                  <th>Meter Reading</th>
+                  <th>Gal Pumped (Net)</th>
+                  <th>Pig Location</th>
+                  <th>% Done</th>
+                  <th>Observed Rate</th>
+                  <th>Est. Remaining</th>
+                </tr>
+              </thead>
+              <tbody id="wfHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let pipeRows = 0;
+  let lastTotalGal = null;
+
+  // ── CARD 01: PIPE VOLUME ──────────────────────────────────
+  function addPipeRow() {
+    pipeRows++;
+    const list = document.getElementById('pipeList');
+    const div = document.createElement('div');
+    div.className = 'pipe-row';
+    div.id = 'pipe_' + pipeRows;
+    div.innerHTML = `
+      <div class="input-group">
+        <label>ID (inches)</label>
+        <input type="number" placeholder="e.g. 4" step="0.01" class="pipe-id">
+      </div>
+      <div class="input-group">
+        <label>Length (feet)</label>
+        <input type="number" placeholder="e.g. 5" step="0.01" class="pipe-len">
+      </div>
+      <button class="btn btn-remove" onclick="removePipeRow('pipe_${pipeRows}')" title="Remove">✕</button>
+    `;
+    list.appendChild(div);
+  }
+
+  function removePipeRow(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function calcVolume() {
+    const rows = document.querySelectorAll('.pipe-row');
+    let totalIn3 = 0, valid = true;
+    const sections = [];
+
+    rows.forEach(row => {
+      const id  = parseFloat(row.querySelector('.pipe-id').value);
+      const len = parseFloat(row.querySelector('.pipe-len').value);
+      if (isNaN(id) || isNaN(len) || id <= 0 || len <= 0) { valid = false; return; }
+      const vol = Math.PI * Math.pow(id / 2, 2) * (len * 12);
+      totalIn3 += vol;
+      sections.push({ id, len, vol });
+    });
+
+    const errEl = document.getElementById('volError');
+    const resEl = document.getElementById('volResults');
+
+    if (!valid || sections.length === 0) {
+      errEl.style.display = 'block';
+      resEl.classList.remove('visible');
+      return;
+    }
+
+    errEl.style.display = 'none';
+    const totalGal  = totalIn3 / 231;
+    lastTotalGal    = totalGal;
+    const galPerPsi = totalGal / 225000;
+
+    document.getElementById('volResultGrid').innerHTML = `
+      <div class="result-box highlight">
+        <div class="result-label">Total Volume</div>
+        <div class="result-value">${totalGal.toFixed(3)}<span class="result-unit">gal</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Total Volume (ft³)</div>
+        <div class="result-value">${(totalIn3/1728).toFixed(3)}<span class="result-unit">ft³</span></div>
+      </div>
+      <div class="result-box green">
+        <div class="result-label">Gallons per PSI</div>
+        <div class="result-value">${galPerPsi.toFixed(6)}<span class="result-unit">gal/psi</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Total Volume (bbl)</div>
+        <div class="result-value">${(totalGal/42).toFixed(4)}<span class="result-unit">bbl</span></div>
+      </div>
+    `;
+
+    if (sections.length > 1) {
+      let trows = sections.map((s, i) => {
+        const g = s.vol / 231;
+        return `<tr><td>Section ${i+1}</td><td>${s.id}"</td><td>${s.len} ft</td><td>${g.toFixed(3)} gal</td><td>${((g/totalGal)*100).toFixed(1)}%</td></tr>`;
+      }).join('');
+      document.getElementById('pipeBreakdown').innerHTML = `
+        <p class="section-label" style="margin-top:16px">Section Breakdown</p>
+        <table class="breakdown-table">
+          <thead><tr><th>Section</th><th>ID</th><th>Length</th><th>Volume</th><th>% of Total</th></tr></thead>
+          <tbody>${trows}</tbody>
+        </table>`;
+    } else {
+      document.getElementById('pipeBreakdown').innerHTML = '';
+    }
+
+    resEl.classList.add('visible');
+  }
+
+  // ── CARD 02: PRESSURE FILL ────────────────────────────────
+  function pushVolume() {
+    if (lastTotalGal === null) { alert('Calculate volume in Card 01 first.'); return; }
+    document.getElementById('pf_volume').value = lastTotalGal.toFixed(4);
+  }
+
+  function calcFill() {
+    const vol    = parseFloat(document.getElementById('pf_volume').value);
+    const start  = parseFloat(document.getElementById('pf_start').value);
+    const target = parseFloat(document.getElementById('pf_target').value);
+    const inc    = 10;
+
+    const err = document.getElementById('fillError');
+    const res = document.getElementById('fillResults');
+
+    if ([vol, start, target].some(isNaN) || vol <= 0 || target <= start) {
+      err.style.display = 'block'; res.classList.remove('visible'); return;
+    }
+    err.style.display = 'none';
+
+    const galPerPsi    = vol / 225000;
+    const dP           = target - start;
+    const totalWater   = galPerPsi * dP;
+    const perIncrement = galPerPsi * inc;
+
+    document.getElementById('fillResultGrid').innerHTML = `
+      <div class="result-box highlight">
+        <div class="result-label">Total Water Required</div>
+        <div class="result-value">${totalWater.toFixed(4)}<span class="result-unit">gal</span></div>
+      </div>
+      <div class="result-box green">
+        <div class="result-label">Gallons per PSI</div>
+        <div class="result-value">${galPerPsi.toFixed(6)}<span class="result-unit">gal/psi</span></div>
+      </div>
+      <div class="result-box blue">
+        <div class="result-label">Per ${inc} PSI Increment</div>
+        <div class="result-value">${perIncrement.toFixed(5)}<span class="result-unit">gal</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Pressure Rise</div>
+        <div class="result-value">${dP.toFixed(0)}<span class="result-unit">psi</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Total Water (bbl)</div>
+        <div class="result-value">${(totalWater/42).toFixed(5)}<span class="result-unit">bbl</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Per Increment (fl oz)</div>
+        <div class="result-value">${(perIncrement*128).toFixed(4)}<span class="result-unit">fl oz</span></div>
+      </div>
+    `;
+
+    const steps = Math.ceil(dP / inc);
+    if (steps <= 100) {
+      let trows = '';
+      for (let i = 1; i <= steps; i++) {
+        const psi    = Math.min(start + i * inc, target);
+        const cumGal = galPerPsi * (psi - start);
+        trows += `<tr><td>${start + (i-1)*inc} → ${psi}</td><td>${perIncrement.toFixed(5)} gal</td><td>${cumGal.toFixed(5)} gal</td></tr>`;
+      }
+      document.getElementById('fillBreakdown').innerHTML = `
+        <p class="section-label" style="margin-top:16px">Increment Table</p>
+        <table class="breakdown-table">
+          <thead><tr><th>PSI Range</th><th>Gal This Step</th><th>Cumulative Gal</th></tr></thead>
+          <tbody>${trows}</tbody>
+        </table>`;
+    } else {
+      document.getElementById('fillBreakdown').innerHTML = `<p class="formula-note" style="margin-top:12px">Too many steps (${steps}) — increase increment size to display table.</p>`;
+    }
+
+    res.classList.add('visible');
+  }
+
+  function updatePressureDisplay() {
+    const start  = parseFloat(document.getElementById('sc_start').value);
+    const target = parseFloat(document.getElementById('sc_target').value);
+    const el     = document.getElementById('sc_pressure_display');
+    if (!isNaN(start) && !isNaN(target) && target > start) {
+      el.textContent = (target - start) + ' PSI';
+      el.style.color = 'var(--accent)';
+    } else {
+      el.textContent = '—';
+      el.style.color = 'var(--muted)';
+    }
+  }
+
+  // ── CARD 03: STROKE COUNT & INCREMENTAL VOLUME ────────────
+  function pushVolumeToStroke() {
+    if (lastTotalGal === null) { alert('Calculate volume in Card 01 first.'); return; }
+    document.getElementById('sc_volume').value = lastTotalGal.toFixed(4);
+  }
+
+  function calcStroke() {
+    const vol          = parseFloat(document.getElementById('sc_volume').value);
+    const strokeStart  = parseFloat(document.getElementById('sc_start').value);
+    const target       = parseFloat(document.getElementById('sc_target').value);
+    const inc          = 10;
+    const pumpCap      = parseFloat(document.getElementById('sc_pump_cap').value);
+    const totalStrokes = parseFloat(document.getElementById('sc_total_strokes').value);
+    const totalDeltaP  = target - strokeStart;
+
+    const err = document.getElementById('strokeError');
+    const res = document.getElementById('strokeResults');
+
+    if ([vol, strokeStart, target, pumpCap, totalStrokes].some(isNaN)
+        || vol <= 0 || target <= strokeStart || pumpCap <= 0) {
+      err.style.display = 'block'; res.classList.remove('visible'); return;
+    }
+    err.style.display = 'none';
+
+    const galPerPsi      = vol / 225000;
+    const calcIncVol     = galPerPsi * inc;
+    const numReadings    = Math.ceil((target - strokeStart) / inc);
+    const totalVolPumped = totalStrokes * pumpCap;
+    const actualIncVol   = (totalVolPumped / totalDeltaP) * inc;
+    const ratio          = actualIncVol / calcIncVol;
+    const doubleDeviation = ratio > 2;
+    const calcTotalWater  = galPerPsi * totalDeltaP;
+    const calcTotalStrokes = calcTotalWater / pumpCap;
+    const strokeDiff       = totalStrokes - calcTotalStrokes;
+
+    document.getElementById('strokeResultGrid').innerHTML = `
+      <div class="result-box highlight">
+        <div class="result-label">Calculated Incremental Vol</div>
+        <div class="result-value">${calcIncVol.toFixed(5)}<span class="result-unit">gal/reading</span></div>
+      </div>
+      <div class="result-box ${doubleDeviation ? 'red' : ratio > 1.5 ? 'yellow' : 'green'}">
+        <div class="result-label">Actual Incremental Vol</div>
+        <div class="result-value">${actualIncVol.toFixed(5)}<span class="result-unit">gal/reading</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Actual Total Volume Pumped</div>
+        <div class="result-value">${totalVolPumped.toFixed(4)}<span class="result-unit">gal</span></div>
+      </div>
+      <div class="result-box green">
+        <div class="result-label">Calculated Total Volume (Should Be)</div>
+        <div class="result-value">${calcTotalWater.toFixed(4)}<span class="result-unit">gal</span></div>
+      </div>
+      <div class="result-box blue">
+        <div class="result-label">Gallons per PSI</div>
+        <div class="result-value">${galPerPsi.toFixed(6)}<span class="result-unit">gal/psi</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Number of Readings</div>
+        <div class="result-value">${numReadings}<span class="result-unit">readings</span></div>
+      </div>
+      <div class="result-box ${doubleDeviation ? 'red' : ratio > 1.5 ? 'yellow' : 'green'}">
+        <div class="result-label">Actual ÷ Calculated Ratio</div>
+        <div class="result-value">${ratio.toFixed(3)}<span class="result-unit">×</span></div>
+      </div>
+      <div class="result-box green">
+        <div class="result-label">Calculated Total Strokes</div>
+        <div class="result-value">${Math.round(calcTotalStrokes)}<span class="result-unit">strokes</span></div>
+      </div>
+      <div class="result-box ${strokeDiff > 0 ? 'red' : 'blue'}">
+        <div class="result-label">Stroke Difference (Actual − Calc)</div>
+        <div class="result-value">${strokeDiff > 0 ? '+' : ''}${Math.round(strokeDiff)}<span class="result-unit">strokes</span></div>
+      </div>
+    `;
+
+    // Deviation banner
+    let bannerClass, bannerIcon, bannerMsg;
+    if (doubleDeviation) {
+      bannerClass = 'fail'; bannerIcon = '⚠';
+      bannerMsg = `DOUBLE DEVIATION — Actual incremental volume is ${ratio.toFixed(2)}× the calculated value. Stop and investigate: possible leak, trapped air, or pipe expansion.`;
+    } else if (ratio > 1.5) {
+      bannerClass = 'warn'; bannerIcon = '△';
+      bannerMsg = `Elevated deviation — actual is ${ratio.toFixed(2)}× calculated. Within range but monitor closely.`;
+    } else {
+      bannerClass = 'pass'; bannerIcon = '✓';
+      bannerMsg = `No double deviation — actual is ${ratio.toFixed(2)}× calculated. Within acceptable range.`;
+    }
+
+    document.getElementById('strokeDeviation').innerHTML = `
+      <div class="deviation-banner ${bannerClass}">
+        <span style="font-size:1.4rem; margin-top:1px">${bannerIcon}</span>
+        <span>${bannerMsg}</span>
+      </div>`;
+
+    // Per-reading table
+    if (numReadings <= 100) {
+      let trows = '';
+      for (let i = 1; i <= numReadings; i++) {
+        const psiFrom   = strokeStart + (i - 1) * inc;
+        const psiTo     = Math.min(psiFrom + inc, target);
+        const cumCalc   = calcIncVol * i;
+        const cumActual = actualIncVol * i;
+        const diffPct   = ((actualIncVol - calcIncVol) / calcIncVol * 100);
+        const cls       = Math.abs(diffPct) > 100 ? 'danger' : Math.abs(diffPct) > 50 ? 'warn' : 'ok';
+        trows += `<tr>
+          <td>${i}</td>
+          <td>${psiFrom} → ${psiTo}</td>
+          <td class="ok">${calcIncVol.toFixed(5)}</td>
+          <td class="${cls}">${actualIncVol.toFixed(5)}</td>
+          <td class="${cls}">${diffPct > 0 ? '+' : ''}${diffPct.toFixed(1)}%</td>
+          <td>${cumCalc.toFixed(5)}</td>
+          <td>${cumActual.toFixed(5)}</td>
+        </tr>`;
+      }
+      document.getElementById('strokeBreakdown').innerHTML = `
+        <p class="section-label" style="margin-top:16px">Reading-by-Reading Breakdown</p>
+        <table class="breakdown-table">
+          <thead><tr>
+            <th>#</th><th>PSI Range</th>
+            <th>Calc Vol/Rdg (gal)</th>
+            <th>Actual Vol/Rdg (gal)</th>
+            <th>Deviation</th>
+            <th>Cum Calc (gal)</th>
+            <th>Cum Actual (gal)</th>
+          </tr></thead>
+          <tbody>${trows}</tbody>
+        </table>
+        <p class="formula-note" style="margin-top:10px">
+          Actual incremental volume is uniform across readings based on total pumped ÷ total ΔP × increment. 
+          Color coding: <span style="color:var(--green)">green</span> = within 50%, 
+          <span style="color:var(--yellow)">yellow</span> = 50–100%, 
+          <span style="color:var(--red)">red</span> = &gt;100% deviation.
+        </p>`;
+    } else {
+      document.getElementById('strokeBreakdown').innerHTML = `<p class="formula-note" style="margin-top:12px">Too many readings (${numReadings}) to display table. Increase increment size.</p>`;
+    }
+
+    res.classList.add('visible');
+  }
+
+  // ── CARD 04: BARREL CONVERTER ─────────────────────────────
+  function convertBbl() {
+    const bbl = parseFloat(document.getElementById('conv_bbl').value);
+    document.getElementById('conv_gal').value = !isNaN(bbl) ? (bbl * 42).toFixed(4) : '';
+  }
+  function convertGal() {
+    const gal = parseFloat(document.getElementById('conv_gal').value);
+    document.getElementById('conv_bbl').value = !isNaN(gal) ? (gal / 42).toFixed(5) : '';
+  }
+
+  // ── CARD 05: BLEED-OFF ────────────────────────────────────
+  function pushVolumeToBleed() {
+    if (lastTotalGal === null) { alert('Calculate volume in Card 01 first.'); return; }
+    document.getElementById('bd_volume').value = lastTotalGal.toFixed(4);
+  }
+
+  function calcBleed() {
+    const pressure = parseFloat(document.getElementById('bd_pressure').value);
+    const vol      = parseFloat(document.getElementById('bd_volume').value);
+    const bleedOz  = parseFloat(document.getElementById('bd_bleed').value);
+
+    if ([pressure, vol, bleedOz].some(isNaN) || vol <= 0) return;
+
+    const volOz        = vol * 128;
+    const compressedOz = volOz * (1 / 300000) * pressure;
+    const psiDrop      = (bleedOz / compressedOz) * pressure;
+
+    document.getElementById('bleedResultGrid').innerHTML = `
+      <div class="result-box highlight">
+        <div class="result-label">Estimated Pressure Drop</div>
+        <div class="result-value">${psiDrop.toFixed(1)}<span class="result-unit">psi</span></div>
+      </div>
+      <div class="result-box green">
+        <div class="result-label">New Pressure</div>
+        <div class="result-value">${(pressure - psiDrop).toFixed(1)}<span class="result-unit">psi</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Bleed Volume</div>
+        <div class="result-value">${bleedOz}<span class="result-unit">fl oz</span></div>
+      </div>
+      <div class="result-box blue">
+        <div class="result-label">Compressed Vol at ${pressure} PSI</div>
+        <div class="result-value">${compressedOz.toFixed(3)}<span class="result-unit">fl oz</span></div>
+      </div>
+    `;
+
+    document.getElementById('bleedResults').classList.add('visible');
+  }
+
+  // ── CARD 06: WATER FILL / PIG TRACKER ────────────────────
+  let wfHistory    = [];
+  let wfSetup      = null;
+  let wfTickerInt  = null;   // setInterval handle for live ticker
+
+  function wfGalPerFt(idIn) {
+    return Math.PI * Math.pow(idIn / 2, 2) * 12 / 231;
+  }
+
+  function wfRecalc() {
+    if (wfHistory.length > 0) wfRender();
+  }
+
+  // Returns observed GPM from last two real entries, or null
+  function wfObsRate() {
+    if (wfHistory.length < 2) return null;
+    const a = wfHistory[wfHistory.length - 2];
+    const b = wfHistory[wfHistory.length - 1];
+    const dtMin = (b.ts - a.ts) / 60000;
+    const dGal  = b.gallons - a.gallons;
+    return (dtMin > 0 && dGal > 0) ? dGal / dtMin : null;
+  }
+
+  // Start/restart the live ticker once we have an observed rate
+  function wfStartTicker() {
+    if (wfTickerInt) clearInterval(wfTickerInt);
+    wfTickerInt = setInterval(() => {
+      if (!wfSetup || wfHistory.length < 2) return;
+      const obsRate = wfObsRate();
+      if (!obsRate) return;
+      wfRenderLive(obsRate);
+    }, 1000);
+  }
+
+  function wfStopTicker() {
+    if (wfTickerInt) { clearInterval(wfTickerInt); wfTickerInt = null; }
+  }
+
+  function wfUpdate() {
+    const id         = parseFloat(document.getElementById('wf_id').value);
+    const length     = parseFloat(document.getElementById('wf_length').value);
+    const meterRaw   = parseFloat(document.getElementById('wf_gallons').value);
+    const offsetRaw  = document.getElementById('wf_offset').value;
+    const rateRaw    = document.getElementById('wf_rate').value;
+    const rateUnit   = document.getElementById('wf_rate_unit').value;
+
+    if (isNaN(id) || isNaN(length) || isNaN(meterRaw) || id <= 0 || length <= 0) {
+      alert('Please enter valid Pipe ID, Line Length, and a Meter Reading.');
+      return;
+    }
+
+    const offset  = (!isNaN(parseFloat(offsetRaw)) && offsetRaw !== '') ? parseFloat(offsetRaw) : 0;
+    const gallons = meterRaw - offset;
+
+    if (gallons < 0) {
+      alert('Meter reading is less than the starting offset. Check your values.');
+      return;
+    }
+
+    const rateGpm = (rateRaw !== '' && !isNaN(parseFloat(rateRaw)))
+      ? (rateUnit === 'gph' ? parseFloat(rateRaw) / 60 : parseFloat(rateRaw))
+      : null;
+
+    wfSetup = { id, length, rateGpm, offset };
+    wfHistory.push({ ts: Date.now(), gallons, meterRaw });
+
+    wfRender();
+
+    // Start live ticker once we have observed rate
+    if (wfHistory.length >= 2 && wfObsRate()) wfStartTicker();
+  }
+
+  // Full render from real entry data (locked state)
+  function wfRender() {
+    if (!wfSetup || wfHistory.length === 0) return;
+    const { id, length, rateGpm } = wfSetup;
+    const galPerFt  = wfGalPerFt(id);
+    const totalGal  = galPerFt * length;
+    const latest    = wfHistory[wfHistory.length - 1];
+    const pumped    = latest.gallons;
+
+    const pigFt  = Math.min(pumped / galPerFt, length);
+    const pigMi  = pigFt / 5280;
+    const pct    = Math.min((pumped / totalGal) * 100, 100);
+    const remFt  = Math.max(length - pigFt, 0);
+    const remMi  = remFt / 5280;
+    const remGal = Math.max(totalGal - pumped, 0);
+
+    const obsRateGpm  = wfObsRate();
+    const effectiveRate = obsRateGpm ?? rateGpm;
+
+    // Progress bar — solid/locked state
+    document.getElementById('wfTrackWrap').style.display = 'block';
+    document.getElementById('wfFill').style.width = pct + '%';
+    const pigLeft = Math.max(Math.min(pct, 96), 4);
+    document.getElementById('wfPig').style.left = pigLeft + '%';
+    document.getElementById('wfPig').className = 'pig-icon';  // remove estimating class
+    document.getElementById('wfPctBadge').textContent = pct.toFixed(1) + '%';
+
+    // Badge — locked on real entry
+    const badge = obsRateGpm
+      ? `<span class="live-badge estimating">● Live</span>`
+      : `<span class="live-badge locked">Logged</span>`;
+
+    document.getElementById('wfResultGrid').innerHTML = `
+      <div class="result-box highlight">
+        <div class="result-label">Pig Location ${badge}</div>
+        <div class="result-value" id="wfLiveFt">${pigFt.toFixed(0)}<span class="result-unit">ft</span></div>
+      </div>
+      <div class="result-box blue">
+        <div class="result-label">Pig Location</div>
+        <div class="result-value" id="wfLiveMi">${pigMi.toFixed(3)}<span class="result-unit">mi</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Distance Remaining</div>
+        <div class="result-value" id="wfLiveRemFt">${remFt.toFixed(0)}<span class="result-unit">ft</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Distance Remaining</div>
+        <div class="result-value" id="wfLiveRemMi">${remMi.toFixed(3)}<span class="result-unit">mi</span></div>
+      </div>
+      <div class="result-box green">
+        <div class="result-label">Gallons Pumped</div>
+        <div class="result-value" id="wfLiveGal">${pumped.toFixed(1)}<span class="result-unit">gal</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Total Line Volume</div>
+        <div class="result-value">${totalGal.toFixed(1)}<span class="result-unit">gal</span></div>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Gallons Remaining</div>
+        <div class="result-value" id="wfLiveRemGal">${remGal.toFixed(1)}<span class="result-unit">gal</span></div>
+      </div>
+      ${obsRateGpm !== null ? `
+      <div class="result-box yellow">
+        <div class="result-label">Observed Pump Rate</div>
+        <div class="result-value">${obsRateGpm.toFixed(1)}<span class="result-unit">gpm</span></div>
+      </div>` : ''}
+    `;
+
+    wfRenderEta(remGal, effectiveRate, obsRateGpm, rateGpm);
+    wfRenderHistory(galPerFt, totalGal, rateGpm);
+    document.getElementById('wfResults').classList.add('visible');
+  }
+
+  // Lightweight live update — only touches the numbers that change each second
+  function wfRenderLive(obsRateGpm) {
+    if (!wfSetup || wfHistory.length === 0) return;
+    const { id, length } = wfSetup;
+    const galPerFt = wfGalPerFt(id);
+    const totalGal = galPerFt * length;
+    const latest   = wfHistory[wfHistory.length - 1];
+
+    // Project forward from last real entry
+    const elapsedMin  = (Date.now() - latest.ts) / 60000;
+    const projPumped  = latest.gallons + obsRateGpm * elapsedMin;
+    const clampedPump = Math.min(projPumped, totalGal);
+
+    const pigFt  = clampedPump / galPerFt;
+    const pigMi  = pigFt / 5280;
+    const pct    = Math.min((clampedPump / totalGal) * 100, 100);
+    const remFt  = Math.max(length - pigFt, 0);
+    const remMi  = remFt / 5280;
+    const remGal = Math.max(totalGal - clampedPump, 0);
+
+    // Update only the live number elements
+    const elFt     = document.getElementById('wfLiveFt');
+    const elMi     = document.getElementById('wfLiveMi');
+    const elRemFt  = document.getElementById('wfLiveRemFt');
+    const elRemMi  = document.getElementById('wfLiveRemMi');
+    const elGal    = document.getElementById('wfLiveGal');
+    const elRemGal = document.getElementById('wfLiveRemGal');
+    if (!elFt) return; // grid not rendered yet
+
+    elFt.innerHTML     = `${pigFt.toFixed(0)}<span class="result-unit">ft</span>`;
+    elMi.innerHTML     = `${pigMi.toFixed(3)}<span class="result-unit">mi</span>`;
+    elRemFt.innerHTML  = `${remFt.toFixed(0)}<span class="result-unit">ft</span>`;
+    elRemMi.innerHTML  = `${remMi.toFixed(3)}<span class="result-unit">mi</span>`;
+    elGal.innerHTML    = `${clampedPump.toFixed(1)}<span class="result-unit">gal</span>`;
+    elRemGal.innerHTML = `${remGal.toFixed(1)}<span class="result-unit">gal</span>`;
+
+    // Progress bar
+    document.getElementById('wfFill').style.width = pct + '%';
+    const pigLeft = Math.max(Math.min(pct, 96), 4);
+    document.getElementById('wfPig').style.left = pigLeft + '%';
+    document.getElementById('wfPig').className = 'pig-icon estimating';
+    document.getElementById('wfPctBadge').textContent = pct.toFixed(1) + '%';
+
+    // ETA — ticking down in real time
+    wfRenderEta(remGal, obsRateGpm, obsRateGpm, null);
+  }
+
+  function wfRenderEta(remGal, effectiveRate, obsRateGpm, rateGpm) {
+    const etaBanner = document.getElementById('wfEtaBanner');
+    if (remGal <= 0) {
+      wfStopTicker();
+      document.getElementById('wfEtaTime').textContent = 'Complete';
+      document.getElementById('wfEtaSub').textContent = 'Pig has reached end of line';
+      document.getElementById('wfEtaBasis').textContent = '';
+      etaBanner.style.display = 'flex';
+    } else if (effectiveRate && effectiveRate > 0) {
+      const remMin  = remGal / effectiveRate;
+      const remHr   = Math.floor(remMin / 60);
+      const remMins = Math.round(remMin % 60);
+      const etaDate = new Date(Date.now() + remMin * 60000);
+      const etaStr  = etaDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('wfEtaTime').textContent =
+        remHr > 0 ? `${remHr}h ${remMins}m` : `${remMins}m`;
+      document.getElementById('wfEtaSub').textContent = `ETA: ~${etaStr}`;
+      document.getElementById('wfEtaBasis').innerHTML =
+        obsRateGpm !== null
+          ? `Using <strong style="color:var(--yellow)">observed rate</strong> of ${obsRateGpm.toFixed(1)} GPM<br>from last two entries`
+          : `Using <strong style="color:var(--muted)">entered rate</strong> of ${rateGpm.toFixed(1)} GPM<br>No observed data yet`;
+      etaBanner.style.display = 'flex';
+    } else {
+      document.getElementById('wfEtaTime').textContent = '—';
+      document.getElementById('wfEtaSub').textContent = '';
+      document.getElementById('wfEtaBasis').innerHTML =
+        `<span style="color:var(--muted)">Enter another reading to calculate ETA based on observed flow rate</span>`;
+      etaBanner.style.display = 'flex';
+    }
+  }
+
+  function wfRenderHistory(galPerFt, totalGal, rateGpm) {
+    if (wfHistory.length === 0) return;
+    let rows = '';
+    wfHistory.forEach((entry, i) => {
+      const t    = new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const loc  = Math.min(entry.gallons / galPerFt, wfSetup.length);
+      const p    = Math.min((entry.gallons / totalGal) * 100, 100);
+      let obs = '—';
+      if (i > 0) {
+        const prev  = wfHistory[i - 1];
+        const dtMin = (entry.ts - prev.ts) / 60000;
+        const dGal  = entry.gallons - prev.gallons;
+        if (dtMin > 0 && dGal > 0) obs = (dGal / dtMin).toFixed(1) + ' GPM';
+      }
+      const remEntry = Math.max(totalGal - entry.gallons, 0);
+      const effRate  = (i > 0 && obs !== '—') ? parseFloat(obs) : rateGpm;
+      const remStr   = (effRate && effRate > 0 && remEntry > 0)
+        ? (() => { const m = remEntry / effRate; const h = Math.floor(m/60); const mn = Math.round(m%60); return h > 0 ? `${h}h ${mn}m` : `${mn}m`; })()
+        : '—';
+
+      rows += `<tr>
+        <td>${i + 1}</td>
+        <td>${t}</td>
+        <td>${entry.meterRaw !== undefined ? entry.meterRaw.toLocaleString('en-US', {minimumFractionDigits:1, maximumFractionDigits:1}) : '—'}</td>
+        <td>${entry.gallons.toFixed(1)}</td>
+        <td>${loc.toFixed(0)} ft / ${(loc/5280).toFixed(3)} mi</td>
+        <td>${p.toFixed(1)}%</td>
+        <td>${obs}</td>
+        <td>${remStr}</td>
+      </tr>`;
+    });
+    document.getElementById('wfHistoryBody').innerHTML = rows;
+    document.getElementById('wfHistoryWrap').style.display = 'block';
+  }
+
+  function wfReset() {
+    wfStopTicker();
+    wfHistory = [];
+    wfSetup   = null;
+    document.getElementById('wf_gallons').value = '';
+    document.getElementById('wf_offset').value  = '';
+    document.getElementById('wfResults').classList.remove('visible');
+    document.getElementById('wfTrackWrap').style.display = 'none';
+    document.getElementById('wfHistoryWrap').style.display = 'none';
+    document.getElementById('wfEtaBanner').style.display = 'none';
+    document.getElementById('wfFill').style.width = '0%';
+    document.getElementById('wfPig').style.left = '4%';
+    document.getElementById('wfPig').className = 'pig-icon';
+    document.getElementById('wfPctBadge').textContent = '0%';
+  }
+
+  // ── NITROGEN BOTTLE ESTIMATOR ─────────────────────────────
+  function calcN2() {
+    const od   = parseFloat(document.getElementById('n2_od').value);
+    const wall = parseFloat(document.getElementById('n2_wall').value);
+
+    if (isNaN(od) || isNaN(wall) || od <= 0 || wall <= 0 || wall >= od / 2) {
+      document.getElementById('n2Results').classList.remove('visible');
+      return;
+    }
+
+    // Sup's field method — exact formula chain from spreadsheet
+    const PI         = 3.1416;
+    const FOOTAGE    = 42;
+    const PRESSURE   = 25;
+    const ATM        = 15;          // field atmospheric constant
+    const BOTTLE_CF  = 200;         // divisor per field spreadsheet
+
+    const radius     = od;                                    // sup uses OD as radius (field convention)
+    const areaSqIn   = PI * radius * radius;                  // cross-section area, sq in
+    const volPerFtCuIn = areaSqIn * 12;                       // cubic inches per foot
+    const volPerFtCuFt = volPerFtCuIn / 1728;                 // cubic feet per foot
+    const totalVol   = volPerFtCuFt * FOOTAGE;                // total pipe volume, cu ft
+    const pressRatio = (PRESSURE + ATM) / ATM;                // pressure-to-atmosphere multiplier
+    const totalGas   = totalVol * pressRatio;                 // SCF of N₂ needed
+    const bottles    = totalGas / BOTTLE_CF;                  // raw bottle count
+    const bottlesUp  = Math.ceil(bottles);                    // always round up
+
+    document.getElementById('n2ResultGrid').innerHTML = `
+      <div class="result-box highlight">
+        <div class="result-label">Bottles Needed (rounded up)</div>
+        <div class="result-value">${bottlesUp}<span class="result-unit">bottles</span></div>
+      </div>
+      <div class="result-box yellow">
+        <div class="result-label">Raw Calculated</div>
+        <div class="result-value">${bottles.toFixed(4)}<span class="result-unit">btl</span></div>
+      </div>
+      <div class="result-box blue">
+        <div class="result-label">Total Gas Required</div>
+        <div class="result-value">${totalGas.toFixed(2)}<span class="result-unit">SCF</span></div>
+      </div>
+    `;
+    document.getElementById('n2Results').classList.add('visible');
+  }
+
+  // Init
+  addPipeRow();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "hydro-current-site-preview",
+  "private": true,
+  "scripts": {
+    "preview": "node dev/preview.cjs",
+    "test:log": "node LivePressureAndTempMonitor/tests/history-log.test.cjs"
+  },
+  "devDependencies": { "playwright": "1.62.1" }
+}

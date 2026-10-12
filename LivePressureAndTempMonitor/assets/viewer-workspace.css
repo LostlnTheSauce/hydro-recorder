@@ -1,0 +1,23 @@
+/* Read-only counterpart of the Field Recorder. */
+#viewerDashboard { max-width:1320px; margin:0 auto; padding:0 24px 24px; }
+#viewerDashboard .app-header { margin:0 -24px 24px; }
+#viewerDashboard .dashboard-tabs { position:static; display:flex; gap:8px; margin-bottom:20px; }
+#viewerDashboard .dashboard-tabs button { flex:1; justify-content:center; text-align:center; background:white; border-color:var(--line); }
+#viewerDashboard .dashboard-tabs button.active { background:var(--accent-soft); border-color:#b5d8cb; }
+#viewerDashboard>.view-controls { width:fit-content; margin-bottom:20px; align-items:center; }
+#viewerDashboard>.view-controls>span { padding:0 10px; font-size:.75rem; color:var(--muted); }
+#viewerDashboard .gauge-card { padding:24px; border:1px solid var(--line); border-radius:12px; background:white; }
+#viewerDashboard .gauge-toolbar h2 { font-size:1.2rem; }
+#viewerDashboard .temperature-panel { border:0; padding:0; }
+#viewerDashboard:not([data-dashboard-view="temperature"]) .temperature-panel { display:none; }
+#viewerDashboard[data-dashboard-view="temperature"] .chart-wrap,
+#viewerDashboard[data-dashboard-view="temperature"] .stat-row,
+#viewerDashboard[data-dashboard-view="temperature"] .current-readout { display:none; }
+#viewerDashboard:not([data-dashboard-view="logs"])>.event-notes,
+#viewerDashboard:not([data-dashboard-view="logs"])>.pressure-log { display:none; }
+#viewerDashboard[data-dashboard-view="logs"]>.gauge-grid { display:none; }
+#viewerGaugeGrid[data-view-mode="A"] [data-view-gauge="B"],
+#viewerGaugeGrid[data-view-mode="B"] [data-view-gauge="A"],
+#viewerGaugeGrid .inactive-test { display:none; }
+@media(min-width:1000px) { #viewerGaugeGrid[data-view-mode="both"] { grid-template-columns:1fr 1fr; } }
+@media(max-width:760px) { #viewerDashboard { padding:0 12px 18px; }#viewerDashboard .app-header { margin:0 -12px 16px; }#viewerDashboard .gauge-card { padding:16px; }#viewerDashboard .dashboard-tabs button { font-size:.8rem; } }

@@ -1,0 +1,3 @@
+.temperature-laptop-power { margin:0; padding:12px 14px; border:1px solid #c7dfd5; border-radius:8px; background:#eef7f2; color:#244e41; font-size:.9rem; font-weight:600; }
+.temperature-laptop-power[data-state="unknown"], .temperature-laptop-power[data-state="stale"] { background:#f4f5f6; border-color:#dce2e5; color:#55646d; }
+.temperature-laptop-power[data-state="low"] { background:#fff0dc; border-color:#d9aa56; color:#7a4311; }

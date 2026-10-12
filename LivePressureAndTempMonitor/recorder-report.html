@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grant's XP3i Crystal Gauge Circular Pressure Chart</title>
+  <style>
+    :root {
+      --ink: #102a43;
+      --muted: #627d98;
+      --paper: #fbfcf7;
+      --panel: #ffffff;
+      --line: #cbd5e1;
+      --blue: #086e9b;
+      --blue-soft: #e7f5fb;
+      --red: #c73535;
+      --green: #1f7a4f;
+      --shadow: 0 12px 30px rgba(30, 55, 75, .12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #edf3f7;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    .app { max-width: 1500px; margin: 0 auto; padding: 22px; }
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.25rem); letter-spacing: -.03em; }
+    h2 { margin: 0 0 12px; font-size: 1.08rem; }
+    .subtitle { margin: 6px 0 0; color: var(--muted); }
+    .badge {
+      flex: 0 0 auto;
+      color: #0a5677;
+      background: var(--blue-soft);
+      border: 1px solid #b8deef;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: .84rem;
+      font-weight: 700;
+    }
+    .layout { display: grid; grid-template-columns: 355px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid #d8e2e9;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+    .controls { padding: 18px; position: sticky; top: 14px; }
+    .section { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid #e4ebf0; }
+    .section:last-child { margin: 0; padding: 0; border: 0; }
+    .dropzone {
+      display: block;
+      border: 2px dashed #8cb9ce;
+      background: #f5fbfe;
+      border-radius: 12px;
+      padding: 17px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+    .dropzone:hover, .dropzone.drag { border-color: var(--blue); background: #eaf7fc; }
+    .dropzone strong { display: block; margin-bottom: 4px; }
+    .dropzone small { color: var(--muted); }
+    #fileInput { display: none; }
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      border: 1px solid #9fb3c2;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 11px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    button:hover { background: #f0f6f9; }
+    button.primary { background: var(--blue); color: white; border-color: var(--blue); }
+    button.primary:hover { background: #075d83; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { display: block; font-size: .76rem; color: var(--muted); font-weight: 750; margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #b8c6d0;
+      border-radius: 7px;
+      padding: 8px 9px;
+    }
+    textarea { min-height: 64px; resize: vertical; }
+    .field { margin-bottom: 10px; }
+    .status {
+      margin-top: 10px;
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #f1f5f8;
+      color: #486581;
+      font-size: .83rem;
+      line-height: 1.35;
+    }
+    .status.good { color: #165f3d; background: #eaf7ef; }
+    .status.bad { color: #952d2d; background: #fff0f0; }
+    .workspace { padding: 18px; min-width: 0; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tabs button.active { background: var(--ink); color: white; border-color: var(--ink); }
+    .chart-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .chart-tools button { min-width: 36px; padding: 6px 9px; }
+    .zoom-value { min-width: 46px; text-align: center; color: var(--muted); font-size: .78rem; font-weight: 800; }
+    details.import-help { background: #f7fafc; border: 1px solid #dce6ec; border-radius: 9px; padding: 0 10px; }
+    details.import-help summary { cursor: pointer; padding: 10px 0; font-weight: 750; font-size: .86rem; }
+    details.import-help[open] summary { border-bottom: 1px solid #e0e8ed; margin-bottom: 10px; }
+    .mini-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+    .mini-tabs button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .check-row { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0; color: var(--ink); font-size: .82rem; font-weight: 650; }
+    .check-row input { width: auto; margin: 3px 0 0; flex: 0 0 auto; }
+    .color-field { display: grid; grid-template-columns: 42px 1fr; gap: 8px; align-items: center; }
+    .color-field input[type="color"] { width: 42px; height: 36px; padding: 2px; cursor: pointer; }
+    .range-field { display: grid; grid-template-columns: 1fr 48px; gap: 8px; align-items: center; }
+    .range-field input[type="range"] { padding: 0; }
+    .range-value { text-align: center; font-size: .8rem; font-weight: 800; color: var(--muted); }
+    .chart-wrap {
+      border: 1px solid #d5dfe6;
+      border-radius: 12px;
+      overflow: auto;
+      background: var(--paper);
+      min-height: 560px;
+      display: block;
+    }
+    svg { display: block; width: min(100%, 920px); height: auto; margin: 0 auto; background: var(--paper); }
+    .stats { display: grid; grid-template-columns: repeat(6, minmax(105px, 1fr)); gap: 9px; margin: 12px 0; }
+    .stat { background: #f5f8fa; border: 1px solid #dbe4ea; border-radius: 9px; padding: 9px 10px; }
+    .stat span { display: block; color: var(--muted); text-transform: uppercase; font-size: .65rem; font-weight: 800; letter-spacing: .06em; }
+    .stat strong { display: block; margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .stat small { display: block; margin-top: 2px; color: #61788a; font-size: .68rem; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .table-wrap { max-height: 330px; overflow: auto; border: 1px solid #d6e0e7; border-radius: 9px; }
+    table { border-collapse: collapse; width: 100%; font-size: .82rem; }
+    th, td { padding: 7px 9px; border-bottom: 1px solid #e3e9ed; text-align: left; white-space: nowrap; }
+    th { position: sticky; top: 0; background: #edf3f7; z-index: 1; }
+    td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .hidden { display: none !important; }
+    .note { color: var(--muted); font-size: .76rem; line-height: 1.4; margin: 8px 0 0; }
+    .print-only { display: none; }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .controls { position: static; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 580px) {
+      .app { padding: 10px; }
+      .hero { align-items: flex-start; flex-direction: column; }
+      .grid2, .stats { grid-template-columns: 1fr 1fr; }
+      .workspace, .controls { padding: 12px; }
+      .chart-wrap { min-height: 380px; }
+    }
+    @media print {
+      @page { size: letter portrait; margin: .4in; }
+      body { background: white; }
+      .app { max-width: none; padding: 0; }
+      .hero, .controls, .toolbar, .screen-only { display: none !important; }
+      .layout { display: block; }
+      .workspace { padding: 0; border: 0; box-shadow: none; }
+      .print-only { display: block; }
+      .print-page { page-break-after: always; break-after: page; }
+      .print-page:last-child { page-break-after: auto; break-after: auto; }
+      .chart-page { page-break-inside: avoid; break-inside: avoid-page; }
+      .chart-page .print-header, .chart-page .print-chart, .chart-page .print-stats { page-break-inside: avoid; break-inside: avoid-page; }
+      .print-header { display: flex; justify-content: space-between; gap: 14px; border-bottom: 2px solid #12334a; padding-bottom: 5px; margin-bottom: 4px; }
+      .print-header h2 { margin: 0; font-size: 14pt; }
+      .print-header p { margin: 1px 0; font-size: 8.5pt; line-height: 1.15; }
+      .print-header .report-note { max-width: 4.7in; margin-top: 6px; color: #4f625b; font-size: 8.5pt; line-height: 1.25; }
+      .print-chart svg { width: 6.8in; max-width: 100%; height: auto; max-height: 7.35in; margin: 0 auto; }
+      .print-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 3px; }
+      .print-stats .stat { padding: 4px; font-size: 7.5pt; }
+      .print-stats .stat small { font-size: 6.2pt; line-height: 1.15; }
+      .print-table table { font-size: 8pt; }
+      .print-table th, .print-table td { padding: 3px 6px; }
+    }
+    /* Command-center visual system */
+    :root {
+      --ink: #102938;
+      --muted: #5d7280;
+      --panel: #ffffff;
+      --line: #c9d6dd;
+      --blue: #157b94;
+      --blue-soft: #dff6fa;
+      --shadow: 0 14px 34px rgba(7, 31, 45, .09);
+    }
+    body { background: radial-gradient(circle at 82% -10%, #d8f2f6 0, #e8eff3 34rem); }
+    .app { max-width: 1560px; }
+    .hero { min-height: 78px; padding: 15px 18px; border-radius: 18px; background: linear-gradient(112deg, #07131c, #10374a); box-shadow: 0 16px 36px rgba(7, 31, 45, .16); }
+    .hero h1 { color: #fff; }
+    .badge { border-color: rgba(75, 210, 231, .28); background: rgba(39, 185, 210, .12); color: #83e2ef; }
+    .panel { border-color: #c4d3da; border-radius: 18px; }
+    .controls { top: 12px; }
+    button { min-height: 40px; border-radius: 9px; }
+    button.primary { background: linear-gradient(135deg, #0d3549, #157b94); border-color: #0d3549; }
+    input, select, textarea { min-height: 41px; border-radius: 9px; }
+    .dropzone { border-color: #8ccbd7; border-radius: 13px; background: #f1fbfc; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <h1>Grant's XP3i Crystal Gauge Circular Pressure Chart</h1>
+      </div>
+      <span class="badge">Offline report builder</span>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls">
+        <section class="section">
+          <h2>1. Load recording</h2>
+          <label class="dropzone" id="dropzone" for="fileInput">
+            <strong>Choose or drop a CSV/TXT file</strong>
+            <small>The file stays on this computer.</small>
+          </label>
+          <input id="fileInput" type="file" accept=".csv,.txt,text/csv,text/plain">
+          <div class="button-row">
+            <button id="demoButton" type="button">Load simulated test</button>
+            <button id="clearButton" type="button">Clear</button>
+          </div>
+          <div id="fileStatus" class="status">No recording loaded.</div>
+        </section>
+
+        <section class="section">
+          <h2>2. Chart settings</h2>
+          <div class="mini-tabs">
+            <button id="samplingSettingsTab" class="active" type="button">Readings</button>
+            <button id="customizationTab" type="button">Appearance</button>
+          </div>
+
+          <div id="samplingSettingsPanel">
+            <div class="grid2">
+              <div class="field">
+                <label for="fullScale">Full scale (psi)</label>
+                <input id="fullScale" type="number" value="1000" min="1" step="1">
+              </div>
+              <div class="field">
+                <label for="chartHours">Chart duration</label>
+                <select id="chartHours">
+                  <option value="24" selected>24 hours</option>
+                  <option value="12">12 hours</option>
+                  <option value="8">8 hours</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="sampleInterval">Official-test reading interval</label>
+              <select id="sampleInterval">
+                <option value="5">5 seconds</option>
+                <option value="15">15 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="60">60 seconds</option>
+                <option value="300">5 minutes</option>
+                <option value="600">10 minutes</option>
+                <option value="900" selected>15 minutes</option>
+              </select>
+            </div>
+            <details class="import-help">
+              <summary>Advanced reading options</summary>
+              <div class="field">
+                <label for="transitionInterval">Come-up and bleed-down reading interval</label>
+                <select id="transitionInterval">
+                  <option value="5">5 seconds</option>
+                  <option value="15">15 seconds</option>
+                  <option value="30">30 seconds</option>
+                  <option value="60" selected>60 seconds</option>
+                  <option value="300">5 minutes</option>
+                  <option value="600">10 minutes</option>
+                  <option value="900">15 minutes</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="pressureDecimals">Displayed pressure decimals</label>
+                <select id="pressureDecimals">
+                  <option value="0">0</option>
+                  <option value="1" selected>1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="timeCorrection">Recorded-time correction</label>
+                <select id="timeCorrection">
+                  <option value="0" selected>No correction</option>
+                  <option value="12">Add 12 hours (current gauge)</option>
+                  <option value="-12">Subtract 12 hours</option>
+                </select>
+                <p class="note">Changes chart and report times without modifying the source CSV.</p>
+              </div>
+            </details>
+            <p class="note">The interval chart uses the official-test interval during the test and the advanced interval before and after it.</p>
+          </div>
+
+          <div id="customizationPanel" class="hidden">
+            <div class="grid2">
+              <div class="field">
+                <label for="traceColor">Pressure trace</label>
+                <div class="color-field"><input id="traceColor" type="color" value="#c73535"><span>Recorded pressure</span></div>
+              </div>
+              <div class="field">
+                <label for="traceWidth">Trace thickness</label>
+                <div class="range-field"><input id="traceWidth" type="range" min="0.5" max="6" step="0.25" value="1"><span id="traceWidthValue" class="range-value">1</span></div>
+              </div>
+            </div>
+            <label class="check-row"><input id="showIntervalMarkers" type="checkbox">Show circles on selected interval readings</label>
+            <label class="check-row"><input id="showRecordingMarkers" type="checkbox">Show recording start dot and final square</label>
+            <label class="check-row"><input id="showTestMarkers" type="checkbox" checked>Show official test START and END flags</label>
+            <div class="field"><label for="testMarkerColor">START and END flag color</label><div class="color-field"><input id="testMarkerColor" type="color" value="#8f3ab8"><span>Official test flags</span></div></div>
+
+            <div style="border-top:1px solid #dfe7ec;margin:14px 0 10px;padding-top:10px">
+              <label class="check-row"><input id="showPressureWindow" type="checkbox" checked>Show pressure test window</label>
+              <p class="note">Flags and window lines use the official test period entered below.</p>
+              <div class="grid2">
+                <div class="field"><label for="windowBottom">Bottom (psi)</label><input id="windowBottom" type="number" step="0.1"></div>
+                <div class="field"><label for="windowTop">Top (psi)</label><input id="windowTop" type="number" step="0.1"></div>
+              </div>
+              <div class="grid2">
+                <div class="field"><label for="windowBottomColor">Bottom color</label><div class="color-field"><input id="windowBottomColor" type="color" value="#168bd2"><span>Lower limit</span></div></div>
+                <div class="field"><label for="windowTopColor">Top color</label><div class="color-field"><input id="windowTopColor" type="color" value="#18a957"><span>Upper limit</span></div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>3. Test information</h2>
+          <div class="field"><label for="projectName">Project / test name</label><input id="projectName" placeholder="Atmos hydrostatic test"></div>
+          <div class="field"><label for="lineInfo">Line / location</label><input id="lineInfo" placeholder="Line segment or work order"></div>
+          <div class="grid2">
+            <div class="field"><label for="operatorName">Recorded by</label><input id="operatorName"></div>
+            <div class="field"><label for="gaugeSerial">Gauge serial</label><input id="gaugeSerial"></div>
+          </div>
+          <div class="field"><label for="testDate">Test date</label><input id="testDate" type="date"></div>
+          <div class="field"><label for="officialTestStart">Official 8-hour test start</label><input id="officialTestStart" type="datetime-local" step="1"></div>
+          <div class="field"><label for="officialTestEnd">Official 8-hour test end</label><input id="officialTestEnd" type="datetime-local" step="1"></div>
+          <div id="officialPeriodStatus" class="status">Enter the official test start and end to show the flags and pressure window.</div>
+          <p class="note" style="margin-bottom:10px">The end is filled eight hours after the start. If an overnight end is entered on the starting date, it is moved to the following day automatically.</p>
+          <div class="field"><label for="notes">Report notes</label><textarea id="notes" placeholder="Weather, test conditions, equipment remarks, or other useful context…"></textarea><p class="note">Included in the PDF report header, outside the circular chart.</p></div>
+        </section>
+
+        <section class="section">
+          <h2>4. Export</h2>
+          <div class="button-row">
+            <button id="printButton" class="primary" type="button" disabled>Print / save PDF</button>
+            <button id="svgButton" type="button" disabled>Save shown chart</button>
+            <button id="csvButton" type="button" disabled>Save sampled CSV</button>
+          </div>
+          <p class="note">For the cleanest PDF, turn off “Headers and footers” in the browser print window.</p>
+        </section>
+      </aside>
+
+      <section class="panel workspace">
+        <div class="toolbar screen-only">
+          <div class="tabs" role="tablist">
+            <button id="fullTab" class="active" type="button">Every recorded reading</button>
+            <button id="sampleTab" type="button">Interval readings</button>
+          </div>
+          <div class="chart-tools">
+            <span id="viewCount" class="note">No data</span>
+            <button id="zoomOut" type="button" title="Zoom out">−</button>
+            <span id="zoomValue" class="zoom-value">100%</span>
+            <button id="zoomIn" type="button" title="Zoom in">+</button>
+            <button id="zoomReset" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div id="stats" class="stats screen-only"></div>
+        <div id="chartWrap" class="chart-wrap screen-only">
+          <div style="text-align:center;color:#829ab1;padding:40px">
+            <strong>Load a recording or the simulated test</strong><br>
+            <span style="font-size:.85rem">A circular pressure chart will appear here.</span>
+          </div>
+        </div>
+
+        <div id="sampleTableSection" class="screen-only" style="margin-top:14px">
+          <h2 id="readingsTableTitle">Recorded readings</h2>
+          <div class="table-wrap"><table><thead><tr><th>#</th><th>Date and time</th><th>Elapsed</th><th>Pressure (psi)</th></tr></thead><tbody id="sampleTableBody"></tbody></table></div>
+        </div>
+
+        <div id="printReport" class="print-only"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    'use strict';
+
+    const state = {
+      fileName: '',
+      headers: [],
+      rawRows: [],
+      importMap: { date: -1, time: 0, pressure: 1 },
+      readings: [],
+      sampled: [],
+      metadata: {},
+      sourceType: '',
+      activeView: 'full',
+      zoom: 100,
+      tableKey: ''
+    };
+    let renderTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const pad = (n) => String(n).padStart(2, '0');
+
+    function secondsLabel(seconds) {
+      if (seconds < 60) return `${seconds}-second`;
+      return `${seconds / 60}-minute`;
+    }
+
+    function intervalLabel() {
+      return secondsLabel(Number($('sampleInterval').value) || 900);
+    }
+
+    function samplingSummary() {
+      if (!getOfficialPeriod()) return intervalLabel();
+      return `${intervalLabel()} test / ${secondsLabel(Number($('transitionInterval').value) || 60)} transitions`;
+    }
+
+    function dateInputValue(date) {
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    function dateTimeInputValue(date) {
+      return `${dateInputValue(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    }
+
+    function displayTestDate() {
+      const raw = $('testDate').value;
+      const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return match ? `${match[2]}/${match[3]}/${match[1]}` : raw;
+    }
+
+    function optionalNumber(id) {
+      const raw = String($(id).value || '').trim();
+      if (!raw) return NaN;
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : NaN;
+    }
+
+    function getOfficialPeriod() {
+      const startRaw = $('officialTestStart').value;
+      const endRaw = $('officialTestEnd').value;
+      const start = startRaw ? new Date(startRaw) : null;
+      const end = endRaw ? new Date(endRaw) : null;
+      if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+      let overnightAdjusted = false;
+      if (end <= start && startRaw.slice(0, 10) === endRaw.slice(0, 10)) {
+        end.setDate(end.getDate() + 1);
+        overnightAdjusted = true;
+      }
+      if (end <= start) return null;
+      return { start, end, overnightAdjusted };
+    }
+
+    function updateOfficialPeriodStatus() {
+      const box = $('officialPeriodStatus');
+      if (!$('officialTestStart').value || !$('officialTestEnd').value) {
+        box.className = 'status';
+        box.textContent = 'Enter the official test start and end to show the flags and pressure window.';
+        return;
+      }
+      const period = getOfficialPeriod();
+      if (!period) {
+        box.className = 'status bad';
+        box.textContent = 'The official test end must be after the start.';
+        return;
+      }
+      const durationHours = (period.end - period.start) / 3600000;
+      box.className = Math.abs(durationHours - 8) < .001 ? 'status good' : 'status';
+      const hasWindowValue = Number.isFinite(optionalNumber('windowBottom')) || Number.isFinite(optionalNumber('windowTop'));
+      box.textContent = `Official test: ${formatDateTime(period.start)} to ${formatDateTime(period.end)} · ${formatDuration(period.end - period.start)}. Test flags are enabled${hasWindowValue ? '; entered pressure-window lines are enabled.' : '; enter a bottom or top pressure to add window lines.'}`;
+    }
+
+    function normalizeOfficialPeriod(changedId) {
+      const startRaw = $('officialTestStart').value;
+      const endRaw = $('officialTestEnd').value;
+      const start = startRaw ? new Date(startRaw) : null;
+      if (changedId === 'officialTestStart' && start && !Number.isNaN(start.getTime()) && !endRaw) {
+        $('officialTestEnd').value = dateTimeInputValue(new Date(start.getTime() + 8 * 3600000));
+      } else if (startRaw && endRaw) {
+        const end = new Date(endRaw);
+        if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end <= start && startRaw.slice(0, 10) === endRaw.slice(0, 10)) {
+          end.setDate(end.getDate() + 1);
+          $('officialTestEnd').value = dateTimeInputValue(end);
+        }
+      }
+      updateOfficialPeriodStatus();
+    }
+
+    function splitDelimitedLine(line, delimiter) {
+      const cells = [];
+      let value = '';
+      let quoted = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (quoted && line[i + 1] === '"') { value += '"'; i++; }
+          else quoted = !quoted;
+        } else if (char === delimiter && !quoted) {
+          cells.push(value.trim()); value = '';
+        } else value += char;
+      }
+      cells.push(value.trim());
+      return cells;
+    }
+
+    function chooseDelimiter(lines) {
+      const candidates = [',', '\t', ';', '|'];
+      let best = { delimiter: ',', score: -1 };
+      for (const delimiter of candidates) {
+        const counts = lines.slice(0, 20).filter(Boolean).map(line => splitDelimitedLine(line, delimiter).length);
+        const common = counts.reduce((acc, count) => { acc[count] = (acc[count] || 0) + 1; return acc; }, {});
+        const entries = Object.entries(common).filter(([count]) => Number(count) > 1).sort((a,b) => b[1] - a[1]);
+        const score = entries.length ? Number(entries[0][0]) * Number(entries[0][1]) : 0;
+        if (score > best.score) best = { delimiter, score };
+      }
+      return best.delimiter;
+    }
+
+    function headerScore(cells) {
+      const text = cells.join(' ').toLowerCase();
+      let score = 0;
+      if (/date|time|timestamp|recorded/.test(text)) score += 3;
+      if (/press|psi|bar|kpa/.test(text)) score += 3;
+      if (/reading|measurement|value/.test(text)) score += 2;
+      if (/sample\s*count|events?/.test(text)) score += 1;
+      if (cells.length >= 2) score += 1;
+      if (cells.some(v => /[a-z]/i.test(v))) score += 1;
+      return score;
+    }
+
+    function parseDelimited(text) {
+      const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim() !== '');
+      if (!lines.length) throw new Error('The file is empty.');
+      const delimiter = chooseDelimiter(lines);
+      const searchLimit = Math.min(lines.length, 40);
+      let headerIndex = 0;
+      let sourceType = '';
+      let bestScore = -1;
+      for (let i = 0; i < searchLimit; i++) {
+        const cells = splitDelimitedLine(lines[i], delimiter);
+        const normalized = cells.map(cell => cell.trim().toLowerCase());
+        const xp3iHeader = normalized[0] === '1' && normalized.some(cell => /date.?time/.test(cell)) && normalized.includes('reading');
+        if (xp3iHeader) {
+          headerIndex = i;
+          sourceType = 'XP3i';
+          break;
+        }
+        const score = headerScore(cells);
+        if (score > bestScore) { bestScore = score; headerIndex = i; }
+      }
+      const metadata = {};
+      if (sourceType === 'XP3i') {
+        lines.slice(0, headerIndex).forEach(line => {
+          const cells = splitDelimitedLine(line, delimiter);
+          if (cells[0] === '0' && cells[1]) metadata[cells[1].trim()] = cells.slice(2).join(delimiter).trim();
+        });
+      }
+      const headers = splitDelimitedLine(lines[headerIndex], delimiter).map((h, i) => h || `Column ${i + 1}`);
+      const normalizedHeaders = headers.map(header => header.toLowerCase().trim());
+      if (!sourceType && normalizedHeaders.includes('timestamp utc') && normalizedHeaders.includes('timestamp local') && normalizedHeaders.includes('pressure')) {
+        sourceType = 'Live monitor';
+      }
+      const rows = lines.slice(headerIndex + 1).map(line => splitDelimitedLine(line, delimiter))
+        .filter(row => row.some(cell => cell !== ''))
+        .map(row => headers.map((_, i) => row[i] ?? ''));
+      return { headers, rows, delimiter, skippedLines: headerIndex, metadata, sourceType };
+    }
+
+    function findColumn(headers, patterns, excluded = []) {
+      let best = -1, bestScore = 0;
+      headers.forEach((header, index) => {
+        if (excluded.includes(index)) return;
+        const h = header.toLowerCase().trim();
+        let score = 0;
+        patterns.forEach(([regex, points]) => { if (regex.test(h)) score += points; });
+        if (score > bestScore) { bestScore = score; best = index; }
+      });
+      return best;
+    }
+
+    function guessColumns(headers) {
+      const pressure = findColumn(headers, [[/pressure/,10],[/\bpsi\b/,8],[/press/,5],[/value|reading/,2]]);
+      const date = findColumn(headers, [[/^date$/,10],[/record.*date/,8],[/date/,5]], [pressure]);
+      const localTimestamp = headers.findIndex(header => /^timestamp\s+local$/i.test(header.trim()));
+      const time = localTimestamp >= 0 ? localTimestamp : findColumn(headers, [[/timestamp|date.?time/,12],[/^time$/,10],[/record.*time/,8],[/time/,5]], [pressure]);
+      return { date, time, pressure };
+    }
+
+    function parsePressure(value) {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+      let cleaned = String(value ?? '').trim().replace(/\s*(psi|psig|bar|kpa|mpa)\s*$/i, '').replace(/,/g, '');
+      const match = cleaned.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/);
+      return match ? Number(match[0]) : NaN;
+    }
+
+    function parseDateTime(dateValue, timeValue, previous) {
+      const d = String(dateValue ?? '').trim();
+      const t = String(timeValue ?? '').trim();
+      const combined = d ? `${d} ${t}`.trim() : t;
+
+      if (/^\d+(?:\.\d+)?$/.test(combined)) {
+        const numeric = Number(combined);
+        if (numeric > 20000 && numeric < 100000) return new Date(Math.round((numeric - 25569) * 86400000));
+        if (numeric > 1e12) return new Date(numeric);
+        if (numeric > 1e9) return new Date(numeric * 1000);
+      }
+
+      const timeOnly = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(AM|PM)?$/i);
+      if (!d && timeOnly) {
+        let hour = Number(timeOnly[1]);
+        const meridiem = (timeOnly[5] || '').toUpperCase();
+        if (meridiem === 'PM' && hour < 12) hour += 12;
+        if (meridiem === 'AM' && hour === 12) hour = 0;
+        const base = previous ? new Date(previous) : new Date(2000, 0, 1);
+        const candidate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hour, Number(timeOnly[2]), Number(timeOnly[3] || 0), Number((timeOnly[4] || '0').padEnd(3, '0')));
+        if (previous && candidate.getTime() < previous.getTime() - 12 * 3600000) candidate.setDate(candidate.getDate() + 1);
+        return candidate;
+      }
+
+      const us = combined.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\s*,?\s*(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(AM|PM)?$/i);
+      if (us) {
+        let year = Number(us[3]); if (year < 100) year += 2000;
+        let hour = Number(us[4]); const ap = (us[8] || '').toUpperCase();
+        if (ap === 'PM' && hour < 12) hour += 12;
+        if (ap === 'AM' && hour === 12) hour = 0;
+        const parsed = new Date(year, Number(us[1]) - 1, Number(us[2]), hour, Number(us[5]), Number(us[6] || 0), Number((us[7] || '0').padEnd(3, '0')));
+        if (!Number.isNaN(parsed.getTime())) return parsed;
+      }
+      const parsed = new Date(combined);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+      return null;
+    }
+
+    function applyMapping() {
+      if (!state.rawRows.length) return;
+      const dateIndex = state.importMap.date;
+      const timeIndex = state.importMap.time;
+      const pressureIndex = state.importMap.pressure;
+      if (timeIndex < 0 || pressureIndex < 0) return setStatus('Choose both a time and pressure column.', 'bad');
+
+      const readings = [];
+      let previous = null;
+      let invalid = 0;
+      const timeCorrectionHours = Number($('timeCorrection').value) || 0;
+      const timeCorrectionMs = timeCorrectionHours * 3600000;
+      for (const row of state.rawRows) {
+        const sourceTime = parseDateTime(dateIndex >= 0 ? row[dateIndex] : '', row[timeIndex], previous);
+        const pressure = parsePressure(row[pressureIndex]);
+        if (!sourceTime || Number.isNaN(sourceTime.getTime()) || !Number.isFinite(pressure)) { invalid++; continue; }
+        readings.push({ time: new Date(sourceTime.getTime() + timeCorrectionMs), sourceTime, pressure });
+        previous = sourceTime;
+      }
+      readings.sort((a, b) => a.time - b.time);
+      const deduped = readings.filter((point, i) => i === 0 || point.time.getTime() !== readings[i - 1].time.getTime() || point.pressure !== readings[i - 1].pressure);
+      if (deduped.length < 2) return setStatus('I could not find at least two valid time/pressure readings. Try different columns.', 'bad');
+      state.readings = deduped;
+      if (!$('gaugeSerial').value && state.metadata['Serial Number']) $('gaugeSerial').value = state.metadata['Serial Number'];
+      if (!$('testDate').value) $('testDate').value = dateInputValue(deduped[0].time);
+      sampleReadings();
+      const suffix = invalid ? ` ${invalid.toLocaleString()} non-data rows were ignored.` : '';
+      const recordingMs = Number(state.metadata['Recording Period']);
+      const interval = Number.isFinite(recordingMs) && recordingMs > 0 ? ` · ${(recordingMs / 1000).toLocaleString()} s recording period` : '';
+      const serial = state.metadata['Serial Number'] ? ` · gauge S/N ${state.metadata['Serial Number']}` : '';
+      const correction = timeCorrectionHours ? ` · ${timeCorrectionHours > 0 ? '+' : ''}${timeCorrectionHours} h time correction` : '';
+      const source = state.sourceType === 'XP3i' ? 'Native XP3i recording recognized' : state.sourceType === 'Live monitor' ? 'Live-monitor CSV recognized' : `${deduped.length.toLocaleString()} readings loaded`;
+      setStatus(`${source}: ${deduped.length.toLocaleString()} valid readings${interval}${serial}${correction}.${suffix}`, 'good');
+      renderAll();
+    }
+
+    function nearestReading(targetMs) {
+      let low = 0, high = state.readings.length - 1;
+      while (low < high) {
+        const mid = Math.floor((low + high) / 2);
+        if (state.readings[mid].time.getTime() < targetMs) low = mid + 1;
+        else high = mid;
+      }
+      const after = state.readings[low];
+      const before = state.readings[Math.max(0, low - 1)];
+      return Math.abs(before.time.getTime() - targetMs) <= Math.abs(after.time.getTime() - targetMs) ? before : after;
+    }
+
+    function pushNearest(result, targetMs) {
+      const reading = nearestReading(targetMs);
+      if (!result.length || reading !== result[result.length - 1]) result.push(reading);
+    }
+
+    function sampleReadings() {
+      if (!state.readings.length) { state.sampled = []; return; }
+      const testInterval = Math.max(1, Number($('sampleInterval').value) || 900) * 1000;
+      const transitionInterval = Math.max(1, Number($('transitionInterval').value) || 60) * 1000;
+      const first = state.readings[0].time.getTime();
+      const last = state.readings[state.readings.length - 1].time.getTime();
+      const period = getOfficialPeriod();
+      const result = [];
+
+      pushNearest(result, first);
+      if (period && period.end.getTime() > first && period.start.getTime() < last) {
+        const testStart = Math.max(first, period.start.getTime());
+        const testEnd = Math.min(last, period.end.getTime());
+
+        for (let target = first + transitionInterval; target < testStart; target += transitionInterval) pushNearest(result, target);
+        pushNearest(result, testStart);
+        for (let target = testStart + testInterval; target < testEnd; target += testInterval) pushNearest(result, target);
+        pushNearest(result, testEnd);
+        for (let target = testEnd + transitionInterval; target < last; target += transitionInterval) pushNearest(result, target);
+      } else {
+        for (let target = first + testInterval; target < last; target += testInterval) pushNearest(result, target);
+      }
+      pushNearest(result, last);
+      state.sampled = result;
+    }
+
+    function formatDateTime(date) {
+      return new Intl.DateTimeFormat('en-US', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true }).format(date);
+    }
+    function formatTimeOnly(date) {
+      return new Intl.DateTimeFormat('en-US', { hour:'numeric', minute:'2-digit', second:'2-digit', hour12:true }).format(date);
+    }
+    function formatDuration(ms) {
+      const total = Math.max(0, Math.round(ms / 1000));
+      const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+      return `${h}h ${pad(m)}m ${pad(s)}s`;
+    }
+
+    function pointForReading(reading, cx, cy, inner, outer, fullScale, chartHours) {
+      const d = reading.time;
+      const hours = d.getHours() + d.getMinutes()/60 + d.getSeconds()/3600 + d.getMilliseconds()/3600000;
+      const fraction = ((hours - 12) / chartHours % 1 + 1) % 1;
+      const angle = fraction * Math.PI * 2 - Math.PI / 2;
+      const boundedPressure = Math.max(0, Math.min(fullScale, reading.pressure));
+      const radius = inner + (boundedPressure / fullScale) * (outer - inner);
+      return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius, angle, radius };
+    }
+
+    function chartText(value, fallback = '—', maxLength = 30) {
+      const text = String(value || fallback).trim();
+      return escapeHtml(text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text);
+    }
+
+    function constantPressurePath(start, end, pressure, cx, cy, inner, outer, fullScale, chartHours) {
+      const duration = end.getTime() - start.getTime();
+      const steps = Math.max(2, Math.ceil(duration / 60000));
+      let path = '';
+      for (let i = 0; i <= steps; i++) {
+        const time = new Date(start.getTime() + duration * i / steps);
+        const point = pointForReading({ time, pressure }, cx, cy, inner, outer, fullScale, chartHours);
+        path += `${i ? 'L' : 'M'}${point.x.toFixed(2)},${point.y.toFixed(2)}`;
+      }
+      return path;
+    }
+
+    function testFlagSvg(reading, label, cx, cy, inner, outer, fullScale, chartHours) {
+      const point = pointForReading(reading, cx, cy, inner, outer, fullScale, chartHours);
+      const ux = Math.cos(point.angle), uy = Math.sin(point.angle);
+      const px = -uy, py = ux;
+      const baseX = point.x + ux * 17, baseY = point.y + uy * 17;
+      const labelX = point.x + ux * 35, labelY = point.y + uy * 35 + 3;
+      const anchor = labelX < cx - 18 ? 'end' : labelX > cx + 18 ? 'start' : 'middle';
+      const color = $('testMarkerColor').value || '#8f3ab8';
+      return `<g aria-label="Official test ${label.toLowerCase()}">
+        <polygon points="${point.x.toFixed(2)},${point.y.toFixed(2)} ${(baseX + px * 5).toFixed(2)},${(baseY + py * 5).toFixed(2)} ${(baseX - px * 5).toFixed(2)},${(baseY - py * 5).toFixed(2)}" fill="${color}" stroke="#fff" stroke-width="1"/>
+        <text x="${labelX.toFixed(2)}" y="${labelY.toFixed(2)}" text-anchor="${anchor}" fill="${color}" stroke="#fffef7" stroke-width="3" paint-order="stroke" font-size="10" font-weight="700" font-family="Arial, sans-serif">TEST ${label}</text>
+      </g>`;
+    }
+
+    function legendSvg(sampled, officialPeriod, traceColor, paper, options = {}) {
+      const plain = options.plain === true;
+      const items = [{ type: 'line', color: traceColor, label: 'Pressure' }];
+      if (!plain && officialPeriod && $('showPressureWindow').checked) {
+        if (Number.isFinite(optionalNumber('windowTop'))) items.push({ type: 'line', color: $('windowTopColor').value || '#18a957', label: 'Upper window' });
+        if (Number.isFinite(optionalNumber('windowBottom'))) items.push({ type: 'line', color: $('windowBottomColor').value || '#168bd2', label: 'Lower window' });
+      }
+      if (!plain && officialPeriod && $('showTestMarkers').checked) items.push({ type: 'flag', color: $('testMarkerColor').value || '#8f3ab8', label: 'Test start / end' });
+      if (!plain && $('showRecordingMarkers').checked) items.push({ type: 'recording', color: '#1f7a4f', label: 'Recording start / end' });
+      if (!plain && sampled && $('showIntervalMarkers').checked) items.push({ type: 'point', color: traceColor, label: 'Interval reading' });
+
+      const columns = Math.min(4, items.length);
+      const rows = Math.ceil(items.length / columns);
+      const cellWidth = 190;
+      const boxWidth = columns * cellWidth + 20;
+      const boxX = (1000 - boxWidth) / 2;
+      const boxY = 986;
+      const boxHeight = 12 + rows * 22;
+      const parts = [`<g aria-label="Chart legend"><rect x="${boxX}" y="${boxY}" width="${boxWidth}" height="${boxHeight}" rx="5" fill="#f9fbfa" stroke="#bfd2c9" stroke-width=".65" opacity=".9"/>`];
+      items.forEach((item, index) => {
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+        const x = boxX + 12 + col * cellWidth;
+        const y = boxY + 19 + row * 22;
+        if (item.type === 'line') {
+          parts.push(`<line x1="${x}" y1="${y - 3}" x2="${x + 24}" y2="${y - 3}" stroke="${item.color}" stroke-width="2.2" stroke-linecap="round"/>`);
+        } else if (item.type === 'flag') {
+          parts.push(`<polygon points="${x + 5},${y - 3} ${x + 22},${y - 10} ${x + 22},${y + 4}" fill="${item.color}"/>`);
+        } else if (item.type === 'recording') {
+          parts.push(`<circle cx="${x + 6}" cy="${y - 3}" r="3.5" fill="#1f7a4f"/><rect x="${x + 17}" y="${y - 6.5}" width="7" height="7" fill="#102a43"/>`);
+        } else if (item.type === 'point') {
+          parts.push(`<line x1="${x}" y1="${y - 3}" x2="${x + 24}" y2="${y - 3}" stroke="${item.color}" stroke-width="1.5"/><circle cx="${x + 12}" cy="${y - 3}" r="3" fill="#fff" stroke="${item.color}" stroke-width="1.4"/>`);
+        }
+        parts.push(`<text x="${x + 31}" y="${y}" fill="#4e6b60" font-size="8" font-family="Arial, sans-serif">${escapeHtml(item.label)}</text>`);
+      });
+      parts.push('</g>');
+      return parts.join('');
+    }
+
+    function makeChart(readings, sampled, title, options = {}) {
+      const size = 1000, cx = 500, cy = 500, inner = 115, outer = 438;
+      const fullScale = Math.max(1, Number($('fullScale').value) || 1000);
+      const chartHours = Math.max(1, Number($('chartHours').value) || 24);
+      const decimals = Number($('pressureDecimals').value);
+      const paper = '#fffef7';
+      const gridMajor = '#4f9176';
+      const gridMinor = '#b4d2c4';
+      const inkGreen = '#286f57';
+      const traceColor = $('traceColor').value || '#c73535';
+      const traceWidth = Math.max(.5, Number($('traceWidth').value) || 1);
+      const plain = options.plain === true;
+      const officialPeriod = plain ? null : getOfficialPeriod();
+      const parts = [];
+      parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} 1080" role="img" aria-label="${escapeHtml(title)}">`);
+      parts.push(`<rect width="1000" height="1080" fill="${paper}"/>`);
+
+      const minorRings = 50;
+      for (let i = 0; i <= minorRings; i++) {
+        const r = inner + (outer - inner) * (i / minorRings);
+        const major = i % 5 === 0;
+        parts.push(`<circle cx="${cx}" cy="${cy}" r="${r.toFixed(2)}" fill="none" stroke="${major ? gridMajor : gridMinor}" stroke-width="${major ? 1.05 : .48}" opacity="${major ? .84 : .64}"/>`);
+      }
+
+      const spokeCount = Math.round(chartHours * 4);
+      for (let i = 0; i < spokeCount; i++) {
+        const angle = i / spokeCount * Math.PI * 2 - Math.PI / 2;
+        const major = i % 4 === 0;
+        const x1 = cx + Math.cos(angle) * inner;
+        const y1 = cy + Math.sin(angle) * inner;
+        const x2 = cx + Math.cos(angle) * outer;
+        const y2 = cy + Math.sin(angle) * outer;
+        parts.push(`<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${major ? gridMajor : '#9fc5b4'}" stroke-width="${major ? 1.1 : .62}" opacity="${major ? .88 : .68}"/>`);
+      }
+
+      const hourLabels = Math.min(24, Math.round(chartHours));
+      for (let i = 0; i < hourLabels; i++) {
+        const clockHour = (12 + i) % 24;
+        const angle = i / chartHours * Math.PI * 2 - Math.PI / 2;
+        const r = outer + 27;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r + 5;
+        let label = clockHour === 0 ? 'MIDNIGHT' : clockHour === 12 ? 'NOON' : String(clockHour > 12 ? clockHour - 12 : clockHour);
+        parts.push(`<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" text-anchor="middle" fill="${inkGreen}" font-size="${label.length > 2 ? 12 : 15}" font-weight="700" font-family="Arial, sans-serif">${label}</text>`);
+      }
+
+      parts.push(`<circle cx="500" cy="500" r="${outer}" fill="none" stroke="${inkGreen}" stroke-width="2.6"/>`);
+      parts.push(`<circle cx="500" cy="500" r="${inner}" fill="${paper}" stroke="${gridMajor}" stroke-width="1.5"/>`);
+
+      const axisCount = Math.max(1, Math.round(chartHours / 4));
+      for (let axis = 0; axis < axisCount; axis++) {
+        const angle = axis / axisCount * Math.PI * 2 - Math.PI / 2;
+        let rotation = angle * 180 / Math.PI + 90;
+        while (rotation > 180) rotation -= 360;
+        while (rotation <= -180) rotation += 360;
+        if (rotation > 90) rotation -= 180;
+        if (rotation < -90) rotation += 180;
+        for (let i = 1; i < 10; i++) {
+          const value = fullScale * i / 10;
+          const labelRadius = inner + (outer - inner) * i / 10;
+          const x = cx + Math.cos(angle) * labelRadius;
+          const y = cy + Math.sin(angle) * labelRadius;
+          const label = value.toFixed(decimals > 0 && fullScale < 100 ? decimals : 0);
+          parts.push(`<text x="${x.toFixed(2)}" y="${y.toFixed(2)}" transform="rotate(${rotation.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)})" text-anchor="middle" dominant-baseline="middle" fill="${inkGreen}" stroke="${paper}" stroke-width="3.2" paint-order="stroke" font-size="10.5" font-family="Arial, sans-serif">${label}</text>`);
+        }
+      }
+
+      const project = chartText($('projectName').value, 'HYDROSTATIC PRESSURE TEST', 31);
+      const lineInfo = chartText($('lineInfo').value, 'LINE / LOCATION', 33);
+      const date = chartText(displayTestDate(), 'DATE', 18);
+      const serial = chartText($('gaugeSerial').value, '—', 22);
+      const operator = chartText($('operatorName').value, '—', 22);
+      parts.push(`<text x="500" y="427" text-anchor="middle" fill="${inkGreen}" font-size="12" font-weight="700" font-family="Arial, sans-serif">${project}</text>`);
+      parts.push(`<text x="500" y="445" text-anchor="middle" fill="#486b5d" font-size="9.5" font-family="Arial, sans-serif">${lineInfo}</text>`);
+      parts.push(`<text x="500" y="466" text-anchor="middle" fill="#486b5d" font-size="9.5" font-family="Arial, sans-serif">DATE: ${date}</text>`);
+      parts.push(`<circle cx="500" cy="500" r="23" fill="#202b27" stroke="#102a21" stroke-width="1.5"/>`);
+      parts.push(`<text x="500" y="539" text-anchor="middle" fill="#486b5d" font-size="9.5" font-family="Arial, sans-serif">GAUGE S/N: ${serial}</text>`);
+      parts.push(`<text x="500" y="556" text-anchor="middle" fill="#486b5d" font-size="9.5" font-family="Arial, sans-serif">RECORDED BY: ${operator}</text>`);
+      parts.push(`<text x="500" y="574" text-anchor="middle" fill="${inkGreen}" font-size="9.5" font-weight="700" font-family="Arial, sans-serif">${chartHours}-HOUR PRESSURE CHART</text>`);
+      parts.push(`<text x="500" y="589" text-anchor="middle" fill="#789487" font-size="7" font-family="Arial, sans-serif">DIGITALLY GENERATED</text>`);
+      parts.push(`<text x="500" y="599" text-anchor="middle" fill="#789487" font-size="7" font-family="Arial, sans-serif">FROM RECORDED DATA</text>`);
+
+      if (officialPeriod && $('showPressureWindow').checked) {
+        const start = officialPeriod.start < state.readings[0]?.time ? state.readings[0].time : officialPeriod.start;
+        const end = officialPeriod.end > state.readings[state.readings.length - 1]?.time ? state.readings[state.readings.length - 1].time : officialPeriod.end;
+        const bottom = optionalNumber('windowBottom');
+        const top = optionalNumber('windowTop');
+        if (end > start && Number.isFinite(bottom)) {
+          parts.push(`<path d="${constantPressurePath(start, end, bottom, cx, cy, inner, outer, fullScale, chartHours)}" fill="none" stroke="${$('windowBottomColor').value || '#168bd2'}" stroke-width="1.65" stroke-linecap="round" opacity=".94"><title>Pressure window lower limit: ${bottom} psi</title></path>`);
+        }
+        if (end > start && Number.isFinite(top)) {
+          parts.push(`<path d="${constantPressurePath(start, end, top, cx, cy, inner, outer, fullScale, chartHours)}" fill="none" stroke="${$('windowTopColor').value || '#18a957'}" stroke-width="1.65" stroke-linecap="round" opacity=".94"><title>Pressure window upper limit: ${top} psi</title></path>`);
+        }
+      }
+
+      if (officialPeriod && $('showTestMarkers').checked && state.readings.length) {
+        const testStartReading = nearestReading(officialPeriod.start.getTime());
+        const testEndReading = nearestReading(officialPeriod.end.getTime());
+        parts.push(testFlagSvg(testStartReading, 'START', cx, cy, inner, outer, fullScale, chartHours));
+        parts.push(testFlagSvg(testEndReading, 'END', cx, cy, inner, outer, fullScale, chartHours));
+      }
+
+      if (readings.length) {
+        let path = '';
+        readings.forEach((reading, i) => {
+          const p = pointForReading(reading, cx, cy, inner, outer, fullScale, chartHours);
+          path += `${i ? 'L' : 'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+        });
+        parts.push(`<path d="${path}" fill="none" stroke="${traceColor}" stroke-width="${traceWidth}" stroke-linecap="round" stroke-linejoin="round" opacity=".98"/>`);
+        if (!plain && sampled && $('showIntervalMarkers').checked) {
+          const markerRadius = readings.length <= 500 ? 4.2 : readings.length <= 2000 ? 2.5 : 1.45;
+          const markerStroke = readings.length <= 500 ? 1.8 : 1.1;
+          readings.forEach(reading => {
+            const p = pointForReading(reading, cx, cy, inner, outer, fullScale, chartHours);
+            parts.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${markerRadius}" fill="#fff" stroke="${traceColor}" stroke-width="${markerStroke}" opacity="1"/>`);
+          });
+        }
+        if (!plain && $('showRecordingMarkers').checked) {
+          const start = pointForReading(readings[0], cx, cy, inner, outer, fullScale, chartHours);
+          const end = pointForReading(readings[readings.length - 1], cx, cy, inner, outer, fullScale, chartHours);
+          parts.push(`<circle cx="${start.x.toFixed(2)}" cy="${start.y.toFixed(2)}" r="5" fill="#1f7a4f" stroke="#fff" stroke-width="1.5"><title>Recording start</title></circle>`);
+          parts.push(`<rect x="${(end.x - 4.5).toFixed(2)}" y="${(end.y - 4.5).toFixed(2)}" width="9" height="9" fill="#102a43" stroke="#fff" stroke-width="1.5"><title>Recording end</title></rect>`);
+        }
+      }
+
+      parts.push(legendSvg(sampled, officialPeriod, traceColor, paper, { plain }));
+      parts.push(`<text x="500" y="1072" text-anchor="middle" fill="#486581" font-size="10" font-family="Arial, sans-serif">${escapeHtml(title)}</text>`);
+      parts.push('</svg>');
+      return parts.join('');
+    }
+
+    function getStats(readings = null, resolution = null) {
+      const statReadings = readings && readings.length ? readings : (state.activeView === 'full' ? state.readings : state.sampled);
+      const statResolution = resolution || (state.activeView === 'full' ? 'full' : 'interval');
+      if (!statReadings.length) return null;
+      const period = getOfficialPeriod();
+      let selected = statReadings;
+      let first = statReadings[0];
+      let last = statReadings[statReadings.length - 1];
+      let duration = last.time - first.time;
+      let scope = 'recording';
+      if (period) {
+        const duringTest = statReadings.filter(reading => reading.time >= period.start && reading.time <= period.end);
+        if (duringTest.length) {
+          selected = duringTest;
+          first = duringTest[0];
+          last = duringTest[duringTest.length - 1];
+          duration = period.end - period.start;
+          scope = 'official-test';
+        }
+      }
+      let minimum = Infinity, maximum = -Infinity;
+      let minimumFirstTime = null, minimumLastTime = null, maximumFirstTime = null, maximumLastTime = null;
+      selected.forEach(reading => {
+        if (reading.pressure < minimum) {
+          minimum = reading.pressure;
+          minimumFirstTime = reading.time;
+          minimumLastTime = reading.time;
+        } else if (reading.pressure === minimum) {
+          minimumLastTime = reading.time;
+        }
+        if (reading.pressure > maximum) {
+          maximum = reading.pressure;
+          maximumFirstTime = reading.time;
+          maximumLastTime = reading.time;
+        } else if (reading.pressure === maximum) {
+          maximumLastTime = reading.time;
+        }
+      });
+      return {
+        start: first.pressure,
+        end: last.pressure,
+        min: minimum,
+        max: maximum,
+        minFirstTime: minimumFirstTime,
+        minLastTime: minimumLastTime,
+        maxFirstTime: maximumFirstTime,
+        maxLastTime: maximumLastTime,
+        change: last.pressure - first.pressure,
+        duration,
+        scope,
+        resolution: statResolution
+      };
+    }
+
+    function statsHtml(stats) {
+      if (!stats) return '';
+      const decimals = Number($('pressureDecimals').value);
+      const f = (v) => `${v.toFixed(decimals)} psi`;
+      const official = stats.scope === 'official-test';
+      const recordingMs = Number(state.metadata['Recording Period']);
+      const recordedPeakLabel = Number.isFinite(recordingMs) && recordingMs > 0 ? `${secondsLabel(recordingMs / 1000)} peak` : 'Recorded peak';
+      const recordedLowLabel = Number.isFinite(recordingMs) && recordingMs > 0 ? `${secondsLabel(recordingMs / 1000)} lowest` : 'Recorded lowest';
+      const intervalPeakLabel = `${intervalLabel()} peak`;
+      const intervalLowLabel = `${intervalLabel()} lowest`;
+      const occurrenceLines = (firstTime, lastTime) => {
+        if (!official || !firstTime || !lastTime) return [];
+        if (firstTime.getTime() === lastTime.getTime()) return [`At ${formatTimeOnly(firstTime)}`];
+        return [`First ${formatTimeOnly(firstTime)}`, `Last ${formatTimeOnly(lastTime)}`];
+      };
+      const changeText = stats.change > 0 ? `${f(Math.abs(stats.change))} gain` : stats.change < 0 ? `${f(Math.abs(stats.change))} drop` : `${f(0)} change`;
+      return [
+        [official ? 'Test duration' : 'Duration', formatDuration(stats.duration), []],
+        [official ? 'Test start' : 'Start', f(stats.start), []],
+        [official ? 'Test end' : 'End', f(stats.end), []],
+        [official ? (stats.resolution === 'interval' ? intervalPeakLabel : recordedPeakLabel) : 'Maximum', f(stats.max), occurrenceLines(stats.maxFirstTime, stats.maxLastTime)],
+        [official ? (stats.resolution === 'interval' ? intervalLowLabel : recordedLowLabel) : 'Minimum', f(stats.min), occurrenceLines(stats.minFirstTime, stats.minLastTime)],
+        [official ? 'Gain / drop' : 'Net change', official ? changeText : `${stats.change >= 0 ? '+' : ''}${f(stats.change)}`, []]
+      ].map(([label, value, details]) => `<div class="stat"><span>${label}</span><strong>${value}</strong>${details.map(detail => `<small>${escapeHtml(detail)}</small>`).join('')}</div>`).join('');
+    }
+
+    function renderTable(readings, mode) {
+      const firstPoint = readings[0];
+      const lastPoint = readings[readings.length - 1];
+      const selectionKey = mode === 'interval' ? `${$('sampleInterval').value}|${$('transitionInterval').value}|${$('officialTestStart').value}|${$('officialTestEnd').value}` : '';
+      const key = [mode, readings.length, firstPoint?.time.getTime(), lastPoint?.time.getTime(), $('pressureDecimals').value, selectionKey].join('|');
+      if (state.tableKey === key) return;
+      state.tableKey = key;
+      const decimals = Number($('pressureDecimals').value);
+      const first = state.readings[0]?.time.getTime() || 0;
+      $('readingsTableTitle').textContent = mode === 'full' ? `Every recorded reading (${readings.length.toLocaleString()})` : `Selected interval readings (${readings.length.toLocaleString()})`;
+      $('sampleTableBody').innerHTML = readings.map((reading, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(formatDateTime(reading.time))}</td><td>${formatDuration(reading.time.getTime() - first)}</td><td>${reading.pressure.toFixed(decimals)}</td></tr>`).join('');
+    }
+
+    function reportHeader(subtitle, includeNotes = true) {
+      const title = $('projectName').value || 'Hydrostatic Pressure Test';
+      const line = $('lineInfo').value || 'Line / location not entered';
+      const operator = $('operatorName').value ? `Recorded by: ${escapeHtml($('operatorName').value)}` : '';
+      const serial = $('gaugeSerial').value ? `Gauge serial: ${escapeHtml($('gaugeSerial').value)}` : '';
+      const date = $('testDate').value ? `Test date: ${escapeHtml(displayTestDate())}` : '';
+      const model = state.metadata['Model Number'] ? `Gauge model: ${escapeHtml(state.metadata['Model Number'])}` : '';
+      const calibration = state.metadata['Calibration Date'] ? `Calibration date: ${escapeHtml(state.metadata['Calibration Date'])}` : '';
+      const noteText = String($('notes').value || '').replace(/\s+/g, ' ').trim();
+      const shortenedNote = noteText.length > 260 ? `${noteText.slice(0, 259)}…` : noteText;
+      const note = includeNotes && shortenedNote ? `<p class="report-note"><strong>Notes:</strong> ${escapeHtml(shortenedNote)}</p>` : '';
+      return `<div class="print-header"><div><h2>${escapeHtml(title)}</h2><p>${escapeHtml(line)}</p><p>${escapeHtml(subtitle)}</p>${note}</div><div style="text-align:right"><p>${date}</p><p>${operator}</p><p>${serial}</p><p>${model}</p><p>${calibration}</p><p>Source: ${escapeHtml(state.fileName)}</p></div></div>`;
+    }
+
+    function renderPrintReport() {
+      if (!state.readings.length) { $('printReport').innerHTML = ''; return; }
+      const sampleName = samplingSummary();
+      const useEveryReading = state.activeView === 'full';
+      const chartReadings = useEveryReading ? state.readings : state.sampled;
+      const sampled = !useEveryReading;
+      const stats = getStats(chartReadings, sampled ? 'interval' : 'full');
+      const selectionLabel = useEveryReading ? `Every recorded reading (${chartReadings.length.toLocaleString()} points)` : `${sampleName} readings (${chartReadings.length.toLocaleString()} points)`;
+      const plainChart = makeChart(chartReadings, sampled, selectionLabel, { plain: true });
+      const annotatedChart = makeChart(chartReadings, sampled, selectionLabel);
+      const notes = $('notes').value ? `<p style="font-size:9pt"><strong>Notes:</strong> ${escapeHtml($('notes').value)}</p>` : '';
+      const tableRows = state.sampled.map((reading, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(formatDateTime(reading.time))}</td><td>${formatDuration(reading.time - state.readings[0].time)}</td><td>${reading.pressure.toFixed(Number($('pressureDecimals').value))}</td></tr>`).join('');
+      $('printReport').innerHTML = `
+        <section class="print-page chart-page">${reportHeader(`${selectionLabel} · pressure-only chart`)}<div class="print-chart">${plainChart}</div><div class="print-stats">${statsHtml(stats)}</div></section>
+        <section class="print-page chart-page">${reportHeader(`${selectionLabel} · annotated chart`)}<div class="print-chart">${annotatedChart}</div><div class="print-stats">${statsHtml(stats)}</div></section>
+        <section class="print-page table-page">${reportHeader(`${sampleName} recorded readings`, false)}${notes}<div class="print-table"><table><thead><tr><th>#</th><th>Date and time</th><th>Elapsed</th><th>Pressure (psi)</th></tr></thead><tbody>${tableRows}</tbody></table></div></section>`;
+    }
+
+    function applyZoom() {
+      state.zoom = Math.max(50, Math.min(400, state.zoom));
+      $('zoomValue').textContent = `${state.zoom}%`;
+      const svg = $('chartWrap').querySelector('svg');
+      if (!svg) return;
+      svg.style.width = `${state.zoom}%`;
+      svg.style.maxWidth = 'none';
+      svg.style.margin = state.zoom > 100 ? '0' : '0 auto';
+    }
+
+    function renderAll() {
+      if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; }
+      if (!state.readings.length) return;
+      sampleReadings();
+      const active = state.activeView === 'full' ? state.readings : state.sampled;
+      const sampled = state.activeView !== 'full';
+      const title = sampled ? `Selected intervals (${active.length.toLocaleString()} readings · ${samplingSummary()})` : `Every recorded reading (${active.length.toLocaleString()} points)`;
+      $('chartWrap').innerHTML = makeChart(active, sampled, title);
+      applyZoom();
+      $('viewCount').textContent = title;
+      $('stats').innerHTML = statsHtml(getStats(active, sampled ? 'interval' : 'full'));
+      const fullScale = Number($('fullScale').value) || 1000;
+      const aboveScale = state.readings.filter(point => point.pressure > fullScale).length;
+      if (aboveScale) {
+        $('viewCount').textContent += ` · WARNING: ${aboveScale.toLocaleString()} readings exceed chart scale`;
+      }
+      $('sampleTableSection').classList.remove('hidden');
+      $('fullTab').classList.toggle('active', !sampled);
+      $('sampleTab').classList.toggle('active', sampled);
+      $('sampleTab').textContent = 'Interval readings';
+      renderTable(active, sampled ? 'interval' : 'full');
+      ['printButton','svgButton','csvButton'].forEach(id => $(id).disabled = false);
+    }
+
+    function scheduleRender(delay = 100) {
+      if (renderTimer) clearTimeout(renderTimer);
+      renderTimer = setTimeout(() => {
+        renderTimer = null;
+        renderAll();
+      }, delay);
+    }
+
+    function setStatus(message, type = '') {
+      const box = $('fileStatus');
+      box.className = `status ${type}`.trim();
+      box.textContent = message;
+    }
+
+    function loadParsed(text, fileName) {
+      try {
+        const parsed = parseDelimited(text);
+        state.fileName = fileName;
+        state.headers = parsed.headers;
+        state.rawRows = parsed.rows;
+        state.metadata = parsed.metadata || {};
+        state.sourceType = parsed.sourceType || '';
+        $('timeCorrection').value = state.sourceType === 'XP3i' ? '12' : '0';
+        const guess = guessColumns(parsed.headers);
+        state.importMap = {
+          date: guess.date >= 0 && guess.date !== guess.time ? guess.date : -1,
+          time: guess.time >= 0 ? guess.time : 0,
+          pressure: guess.pressure >= 0 ? guess.pressure : Math.min(1, parsed.headers.length - 1)
+        };
+        setStatus(`Found ${parsed.rows.length.toLocaleString()} rows and ${parsed.headers.length} columns. Checking the guessed columns…`);
+        applyMapping();
+        updateOfficialPeriodStatus();
+      } catch (error) { setStatus(error.message || String(error), 'bad'); }
+    }
+
+    function loadFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => loadParsed(String(reader.result), file.name);
+      reader.onerror = () => setStatus('The file could not be read.', 'bad');
+      reader.readAsText(file);
+    }
+
+    function buildDemoCsv() {
+      const start = new Date();
+      start.setHours(6, 30, 0, 0);
+      const phases = {
+        zero: 5 * 60,
+        ramp75: 29 * 60,
+        leakCheck: 30 * 60,
+        rampTest: 29 * 60,
+        initialHold: 15 * 60,
+        waitForQuarter: 12 * 60,
+        officialTest: 8 * 3600,
+        finalHold: 15 * 60,
+        bleed: 35 * 60,
+        finalZero: 5 * 60
+      };
+      const profileIndex = Math.floor(Math.random() * 3);
+      const profile = profileIndex === 0 ? 'slow drop' : profileIndex === 1 ? 'slow rise' : 'nearly steady';
+      const testStartPressure = 750;
+      const testEndPressure = profileIndex === 0 ? 733 : profileIndex === 1 ? 785 : 750 + (Math.random() * 8 - 4);
+      const pressure75 = testStartPressure * .75;
+      const keys = Object.keys(phases);
+      const boundaries = {};
+      let cursor = 0;
+      keys.forEach(key => { boundaries[key] = { start: cursor, end: cursor + phases[key] }; cursor += phases[key]; });
+      const testStart = new Date(start.getTime() + boundaries.officialTest.start * 1000);
+      const testEnd = new Date(start.getTime() + boundaries.officialTest.end * 1000);
+      const rows = ['Timestamp,Pressure (psi)'];
+
+      const progress = (s, phase) => Math.max(0, Math.min(1, (s - phase.start) / (phase.end - phase.start)));
+      const monotonicCurve = p => p + .022 * Math.sin(p * Math.PI * 4);
+      for (let s = 0; s <= cursor; s++) {
+        let pressure = 0;
+        if (s <= boundaries.zero.end) {
+          pressure = Math.sin(s / 17) * .025;
+        } else if (s <= boundaries.ramp75.end) {
+          const p = progress(s, boundaries.ramp75);
+          pressure = pressure75 * (1 - Math.pow(1 - p, 1.32));
+        } else if (s <= boundaries.leakCheck.end) {
+          const p = progress(s, boundaries.leakCheck);
+          pressure = pressure75 - 1.2 * monotonicCurve(p);
+        } else if (s <= boundaries.rampTest.end) {
+          const p = progress(s, boundaries.rampTest);
+          pressure = (pressure75 - 1.2) + (testStartPressure - pressure75 + 1.2) * (1 - Math.pow(1 - p, 1.28));
+        } else if (s <= boundaries.initialHold.end) {
+          const p = progress(s, boundaries.initialHold);
+          pressure = testStartPressure - .35 * monotonicCurve(p);
+        } else if (s <= boundaries.waitForQuarter.end) {
+          const p = progress(s, boundaries.waitForQuarter);
+          pressure = testStartPressure - .35 + .35 * monotonicCurve(p);
+        } else if (s <= boundaries.officialTest.end) {
+          const p = progress(s, boundaries.officialTest);
+          pressure = testStartPressure + (testEndPressure - testStartPressure) * monotonicCurve(p);
+        } else if (s <= boundaries.finalHold.end) {
+          const p = progress(s, boundaries.finalHold);
+          const direction = Math.sign(testEndPressure - testStartPressure) || -1;
+          pressure = testEndPressure + direction * .4 * monotonicCurve(p);
+        } else if (s <= boundaries.bleed.end) {
+          const p = progress(s, boundaries.bleed);
+          const direction = Math.sign(testEndPressure - testStartPressure) || -1;
+          const bleedStart = testEndPressure + direction * .4;
+          pressure = bleedStart * Math.pow(1 - p, 1.7);
+        } else {
+          pressure = Math.sin(s / 13) * .02;
+        }
+        const t = new Date(start.getTime() + s * 1000);
+        rows.push(`${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())},${Math.max(0, pressure).toFixed(2)}`);
+      }
+      return { csv: rows.join('\n'), start, testStart, testEnd, profile, testStartPressure, testEndPressure };
+    }
+
+    function loadDemo() {
+      const demo = buildDemoCsv();
+      $('projectName').value = 'Pressure Recorder';
+      $('lineInfo').value = `Simulated ${demo.profile} profile`;
+      $('testDate').value = dateInputValue(demo.start);
+      $('officialTestStart').value = dateTimeInputValue(demo.testStart);
+      $('officialTestEnd').value = dateTimeInputValue(demo.testEnd);
+      updateOfficialPeriodStatus();
+      loadParsed(demo.csv, `simulated_${demo.profile.replace(/\s+/g, '_')}_hydro_test.csv`);
+    }
+
+    function download(name, content, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url; anchor.download = name; document.body.appendChild(anchor); anchor.click(); anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function fileStem() {
+      return (state.fileName || 'pressure-test').replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]+/gi, '_');
+    }
+
+    function showSettingsPanel(panel) {
+      const customization = panel === 'customization';
+      $('samplingSettingsPanel').classList.toggle('hidden', customization);
+      $('customizationPanel').classList.toggle('hidden', !customization);
+      $('samplingSettingsTab').classList.toggle('active', !customization);
+      $('customizationTab').classList.toggle('active', customization);
+    }
+
+    $('fileInput').addEventListener('change', event => loadFile(event.target.files[0]));
+    $('demoButton').addEventListener('click', loadDemo);
+    $('clearButton').addEventListener('click', () => location.reload());
+    $('samplingSettingsTab').addEventListener('click', () => showSettingsPanel('sampling'));
+    $('customizationTab').addEventListener('click', () => showSettingsPanel('customization'));
+    $('fullTab').addEventListener('click', () => { state.activeView = 'full'; renderAll(); });
+    $('sampleTab').addEventListener('click', () => { state.activeView = 'sample'; renderAll(); });
+    const renderInputs = [
+      'fullScale','chartHours','sampleInterval','transitionInterval','pressureDecimals','timeCorrection',
+      'projectName','lineInfo','operatorName','gaugeSerial','testDate','notes',
+      'traceColor','traceWidth','showIntervalMarkers','showRecordingMarkers','showTestMarkers','testMarkerColor',
+      'showPressureWindow','windowBottom','windowTop','windowBottomColor','windowTopColor'
+    ];
+    renderInputs.forEach(id => $(id).addEventListener('input', () => {
+      if (id === 'traceWidth') $('traceWidthValue').textContent = Number($('traceWidth').value).toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+      if (id === 'timeCorrection' && state.rawRows.length) { applyMapping(); return; }
+      if (id === 'windowBottom' || id === 'windowTop') updateOfficialPeriodStatus();
+      scheduleRender(['projectName','lineInfo','operatorName','gaugeSerial','notes'].includes(id) ? 180 : 60);
+    }));
+    ['officialTestStart','officialTestEnd'].forEach(id => $(id).addEventListener('change', () => {
+      normalizeOfficialPeriod(id);
+      scheduleRender(0);
+    }));
+    $('zoomOut').addEventListener('click', () => { state.zoom -= 25; applyZoom(); });
+    $('zoomIn').addEventListener('click', () => { state.zoom += 25; applyZoom(); });
+    $('zoomReset').addEventListener('click', () => { state.zoom = 100; applyZoom(); });
+    $('printButton').addEventListener('click', () => { renderPrintReport(); window.print(); });
+    $('svgButton').addEventListener('click', () => {
+      const svg = $('chartWrap').querySelector('svg');
+      if (svg) {
+        const cleanSvg = svg.cloneNode(true);
+        cleanSvg.removeAttribute('style');
+        download(`${fileStem()}_${state.activeView === 'full' ? 'every-reading' : 'selected-intervals'}_circular-chart.svg`, '<?xml version="1.0" encoding="UTF-8"?>\n' + cleanSvg.outerHTML, 'image/svg+xml');
+      }
+    });
+    $('csvButton').addEventListener('click', () => {
+      const rows = ['Timestamp,Elapsed,Pressure_psi', ...state.sampled.map(r => `"${formatDateTime(r.time)}","${formatDuration(r.time - state.readings[0].time)}",${r.pressure}`)];
+      download(`${fileStem()}_selected_interval_readings.csv`, rows.join('\r\n'), 'text/csv');
+    });
+
+    const dropzone = $('dropzone');
+    ['dragenter','dragover'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.remove('drag'); }));
+    dropzone.addEventListener('drop', event => loadFile(event.dataTransfer.files[0]));
+    updateOfficialPeriodStatus();
+  </script>
+</body>
+</html>

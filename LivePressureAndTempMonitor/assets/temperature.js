@@ -1,0 +1,921 @@
+(function () {
+  'use strict';
+
+  const DEFAULT_CHANNELS = [
+    { key: 'ambient', name: 'Ambient', color: '#3f7fbe' },
+    { key: 'pipe', name: 'Pipe', color: '#e07832' },
+    { key: 'soil', name: 'Soil', color: '#77624c' },
+    { key: 'aux', name: 'Auxiliary', color: '#8a55ae' },
+  ];
+
+  const FIELD_LOG = [
+    [310, 0, 59, 66, 70, 'Pressure is at 0 psi'],
+    [353, 770, 58, 66, 70, 'Reached 75%, begin 30 minute hold'],
+    [383, 757, 58, 65, 70, 'End 30 minute hold, begin pressuring up'],
+    [393, 1033, 58, 65, 70, 'Reached test pressure, begin 15 minute hold'],
+    [420, 1033, 57, 66, 70, 'Begin 8 hour test'],
+    [435, 1033, 58, 66, 70, 'Sun coming out'],
+    [450, 1033, 58, 68, 70, 'Sunny'],
+    [465, 1033, 58, 69, 69, 'Sunny'],
+    [480, 1033, 61, 71, 68, 'Sunny'],
+    [495, 1033, 64, 72, 68, 'Sunny'],
+    [510, 1034, 66, 74, 68, 'Sunny'],
+    [525, 1034, 68, 75, 68, 'Sunny'],
+    [540, 1035, 70, 76, 68, 'Sunny'],
+    [555, 1035, 72, 78, 68, 'Sunny'],
+    [570, 1036, 73, 78, 68, 'Sunny'],
+    [585, 1037, 74, 79, 68, 'Sunny'],
+    [600, 1037, 75, 80, 68, 'Sunny'],
+    [615, 1038, 76, 82, 69, 'Sunny'],
+    [630, 1038, 77, 82, 69, 'Sunny'],
+    [645, 1039, 78, 84, 69, 'Sunny'],
+    [660, 1040, 79, 84, 69, 'Sunny'],
+    [675, 1041, 80, 86, 69, 'Sunny'],
+    [690, 1042, 80, 86, 69, 'Sunny'],
+    [705, 1042, 82, 88, 69, 'Sunny'],
+    [720, 1043, 82, 89, 70, 'Sunny'],
+    [735, 1044, 82, 90, 70, 'Sunny'],
+    [750, 1044, 82, 90, 70, 'Sunny'],
+    [765, 1045, 83, 91, 70, 'Sunny'],
+    [780, 1045, 84, 92, 70, 'Sunny'],
+    [795, 1046, 84, 94, 71, 'Sunny'],
+    [810, 1046, 85, 94, 72, 'Sunny'],
+    [825, 1046, 85, 96, 72, 'Sunny'],
+    [840, 1047, 86, 96, 72, 'Sunny'],
+    [855, 1047, 86, 96, 73, 'Sunny'],
+    [870, 1047, 86, 96, 73, 'Sunny'],
+    [885, 1047, 86, 96, 74, 'Sunny'],
+    [900, 1047, 86, 96, 74, 'End of test, begin 15 minute hold'],
+    [915, 1047, 85, 94, 74, 'End 15 minute hold, begin pressuring down'],
+  ];
+
+  const BLEED_LOG = [
+    [304, 0, 68, 72, 84, 'Pressure is at 0 psi'],
+    [361, 3119, 68, 72, 84, 'Reached 75%, begin 30 minute hold'],
+    [453, 3100, 64, 72, 84, 'End 30 minute hold / Begin pressuring up'],
+    [544, 4158, 72, 72, 84, 'Reached test pressure / Begin 15 minute hold'],
+    [570, 4160, 76, 72, 83, 'Begin 8 hour test'],
+    [585, 4167, 77, 72, 82, 'Bled down 10 oz 4167-4159'],
+    [600, 4162, 78, 72, 82, 'Bled down 17 oz 4167-4148'],
+    [615, 4148, 80, 72, 82, 'Sunny'],
+    [630, 4153, 81, 72, 82, 'Sunny'],
+    [645, 4157, 82, 72, 81, 'Sunny'],
+    [660, 4162, 84, 72, 81, 'Bled down 19 oz 4163-4146'],
+    [675, 4149, 86, 72, 80, 'Sunny'],
+    [690, 4153, 86, 72, 80, 'Sunny'],
+    [705, 4156, 87, 72, 80, 'Sunny'],
+    [720, 4161, 88, 72, 80, 'Bled down 16 oz 4161-4146'],
+    [735, 4148, 88, 72, 80, 'Sunny'],
+    [750, 4151, 89, 72, 80, 'Sunny'],
+    [765, 4158, 90, 72, 80, 'Sunny'],
+    [780, 4146, 90, 72, 80, 'Bled down 13 oz 4158-4147'],
+    [795, 4150, 90, 72, 80, 'Partly Cloudy'],
+    [810, 4153, 91, 72, 80, 'Partly Cloudy'],
+    [825, 4157, 92, 72, 80, 'Partly Cloudy'],
+    [840, 4158, 92, 72, 80, 'Sunny'],
+    [855, 4158, 98, 72, 79, 'Sunny'],
+    [870, 4156, 92, 72, 79, 'Sunny'],
+    [885, 4155, 92, 72, 79, 'Sunny'],
+    [900, 4153, 90, 72, 79, 'Partly Cloudy'],
+    [915, 4156, 92, 72, 79, 'Partly Cloudy'],
+    [930, 4157, 92, 72, 79, 'Partly Cloudy'],
+    [945, 4155, 92, 72, 79, 'Sunny'],
+    [960, 4150, 92, 72, 79, 'Sunny'],
+    [975, 4146, 90, 72, 80, 'Sunny'],
+    [990, 4145, 90, 72, 80, 'Sunny'],
+    [1005, 4146, 90, 72, 80, 'Sunny'],
+    [1020, 4146, 90, 72, 80, 'Sunny'],
+    [1035, 4147, 90, 72, 80, 'Sunny'],
+    [1050, 4147, 91, 72, 80, 'End of test / Begin 15 minute hold'],
+    [1065, 4146, 90, 72, 80, 'End of hold / begin depressurizing line'],
+  ];
+
+  function channels(input) {
+    const supplied = Array.isArray(input) ? input : [];
+    return DEFAULT_CHANNELS.map((fallback) => {
+      const match = supplied.find((item) => item && item.key === fallback.key) || {};
+      return {
+        key: fallback.key,
+        name: String(match.name || fallback.name).trim().slice(0, 30) || fallback.name,
+        color: /^#[0-9a-f]{6}$/i.test(String(match.color || '')) ? match.color : fallback.color,
+      };
+    });
+  }
+
+  function localInputValue(date) {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function buildDemoData(rows) {
+    const base = new Date();
+    base.setDate(base.getDate() - 1);
+    base.setHours(0, 0, 0, 0);
+    const at = (minutes) => base.getTime() + minutes * 60000;
+    const pressureReadings = rows.map((row) => ({ at: at(row[0]), pressure: row[1], unit: 'PSI' }));
+    const temperatureReadings = rows.map((row) => ({ at: at(row[0]), ambient: row[2], pipe: row[3], soil: row[4], aux: null }));
+    const noteRows = rows.filter((row) => meaningfulRemark(row[5]));
+    const startRow = rows.find((row) => isTestStartRemark(row[5])) || rows[0];
+    const endRow = rows.find((row) => isTestEndRemark(row[5])) || rows.at(-1);
+    return {
+      pressureReadings,
+      temperatureReadings,
+      notes: noteRows.map((row) => ({ at: at(row[0]), text: row[5] })),
+      testStart: localInputValue(new Date(at(startRow[0]))),
+      testEnd: localInputValue(new Date(at(endRow[0]))),
+    };
+  }
+
+  function demoData() { return buildDemoData(FIELD_LOG); }
+  function bleedDemoData() { return buildDemoData(BLEED_LOG); }
+
+  function isTestStartRemark(value) {
+    return /\bbegin\s+(?:the\s+)?(?:8|eight)[ -]?(?:hour|hr)\s+test\b/i.test(String(value || ''));
+  }
+
+  function isTestEndRemark(value) {
+    return /\bend\s+of\s+(?:the\s+)?test\b|\bend\s+(?:the\s+)?(?:8|eight)[ -]?(?:hour|hr)\s+test\b/i.test(String(value || ''));
+  }
+
+  function meaningfulRemark(value) {
+    const text = String(value || '').trim();
+    if (!text) return false;
+    return !/^(sunny|partly\s+cloudy|cloudy|clear|overcast)$/i.test(text);
+  }
+
+  function splitCsvRow(line) {
+    if (line.includes('\t')) return line.split('\t').map((value) => value.trim());
+    const cells = [];
+    let value = '';
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const character = line[index];
+      if (character === '"') {
+        if (quoted && line[index + 1] === '"') { value += '"'; index += 1; }
+        else quoted = !quoted;
+      } else if (character === ',' && !quoted) {
+        cells.push(value.trim());
+        value = '';
+      } else value += character;
+    }
+    cells.push(value.trim());
+    return cells;
+  }
+
+  function normalizedHeader(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  function headerMap(row) {
+    const aliases = {
+      time: ['time', 'timestamp', 'recordedtime'],
+      date: ['date', 'testdate', 'recordeddate'],
+      pressure: ['pressure', 'pressurepsi', 'psi'],
+      ambient: ['ambient', 'ambienttemp', 'ambienttemperature', 'airtemp', 'airtemperature'],
+      pipe: ['pipe', 'pipetemp', 'pipetemperature', 'linetemp', 'linetemperature'],
+      soil: ['ground', 'groundtemp', 'groundtemperature', 'soil', 'soiltemp', 'soiltemperature'],
+      aux: ['aux', 'auxiliary', 'auxiliarytemp', 'temp4', 'probe4'],
+      comments: ['comments', 'remarks', 'commentsremarks', 'notes', 'comment'],
+    };
+    const map = {};
+    row.forEach((heading, index) => {
+      const normalized = normalizedHeader(heading);
+      Object.entries(aliases).forEach(([key, values]) => { if (values.includes(normalized)) map[key] = index; });
+    });
+    return map;
+  }
+
+  function numericCell(value) {
+    const cleaned = String(value ?? '').trim().replace(/,/g, '').replace(/[^0-9+\-.]/g, '');
+    if (!cleaned) return null;
+    const number = Number(cleaned);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function parseTimeCell(value) {
+    const text = String(value || '').trim();
+    const match = text.match(/\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?\b/i);
+    if (!match) return null;
+    let hour = Number(match[1]);
+    const minute = Number(match[2]);
+    const second = Number(match[3] || 0);
+    const meridiem = String(match[4] || '').toUpperCase();
+    if (minute > 59 || second > 59 || hour > 24) return null;
+    if (meridiem) {
+      if (hour < 1 || hour > 12) return null;
+      if (hour === 12) hour = 0;
+      if (meridiem === 'PM') hour += 12;
+    } else if (hour === 24) {
+      if (minute || second) return null;
+      hour = 0;
+    }
+    return hour * 3600000 + minute * 60000 + second * 1000;
+  }
+
+  function parseDateCell(value, fallback) {
+    const text = String(value || '').trim();
+    if (!text) return fallback;
+    const parsed = new Date(`${text} 12:00:00`);
+    if (!Number.isFinite(parsed.getTime())) return fallback;
+    parsed.setHours(0, 0, 0, 0);
+    return parsed.getTime();
+  }
+
+  function parsePastedTest(text, fallbackDate) {
+    const rawRows = String(text || '').split(/\r?\n/).map((line) => splitCsvRow(line)).filter((row) => row.some((cell) => String(cell).trim()));
+    if (!rawRows.length) throw new Error('Paste spreadsheet rows before importing.');
+    let map = headerMap(rawRows[0]);
+    let startIndex = map.time !== undefined && map.pressure !== undefined ? 1 : 0;
+    if (startIndex === 0) map = { time: 0, pressure: 1, ambient: 2, pipe: 3, soil: 4, comments: 5 };
+    const dateMatch = String(fallbackDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const fallback = dateMatch ? new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])) : new Date(fallbackDate || Date.now());
+    if (!Number.isFinite(fallback.getTime())) throw new Error('Choose a valid test date.');
+    fallback.setHours(0, 0, 0, 0);
+    let baseDate = fallback.getTime();
+    let previousTime = null;
+    let dayOffset = 0;
+    const parsedRows = [];
+    let skipped = 0;
+    for (let index = startIndex; index < rawRows.length; index += 1) {
+      const row = rawRows[index];
+      const repeatedHeader = headerMap(row);
+      if (repeatedHeader.time !== undefined && repeatedHeader.pressure !== undefined) continue;
+      const timeOfDay = parseTimeCell(row[map.time]);
+      const pressure = numericCell(row[map.pressure]);
+      if (timeOfDay === null || pressure === null) { skipped += 1; continue; }
+      if (map.date !== undefined) baseDate = parseDateCell(row[map.date], baseDate);
+      if (previousTime !== null && timeOfDay < previousTime - 6 * 3600000) dayOffset += 86400000;
+      previousTime = timeOfDay;
+      parsedRows.push({
+        at: baseDate + dayOffset + timeOfDay,
+        pressure,
+        ambient: map.ambient === undefined ? null : numericCell(row[map.ambient]),
+        pipe: map.pipe === undefined ? null : numericCell(row[map.pipe]),
+        soil: map.soil === undefined ? null : numericCell(row[map.soil]),
+        aux: map.aux === undefined ? null : numericCell(row[map.aux]),
+        comment: map.comments === undefined ? '' : String(row[map.comments] || '').trim(),
+      });
+    }
+    if (parsedRows.length < 2) throw new Error('I could not find at least two valid time and pressure rows. Include the header row when possible.');
+    parsedRows.sort((a, b) => a.at - b.at);
+    const startRow = parsedRows.find((row) => isTestStartRemark(row.comment));
+    const endRow = parsedRows.find((row) => isTestEndRemark(row.comment));
+    return {
+      pressureReadings: parsedRows.map((row) => ({ at: row.at, pressure: row.pressure, unit: 'PSI' })),
+      temperatureReadings: parsedRows.map((row) => ({ at: row.at, ambient: row.ambient, pipe: row.pipe, soil: row.soil, aux: row.aux })),
+      notes: parsedRows.filter((row) => meaningfulRemark(row.comment)).map((row) => ({ at: row.at, text: row.comment })),
+      testStart: startRow ? localInputValue(new Date(startRow.at)) : '',
+      testEnd: endRow ? localInputValue(new Date(endRow.at)) : '',
+      rowCount: parsedRows.length,
+      skipped,
+      inferredWindow: Boolean(startRow && endRow),
+    };
+  }
+
+  function validNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function period(startValue, endValue) {
+    if (!startValue) return null;
+    const start = new Date(startValue).getTime();
+    // An actual end may be entered later; do not hide the known start meanwhile.
+    if (!endValue) return Number.isFinite(start) ? { start, end: Infinity } : null;
+    let end = new Date(endValue).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+    while (end <= start) end += 86400000;
+    return { start, end };
+  }
+
+  function nearest(readings, timestamp) {
+    if (!readings.length) return null;
+    let low = 0;
+    let high = readings.length - 1;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (Number(readings[middle].at) < timestamp) low = middle + 1;
+      else high = middle;
+    }
+    const current = readings[low];
+    const previous = low > 0 ? readings[low - 1] : null;
+    if (!previous) return current;
+    return Math.abs(Number(previous.at) - timestamp) <= Math.abs(Number(current.at) - timestamp) ? previous : current;
+  }
+
+  function extent(values, minimumSpan) {
+    let minimum = Infinity;
+    let maximum = -Infinity;
+    values.forEach((value) => {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return;
+      minimum = Math.min(minimum, number);
+      maximum = Math.max(maximum, number);
+    });
+    if (!Number.isFinite(minimum) || !Number.isFinite(maximum)) return [0, minimumSpan];
+    const span = Math.max(minimumSpan, maximum - minimum);
+    const padding = span * .12;
+    minimum -= padding;
+    maximum += padding;
+    return [minimum, maximum];
+  }
+
+  function analysis(pressureReadings, temperatureReadings, channelKey, testPeriod) {
+    let pressure = pressureReadings.filter((item) => Number.isFinite(Number(item.at)) && Number.isFinite(Number(item.pressure)));
+    let temperatures = temperatureReadings.filter((item) => Number.isFinite(Number(item.at)) && validNumber(item[channelKey]) !== null);
+    if (testPeriod) {
+      pressure = pressure.filter((item) => item.at >= testPeriod.start && item.at <= testPeriod.end);
+      temperatures = temperatures.filter((item) => item.at >= testPeriod.start && item.at <= testPeriod.end);
+    }
+    const pressureChange = pressure.length > 1 ? Number(pressure.at(-1).pressure) - Number(pressure[0].pressure) : null;
+    const temperatureChange = temperatures.length > 1 ? Number(temperatures.at(-1)[channelKey]) - Number(temperatures[0][channelKey]) : null;
+    return { pressureChange, temperatureChange };
+  }
+
+  function chartHeight(canvas) {
+    return canvas.closest('.temp-chart-dialog[open]') ? Math.max(240, canvas.getBoundingClientRect().height) : 330;
+  }
+
+  function canvasContext(canvas) {
+    const width = Math.max(240, canvas.getBoundingClientRect().width || 900);
+    const height = chartHeight(canvas);
+    const ratio = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const pixelWidth = Math.round(width * ratio);
+    const pixelHeight = Math.round(height * ratio);
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    const context = canvas.getContext('2d');
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = '#fffef9';
+    context.fillRect(0, 0, width, height);
+    return { context, width, height };
+  }
+
+  function line(context, points, color, width) {
+    if (points.length < 2) return;
+    const stride = Math.max(1, Math.ceil(points.length / 1800));
+    context.beginPath();
+    points.forEach((point, index) => {
+      if (index % stride && index !== points.length - 1) return;
+      if (index === 0) context.moveTo(point.x, point.y); else context.lineTo(point.x, point.y);
+    });
+    context.strokeStyle = color;
+    context.lineWidth = width;
+    context.lineJoin = 'round';
+    context.lineCap = 'round';
+    context.stroke();
+  }
+
+  function sampledPoints(items, mapper, maximumPoints = 1800) {
+    if (!items.length) return [];
+    const points = [];
+    const stride = Math.max(1, Math.ceil(items.length / maximumPoints));
+    for (let index = 0; index < items.length; index += stride) {
+      const point = mapper(items[index]);
+      if (point) points.push(point);
+    }
+    const lastIndex = items.length - 1;
+    if (lastIndex % stride !== 0) {
+      const lastPoint = mapper(items[lastIndex]);
+      if (lastPoint) points.push(lastPoint);
+    }
+    return points;
+  }
+
+  function recordingLine(context, items, mapper, color, width, gap) {
+    if (!gap) { line(context, sampledPoints(items, mapper), color, width); return; }
+    let start = 0;
+    for (let i = 1; i <= items.length; i++) {
+      if (i === items.length || items[i].at - items[i-1].at > gap) {
+        line(context, sampledPoints(items.slice(start, i), mapper), color, width); start = i;
+      }
+    }
+  }
+
+  function updateMetaSelection(meta, requestedAt) {
+    const targetAt = Number.isFinite(Number(requestedAt)) ? Math.max(meta.start, Math.min(meta.end, Number(requestedAt))) : meta.end;
+    const anchorReadings = meta.pressure.length ? meta.pressure : meta.temperatures;
+    const anchor = nearest(anchorReadings, targetAt);
+    meta.selectedAt = meta.replay ? targetAt : Math.max(meta.start, Math.min(meta.end, Number(anchor?.at) || targetAt));
+    meta.selectedPressure = nearest(meta.pressure, meta.selectedAt);
+    meta.selectedTemperature = nearest(meta.temperatures, meta.selectedAt);
+    if (meta.gapLimits) {
+      if (Math.abs((meta.selectedPressure?.at ?? Infinity)-meta.selectedAt) > meta.gapLimits.pressure) meta.selectedPressure = null;
+      if (Math.abs((meta.selectedTemperature?.at ?? Infinity)-meta.selectedAt) > meta.gapLimits.temperature) meta.selectedTemperature = null;
+    }
+  }
+
+  function selectionCanvasContext(canvas) {
+    const width = Math.max(240, canvas.getBoundingClientRect().width || 900);
+    const height = chartHeight(canvas);
+    const ratio = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const pixelWidth = Math.round(width * ratio);
+    const pixelHeight = Math.round(height * ratio);
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    const context = canvas.getContext('2d');
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    return { context, width, height };
+  }
+
+  function drawSelectionOverlay(canvas, meta) {
+    if (!canvas) return;
+    const { context } = selectionCanvasContext(canvas);
+    if (!meta) return;
+    const selectedX = meta.box.left + (meta.selectedAt - meta.start) / Math.max(1, meta.end - meta.start) * (meta.box.right - meta.box.left);
+    context.beginPath();
+    context.moveTo(selectedX, meta.box.top);
+    context.lineTo(selectedX, meta.box.bottom);
+    context.setLineDash([5, 4]);
+    context.strokeStyle = 'rgba(16, 54, 77, .78)';
+    context.lineWidth = 1.3;
+    context.stroke();
+    context.setLineDash([]);
+  }
+
+  function chartFrame(context, width, height, leftLabel, rightLabel) {
+    const box = { left: 58, right: width - 56, top: 28, bottom: height - 42 };
+    context.font = '700 11px system-ui';
+    context.fillStyle = '#607686';
+    context.textBaseline = 'middle';
+    context.textAlign = 'left';
+    context.fillText(leftLabel, box.left, 13);
+    context.textAlign = 'right';
+    context.fillText(rightLabel, box.right, 13);
+    for (let index = 0; index <= 5; index += 1) {
+      const y = box.top + (box.bottom - box.top) * index / 5;
+      context.beginPath();
+      context.moveTo(box.left, y);
+      context.lineTo(box.right, y);
+      context.strokeStyle = index === 5 ? '#9bb0bc' : '#dce6eb';
+      context.lineWidth = index === 5 ? 1 : .7;
+      context.stroke();
+    }
+    return box;
+  }
+
+  function drawEmpty(context, width, height, message) {
+    context.fillStyle = '#718594';
+    context.font = '700 13px system-ui';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(message, width / 2, height / 2);
+  }
+
+  function drawTimeline(canvas, options) {
+    const { context, width, height } = canvasContext(canvas);
+    let pressure = options.pressureReadings;
+    let temperatures = options.temperatureReadings;
+    let earliestAt = Infinity;
+    let latestAt = -Infinity;
+    pressure.forEach((item) => {
+      const at = Number(item.at);
+      if (!Number.isFinite(at)) return;
+      earliestAt = Math.min(earliestAt, at);
+      latestAt = Math.max(latestAt, at);
+    });
+    temperatures.forEach((item) => {
+      const at = Number(item.at);
+      if (!Number.isFinite(at)) return;
+      earliestAt = Math.min(earliestAt, at);
+      latestAt = Math.max(latestAt, at);
+    });
+    if (!Number.isFinite(earliestAt) || !Number.isFinite(latestAt)) {
+      drawEmpty(context, width, height, 'No temperature readings in this time range yet.');
+      canvas._temperatureMeta = null;
+      return;
+    }
+    let start = earliestAt;
+    let end = latestAt;
+    if (options.officialOnly && options.testPeriod) {
+      start = Math.max(start, options.testPeriod.start);
+      end = Math.min(end, options.testPeriod.end);
+    }
+    if (options.historyRange === 'pretest' && options.testPeriod) end = Math.min(end, options.testPeriod.start - 1);
+    if (options.historyRange === 'recent') start = Math.max(start, end - 6 * 3600000);
+    if (options.historyRange === 'official' && !options.testPeriod) {
+      drawEmpty(context, width, height, 'Start the official test to view this period.');
+      canvas._temperatureMeta = null;
+      return;
+    }
+    if (end < start) {
+      drawEmpty(context, width, height, 'No readings in this period.');
+      canvas._temperatureMeta = null;
+      return;
+    }
+    if (end === start) end = start + 60000;
+    const fullStart = start, fullEnd = end;
+    const zoom = clampZoom(options.zoom, fullStart, fullEnd);
+    if (zoom) { start = zoom.start; end = zoom.end; }
+    pressure = pressure.filter((item) => item.at >= start && item.at <= end);
+    temperatures = temperatures.filter((item) => item.at >= start && item.at <= end);
+    const temperatureValues = [];
+    options.visibleKeys.forEach((key) => temperatures.forEach((item) => {
+      const value = validNumber(item[key]);
+      if (value !== null) temperatureValues.push(value);
+    }));
+    const [pressureMin, pressureMax] = extent(pressure.map((item) => item.pressure), 2);
+    const [temperatureMin, temperatureMax] = extent(temperatureValues, 4);
+    const showTemperatureScale = options.visibleKeys.length > 0;
+    const showPressure = options.showPressure !== false;
+    const box = chartFrame(context, width, height, showPressure ? 'PRESSURE (PSI)' : '', showTemperatureScale ? 'TEMPERATURE (°F)' : '');
+    const x = (value) => box.left + (value - start) / (end - start) * (box.right - box.left);
+    const pressureY = (value) => box.bottom - (value - pressureMin) / (pressureMax - pressureMin) * (box.bottom - box.top);
+    const temperatureY = (value) => box.bottom - (value - temperatureMin) / (temperatureMax - temperatureMin) * (box.bottom - box.top);
+
+    context.font = '600 12px system-ui';
+    context.textBaseline = 'middle';
+    for (let index = 0; index <= 5; index += 1) {
+      const y = box.top + (box.bottom - box.top) * index / 5;
+      context.fillStyle = '#b43b3b';
+      context.textAlign = 'right';
+      if (showPressure) context.fillText((pressureMax - (pressureMax - pressureMin) * index / 5).toFixed(1), box.left - 7, y);
+      if (showTemperatureScale) {
+        context.fillStyle = '#526b7f';
+        context.textAlign = 'left';
+        context.fillText(`${(temperatureMax - (temperatureMax - temperatureMin) * index / 5).toFixed(options.wholeDegrees ? 0 : 1)}°`, box.right + 7, y);
+      }
+    }
+    const timeTicks = width < 500 ? 2 : 4;
+    for (let index = 0; index <= timeTicks; index += 1) {
+      const at = start + (end - start) * index / timeTicks;
+      const px = x(at);
+      context.fillStyle = '#526b7f';
+      context.textAlign = index === 0 ? 'left' : index === timeTicks ? 'right' : 'center';
+      context.textBaseline = 'top';
+      context.fillText(new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...((end - start) < 300000 ? { second: '2-digit' } : {}) }), px, box.bottom + 10);
+    }
+
+    (options.notes || []).filter((note) => note.at >= start && note.at <= end).slice(-40).forEach((note, index) => {
+      const px = x(Number(note.at));
+      context.beginPath();
+      context.moveTo(px, box.top);
+      context.lineTo(px, box.bottom);
+      context.setLineDash([4, 4]);
+      context.strokeStyle = 'rgba(90,65,126,.52)';
+      context.lineWidth = 1;
+      context.stroke();
+      context.setLineDash([]);
+      const label = String(note.text || '').slice(0, 28);
+      if (label) {
+        context.save();
+        const nearRight = px > box.left + (box.right - box.left) * .75;
+        context.translate(px + (nearRight ? -4 : 4), box.top + 7 + (index % 4) * 11);
+        context.fillStyle = '#695080';
+        context.font = '700 8px system-ui';
+        context.textAlign = nearRight ? 'right' : 'left';
+        context.textBaseline = 'top';
+        context.fillText(label, 0, 0);
+        context.restore();
+      }
+    });
+
+    if (showPressure) recordingLine(context, pressure, (item) => ({ x: x(Number(item.at)), y: pressureY(Number(item.pressure)) }), '#c83d3d', 2.2, options.gapLimits?.pressure);
+    options.channelConfig.forEach((channel) => {
+      if (!options.visibleKeys.includes(channel.key)) return;
+      recordingLine(context, temperatures.filter(item => validNumber(item[channel.key]) !== null), (item) => {
+        const value = validNumber(item[channel.key]);
+        return value === null ? null : { x: x(Number(item.at)), y: temperatureY(value) };
+      }, channel.color, 2, options.gapLimits?.temperature);
+    });
+
+    const hasSelectedAt = options.selectedAt !== null && options.selectedAt !== undefined && Number.isFinite(Number(options.selectedAt));
+    const meta = {
+      box, height, start, end, fullStart, fullEnd, zoomed: Boolean(zoom), pressure, temperatures, channelConfig: options.channelConfig, visibleKeys: options.visibleKeys,
+      pressureMin, pressureMax, temperatureMin, temperatureMax, showPressure,
+      wholeDegrees: options.wholeDegrees === true, replay: options.replay === true, gapLimits: options.gapLimits,
+    };
+    updateMetaSelection(meta, hasSelectedAt ? options.selectedAt : end);
+    canvas._temperatureMeta = meta;
+  }
+
+  function setPanelText(panel, selector, value) {
+    const element = panel.querySelector(selector);
+    if (element) element.textContent = value;
+  }
+
+  function inspectorTime(timestamp, includeDate = false) {
+    if (!Number.isFinite(Number(timestamp))) return '—';
+    const options = { hour: 'numeric', minute: '2-digit', second: '2-digit' };
+    if (includeDate) Object.assign(options, { month: 'numeric', day: 'numeric', year: 'numeric' });
+    return new Date(Number(timestamp)).toLocaleString([], options);
+  }
+
+  function updateInspector(panel, canvas, channelConfig, state) {
+    const meta = canvas._temperatureMeta;
+    const scrubber = panel.querySelector('.temp-scrubber');
+    const returnLive = panel.querySelector('.temp-return-live');
+    if (!meta) {
+      if (scrubber) { scrubber.disabled = true; scrubber.value = '1000'; }
+      if (returnLive) returnLive.disabled = true;
+      setPanelText(panel, '.temp-inspector-time', 'Waiting for readings');
+      setPanelText(panel, '.temp-inspector-pressure', '—');
+      channelConfig.forEach((channel) => setPanelText(panel, `[data-temp-inspector-value="${channel.key}"]`, '—'));
+      setPanelText(panel, '.temp-scrubber-start', '—');
+      setPanelText(panel, '.temp-scrubber-end', 'Live');
+      return;
+    }
+    if (scrubber) {
+      const span = Math.max(1, meta.end - meta.start);
+      scrubber.disabled = false;
+      scrubber.value = state.followLive ? scrubber.max : String(Math.round((meta.selectedAt - meta.start) / span * Number(scrubber.max)));
+      scrubber.setAttribute('aria-valuetext', `${state.followLive ? 'Live, ' : ''}${inspectorTime(meta.selectedAt, true)}`);
+    }
+    if (!state.followLive) state.at = meta.selectedAt;
+    if (returnLive) returnLive.disabled = state.followLive;
+    setPanelText(panel, '.temp-inspector-time', `${state.followLive ? 'Live • ' : ''}${inspectorTime(meta.selectedAt, true)}`);
+    setPanelText(panel, '.temp-inspector-pressure', meta.selectedPressure ? `${Number(meta.selectedPressure.pressure).toFixed(1)} PSI` : '—');
+    channelConfig.forEach((channel) => {
+      const value = meta.selectedTemperature ? validNumber(meta.selectedTemperature[channel.key]) : null;
+      setPanelText(panel, `[data-temp-inspector-value="${channel.key}"]`, value === null ? '—' : `${value.toFixed(meta.wholeDegrees ? 0 : 1)}°F`);
+    });
+    setPanelText(panel, '.temp-scrubber-start', inspectorTime(meta.start));
+    setPanelText(panel, '.temp-scrubber-end', `${meta.zoomed || meta.replay ? '' : 'Live '}${inspectorTime(meta.end)}`);
+  }
+
+  function refreshSelection(panel, state, channelConfig) {
+    const canvas = panel.querySelector('.temperature-chart');
+    const overlay = panel.querySelector('.temperature-selection-overlay');
+    const meta = canvas?._temperatureMeta || null;
+    if (meta) updateMetaSelection(meta, state.followLive ? meta.end : state.at);
+    drawSelectionOverlay(overlay, meta);
+    updateInspector(panel, canvas, channelConfig || meta?.channelConfig || DEFAULT_CHANNELS, state);
+  }
+
+  function renderPanel(panel, options) {
+    if (!panel) return;
+    const channelConfig = channels(options.channels);
+    const temperatureReadings = Array.isArray(options.temperatureReadings) ? options.temperatureReadings.filter((item) => item && Number.isFinite(Number(item.at))) : [];
+    const pressureReadings = Array.isArray(options.pressureReadings) ? options.pressureReadings.filter((item) => item && Number.isFinite(Number(item.at)) && Number.isFinite(Number(item.pressure))) : [];
+    const latest = temperatureReadings.at(-1) || {};
+    channelConfig.forEach((channel) => {
+      panel.querySelectorAll(`[data-temp-label="${channel.key}"]`).forEach((element) => { element.textContent = channel.name; });
+      const value = validNumber(latest[channel.key]);
+      setPanelText(panel, `[data-temp-value="${channel.key}"]`, value === null ? '—' : value.toFixed(options.wholeDegrees ? 0 : 1));
+      const current = panel.querySelector(`[data-temp-current="${channel.key}"]`);
+      if (current) current.classList.toggle('inactive', value === null);
+    });
+    const visibleKeys = Array.from(panel.querySelectorAll('.temp-toggle input:checked')).map((input) => input.value).filter((key) => channelConfig.some((channel) => channel.key === key));
+    const analysisKey = 'pipe';
+    const testPeriod = period(options.testStart, options.testEnd);
+    const analysisResult = analysis(pressureReadings, temperatureReadings, analysisKey, testPeriod);
+    const canvas = panel.querySelector('.temperature-chart');
+    const selectionState = panel._temperatureSelection || { followLive: true, at: null };
+    if (options.replay && selectionState.followLive) { selectionState.followLive = false; selectionState.at = null; }
+    panel._temperatureSelection = selectionState;
+    const chartOptions = {
+      pressureReadings,
+      showPressure: panel.querySelector('.temp-pressure-toggle')?.checked !== false,
+      temperatureReadings,
+      channelConfig,
+      visibleKeys,
+      analysisKey,
+      testPeriod,
+      historyRange: panel.querySelector('.temp-history-range')?.value,
+      officialOnly: panel.querySelector('.temp-history-range') ? panel.querySelector('.temp-history-range').value === 'official' : panel.querySelector('.temp-official-only')?.checked !== false,
+      notes: panel.querySelector('.temp-show-notes')?.checked ? (options.notes || []) : [],
+      selectedAt: selectionState.followLive ? null : selectionState.at,
+      wholeDegrees: options.wholeDegrees === true,
+      zoom: panel._temperatureZoom,
+      replay: options.replay === true, gapLimits: options.gapLimits,
+    };
+    drawTimeline(canvas, chartOptions);
+    updateZoomControls(panel, canvas._temperatureMeta);
+    refreshSelection(panel, selectionState, channelConfig);
+    const selectedChannel = channelConfig.find((item) => item.key === analysisKey) || channelConfig[1];
+    setPanelText(panel, '.temp-pressure-change', analysisResult.pressureChange === null ? '—' : `${analysisResult.pressureChange >= 0 ? '+' : ''}${analysisResult.pressureChange.toFixed(1)} psi`);
+    setPanelText(panel, '.temp-temperature-change', analysisResult.temperatureChange === null ? '—' : `${analysisResult.temperatureChange >= 0 ? '+' : ''}${analysisResult.temperatureChange.toFixed(options.wholeDegrees ? 0 : 1)}°F`);
+    setPanelText(panel, '.temp-analysis-name', selectedChannel.name);
+  }
+
+  function bindPanel(panel, onChange) {
+    if (!panel || panel.dataset.temperatureBound === 'true') return;
+    panel.dataset.temperatureBound = 'true';
+    bindZoom(panel, onChange);
+    panel.querySelectorAll('.temp-toggle input,.temp-official-only,.temp-show-notes,.temp-history-range').forEach((input) => input.addEventListener('change', () => {
+      if (input.matches('.temp-history-range,.temp-official-only')) {
+        panel._temperatureZoom = null;
+        panel._temperatureSelection = { followLive: true, at: null };
+      }
+      onChange();
+    }));
+    const scrubber = panel.querySelector('.temp-scrubber');
+    let scrubberFrame = null;
+    if (scrubber) scrubber.addEventListener('input', () => {
+      const meta = panel.querySelector('.temperature-chart')._temperatureMeta;
+      if (!meta) return;
+      const value = Number(scrubber.value);
+      const maximum = Math.max(1, Number(scrubber.max));
+      const state = panel._temperatureSelection || { followLive: true, at: null };
+      state.followLive = value >= maximum && !meta.zoomed && !meta.replay;
+      const requestedAt = meta.start + value / maximum * (meta.end - meta.start);
+      const anchor = nearest(meta.pressure.length ? meta.pressure : meta.temperatures, requestedAt);
+      state.at = meta.replay ? requestedAt : Number(anchor?.at) || requestedAt;
+      panel._temperatureSelection = state;
+      if (scrubberFrame !== null) return;
+      scrubberFrame = window.setTimeout(() => {
+        scrubberFrame = null;
+        refreshSelection(panel, state);
+      }, 32);
+    });
+    const returnLive = panel.querySelector('.temp-return-live');
+    if (returnLive) returnLive.addEventListener('click', () => {
+      panel._temperatureZoom = null;
+      panel._temperatureSelection = { followLive: true, at: null };
+      onChange();
+    });
+    const canvas = panel.querySelector('.temperature-chart');
+    const tooltip = panel.querySelector('.temperature-tooltip');
+    canvas.addEventListener('pointermove', (event) => {
+      const meta = canvas._temperatureMeta;
+      if (!meta || !tooltip) return;
+      const rect = canvas.getBoundingClientRect();
+      const pointerX = (event.clientX - rect.left) * (Math.max(240, rect.width || 900) / rect.width);
+      if (pointerX < meta.box.left || pointerX > meta.box.right) {
+        tooltip.classList.add('hidden');
+        return;
+      }
+      const at = meta.start + (pointerX - meta.box.left) / (meta.box.right - meta.box.left) * (meta.end - meta.start);
+      const pressure = nearest(meta.pressure, at);
+      const temperature = nearest(meta.temperatures, at);
+      const values = [`<strong>${inspectorTime(at, true)}</strong>`];
+      if (meta.showPressure && pressure && (!meta.gapLimits || Math.abs(pressure.at-at) <= meta.gapLimits.pressure)) values.push(`<span>Pressure: ${Number(pressure.pressure).toFixed(1)} psi</span>`);
+      meta.channelConfig.forEach((channel) => {
+        if (!meta.visibleKeys.includes(channel.key) || !temperature || (meta.gapLimits && Math.abs(temperature.at-at) > meta.gapLimits.temperature)) return;
+        const value = validNumber(temperature[channel.key]);
+        if (value !== null) values.push(`<span>${channel.name}: ${value.toFixed(meta.wholeDegrees ? 0 : 1)}°F</span>`);
+      });
+      tooltip.innerHTML = values.join('');
+      tooltip.classList.remove('hidden');
+      tooltip.style.left = `${Math.max(8, Math.min(rect.width - 150, event.clientX - rect.left + 12))}px`;
+      tooltip.style.top = `${Math.max(8, event.clientY - rect.top - 18)}px`;
+    });
+    canvas.addEventListener('pointerleave', () => { if (tooltip) tooltip.classList.add('hidden'); });
+  }
+
+  // View-only zoom: data, capture intervals, exports and official calculations stay unchanged.
+  function clampZoom(zoom, start, end) {
+    if (!zoom || !Number.isFinite(zoom.start) || !Number.isFinite(zoom.end) || zoom.end <= zoom.start || end <= start) return null;
+    const span = Math.min(end - start, Math.max(10000, zoom.end - zoom.start));
+    if (span >= end - start) return null;
+    const left = Math.max(start, Math.min(end - span, zoom.start));
+    return { start: left, end: left + span };
+  }
+
+  function updateZoomControls(panel, meta) {
+    const controls = panel.querySelector('.temp-zoom-controls');
+    if (!controls) return;
+    controls.querySelectorAll('[data-zoom],select').forEach(el => { el.disabled = !meta; });
+    if (!meta) { setPanelText(panel, '.temp-zoom-window', 'Zoom becomes available when readings arrive.'); return; }
+    controls.querySelector('[data-zoom="reset"]').disabled = !meta.zoomed;
+    controls.querySelector('[data-zoom="out"]').disabled = !meta.zoomed;
+    controls.querySelector('[data-zoom="in"]').disabled = meta.end - meta.start <= 10000;
+    controls.querySelector('[data-zoom="earlier"]').disabled = meta.start <= meta.fullStart;
+    controls.querySelector('[data-zoom="later"]').disabled = meta.end >= meta.fullEnd;
+    const preset = controls.querySelector('.temp-zoom-preset');
+    const minutes = String((meta.end - meta.start) / 60000);
+    preset.value = !meta.zoomed ? 'all' : [...preset.options].some(o => o.value === minutes) ? minutes : 'custom';
+    setPanelText(panel, '.temp-zoom-window', `${meta.zoomed ? 'Zoomed view' : 'Full selected history'}: ${inspectorTime(meta.start, true)} – ${inspectorTime(meta.end, true)}`);
+  }
+
+  function bindZoom(panel, onChange) {
+    const canvas = panel.querySelector('.temperature-chart');
+    const wrap = canvas.closest('.temperature-canvas-wrap');
+    const controls = document.createElement('div');
+    controls.className = 'temp-zoom-controls';
+    controls.innerHTML = `<div class="temp-zoom-actions"><label>Time window <select class="temp-zoom-preset" aria-label="Temperature chart time window"><option value="all">Full history</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="60">1 hour</option><option value="360">6 hours</option><option value="custom" disabled>Custom zoom</option></select></label><button type="button" data-zoom="in">Zoom in +</button><button type="button" data-zoom="out">Zoom out −</button><button type="button" data-zoom="earlier">← Earlier</button><button type="button" data-zoom="later">Later →</button><button type="button" data-zoom="reset">Reset zoom</button></div><small>Choose a window or drag across the graph to zoom in. Earlier / Later moves the window. Recording continues unchanged.</small><span class="temp-zoom-window" role="status"></span>`;
+    wrap.before(controls);
+    bindExpandedChart(panel, controls, wrap, onChange);
+    const shade = document.createElement('div'); shade.className = 'temp-zoom-drag'; shade.hidden = true;
+    shade.setAttribute('aria-hidden', 'true'); wrap.appendChild(shade);
+    function apply(zoom) {
+      const meta = canvas._temperatureMeta;
+      if (!meta) return;
+      panel._temperatureZoom = clampZoom(zoom, meta.fullStart, meta.fullEnd);
+      const view = panel._temperatureZoom;
+      panel._temperatureSelection = view ? { followLive: false, at: (view.start + view.end) / 2 } : { followLive: true, at: null };
+      panel.querySelector('.temperature-tooltip')?.classList.add('hidden');
+      onChange();
+    }
+    controls.querySelector('.temp-zoom-preset').addEventListener('change', event => {
+      const meta = canvas._temperatureMeta; if (!meta) return;
+      if (event.target.value === 'all') { apply(null); return; }
+      const span = Number(event.target.value) * 60000;
+      const center = panel._temperatureSelection?.followLive === false ? meta.selectedAt : meta.end - span / 2;
+      apply({ start: center - span / 2, end: center + span / 2 });
+    });
+    controls.addEventListener('click', event => {
+      const button = event.target.closest('[data-zoom]'); const meta = canvas._temperatureMeta;
+      if (!button || !meta) return;
+      const action = button.dataset.zoom, span = meta.end - meta.start;
+      if (action === 'reset') { apply(null); return; }
+      if (action === 'earlier' || action === 'later') {
+        const shift = span * .75 * (action === 'earlier' ? -1 : 1);
+        apply({ start: meta.start + shift, end: meta.end + shift }); return;
+      }
+      const nextSpan = span * (action === 'in' ? .5 : 2);
+      const center = action === 'in' && panel._temperatureSelection?.followLive === false ? meta.selectedAt : (meta.start + meta.end) / 2;
+      apply({ start: center - nextSpan / 2, end: center + nextSpan / 2 });
+    });
+    let drag = null;
+    function position(event, meta) {
+      const rect = canvas.getBoundingClientRect();
+      const scale = Math.max(240, rect.width || 900) / rect.width;
+      const x = Math.max(meta.box.left, Math.min(meta.box.right, (event.clientX - rect.left) * scale));
+      return { x, at: meta.start + (x - meta.box.left) / (meta.box.right - meta.box.left) * (meta.end - meta.start), scale };
+    }
+    canvas.addEventListener('pointerdown', event => {
+      const meta = canvas._temperatureMeta;
+      if (!meta || event.button !== 0 || !event.isPrimary || (event.pointerType === 'touch' && !canvas.closest('.temp-chart-dialog[open]'))) return;
+      const rect = canvas.getBoundingClientRect();
+      const y = (event.clientY - rect.top) * meta.height / rect.height;
+      const x = (event.clientX - rect.left) * Math.max(240, rect.width || 900) / rect.width;
+      if (x < meta.box.left || x > meta.box.right || y < meta.box.top || y > meta.box.bottom) return;
+      drag = { meta, first: position(event, meta), pointerId: event.pointerId };
+      if (event.pointerType !== 'touch') {
+        canvas.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      }
+    });
+    canvas.addEventListener('pointermove', event => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const point = position(event, drag.meta), rect = canvas.getBoundingClientRect();
+      shade.hidden = false;
+      shade.style.left = `${Math.min(point.x, drag.first.x) / point.scale}px`;
+      shade.style.width = `${Math.abs(point.x - drag.first.x) / point.scale}px`;
+      shade.style.top = `${drag.meta.box.top * rect.height / drag.meta.height}px`;
+      shade.style.height = `${(drag.meta.box.bottom - drag.meta.box.top) * rect.height / drag.meta.height}px`;
+      panel.querySelector('.temperature-tooltip')?.classList.add('hidden');
+    });
+    function cancelDrag() { drag = null; shade.hidden = true; }
+    canvas.addEventListener('pointerup', event => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const saved = drag, point = position(event, saved.meta); cancelDrag();
+      if (event.pointerType !== 'touch' && canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      if (Math.abs(point.x - saved.first.x) >= 8) apply({ start: Math.min(point.at, saved.first.at), end: Math.max(point.at, saved.first.at) });
+    });
+    canvas.addEventListener('pointercancel', cancelDrag);
+    canvas.addEventListener('lostpointercapture', cancelDrag);
+    controls.addEventListener('keydown', event => { if (event.key === 'Escape' && !canvas.closest('.temp-chart-dialog[open]')) { cancelDrag(); apply(null); } });
+  }
+
+  function bindExpandedChart(panel, controls, wrap, onChange) {
+    const expand = document.createElement('button');
+    expand.type = 'button';
+    expand.className = 'temp-chart-expand';
+    expand.textContent = 'Expand chart ⤢';
+    expand.setAttribute('aria-haspopup', 'dialog');
+    controls.prepend(expand);
+    const dialog = document.createElement('dialog');
+    dialog.className = 'temp-chart-dialog';
+    dialog.setAttribute('aria-label', 'Expanded pressure and temperature chart');
+    dialog.innerHTML = '<header class="temp-chart-dialog-header"><div><strong>Pressure &amp; temperature</strong><small>Drag across the graph to zoom. Turn your phone sideways for a wider view.</small></div><button type="button" class="temp-chart-close" autofocus>Close chart</button></header><div class="temp-chart-dialog-body"></div>';
+    panel.appendChild(dialog);
+    const body = dialog.querySelector('.temp-chart-dialog-body');
+    let moved = [], priorOverflow;
+    expand.addEventListener('click', () => {
+      if (dialog.open) return;
+      // Put the graph first in the expanded view; controls remain just below it.
+      const nodes = [wrap, controls, panel.querySelector('.temperature-controls'), panel.querySelector('.temperature-inspector')].filter(Boolean);
+      moved = nodes.map(node => {
+        const marker = document.createComment('Expanded chart original position');
+        node.before(marker);
+        body.appendChild(node);
+        return { node, marker };
+      });
+      priorOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      dialog.showModal();
+      onChange();
+    });
+    dialog.querySelector('.temp-chart-close').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => {
+      moved.forEach(({ node, marker }) => marker.replaceWith(node));
+      moved = [];
+      document.body.style.overflow = priorOverflow;
+      panel.querySelector('.temperature-tooltip')?.classList.add('hidden');
+      onChange();
+      expand.focus({ preventScroll: true });
+    });
+    // Repaint at the new pixel size on rotation or expansion, even while offline.
+    let previousSize = '', frame;
+    const observer = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      const size = `${width}:${height}`;
+      if (!width || size === previousSize) return;
+      previousSize = size;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(onChange);
+    });
+    observer.observe(wrap);
+  }
+
+  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, demoData, bleedDemoData, parsePastedTest, renderPanel, bindPanel, nearest, analyze: analysis, clampZoom };
+})();

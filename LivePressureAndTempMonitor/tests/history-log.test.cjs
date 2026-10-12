@@ -1,0 +1,33 @@
+const assert=require('node:assert/strict');
+const {prepare,plan}=require('../assets/history-log.js');
+const at=Date.UTC(2026,9,3,12);
+const record={readings:[{at,pressure:0},{at:at+15000,pressure:983.9},{at:at+30000,pressure:984.6},{at:at+3600000,pressure:900}],temperatureReadings:[
+  {at,pipe:75,ambient:72,soil:null,aux:''},{at:at+15000,pipe:76,ambient:73},{at:at+30000,pipe:77,ambient:74},{at:at+3600000,pipe:78,ambient:75}
+]};
+const original=JSON.stringify(record), data=prepare(record);
+let log=plan(data,{interval:900000});
+assert.equal(log.count,5); assert.equal(log.row(0).values.pressure.value,0);
+assert.equal(log.row(1).values.pressure,null,'No stale pressure across outage');
+assert.equal(log.row(1).values.pipe,null,'No stale temperature across outage');
+assert.equal(log.row(0).values.soil,null,'Null must not become zero');
+assert.equal(log.row(0).values.aux,null,'Blank must not become zero');
+assert.equal(log.row(4).values.pressure.value,900);
+log=plan(data,{interval:15000}); assert.equal(log.row(1).values.pressure.value,983.9);
+assert.equal(Math.round(log.row(2).values.pressure.value),985);
+assert.equal(plan(data,{period:'official'}).count,0,'Unknown test period is explicit');
+log=plan(data,{period:'official',testStart:at+15000,testEnd:at+30000,interval:15000});
+assert.equal(log.count,2); assert.equal(log.row(0).values.pressure.value,983.9);
+assert.equal(log.row(1).values.pressure.value,984.6);
+log=plan(data,{period:'pretest',testStart:at+15000,interval:15000});
+assert(log.end<at+15000);assert.equal(log.row(log.count-1).values.pressure.value,0,'Never borrow official readings for pretest');
+assert.equal(plan(prepare({})).count,0);
+assert.equal(plan(prepare({readings:[{at,pressure:5}]})).count,1);
+const long=prepare({readings:[{at,pressure:1},{at:at+60*3600000,pressure:2}]});
+log=plan(long,{interval:1000}); assert.equal(log.count,216001);assert.equal(log.row(216000).values.pressure.value,2);
+const sparse=prepare({temperatureReadings:[{at,pipe:70,source:'manual'},{at:at+900000,pipe:71,source:'manual'}]});
+assert.equal(plan(sparse,{interval:60000}).row(1).values.pipe,null,'Manual readings are not carried forward');
+const tempOnly=plan(prepare({temperatureReadings:[{at,pipe:72},{at:at+60000,pipe:74}]}),{interval:30000});
+assert.equal(tempOnly.row(1).values.pipe.value,72,'Ties choose earlier actual sample');
+assert.equal(tempOnly.row(1).values.pressure,null);
+assert.equal(JSON.stringify(record),original,'Original data unchanged');
+console.log('History log: intervals, endpoints, zero/missing values, outage gaps, per-channel samples, official/pretest bounds, manual samples, 60-hour pagination and data preservation passed.');

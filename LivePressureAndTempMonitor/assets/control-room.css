@@ -1,0 +1,189 @@
+/* Control Room: shared presentation only. Device, storage and chart engines are unchanged. */
+:root { --ink:#193247; --muted:#536d81; --line:#cddbe5; --paper:#f8fafc; --wash:#e9eef2; --accent:#1f5b85; --accent-soft:#e6eff6; color:var(--ink); background:var(--wash); }
+body { background:var(--wash); }
+button,.test-design-file-button,.backup-import-button,input:not([type="checkbox"]):not([type="range"]),select,textarea { border-radius:5px; }
+button:hover { background:#edf3f8; }
+button.primary:hover { background:#17476a; }
+button.primary.danger { background:#a33232; border-color:#a33232; }
+h1,h2,h3 { font-weight:650; }
+.app-header { background:#f8fafc; padding:16px 28px; min-height:84px; }
+.app-header h1 { font-size:1.2rem; letter-spacing:-.025em; }
+.header-actions a { font-size:.8rem; font-weight:600; text-decoration:none; padding:8px 0; }
+.header-actions a[aria-current="page"] { border-bottom:2px solid var(--accent); }
+.brand-mark img { width:42px; height:42px; }
+#cloudSaveStatus { padding:7px 28px; border-bottom:1px solid var(--line); color:var(--muted); background:#f0f5f8; font-size:.75rem; }
+.console-layout { display:block; max-width:1600px; }
+.console-sidebar { padding:0 28px; border-right:0; border-bottom:1px solid var(--line); background:#f8fafc; }
+.sidebar-heading { display:none; }
+.dashboard-tabs { display:flex; position:static; gap:24px; }
+.dashboard-tabs button { border:0; border-radius:0; border-bottom:3px solid transparent; padding:16px 4px; background:transparent; min-height:52px; }
+.dashboard-tabs button i,.dashboard-tabs button small { display:none; }
+.dashboard-tabs button.active { border-color:var(--accent); background:transparent; }
+.console-main { padding:26px 28px 32px; }
+.workspace-heading { margin-bottom:22px; align-items:flex-start; }
+#workspaceEyebrow { margin-bottom:5px; font-size:.65rem; }
+.workspace-heading h2 { font-size:1.9rem; }
+.workspace-heading p { font-size:.8rem; margin-top:7px; }
+.field-clock { border-left:1px solid var(--line); padding-left:22px; }
+.field-clock strong { font-family:Consolas,"Cascadia Mono",monospace; }
+.test-bar { margin-bottom:18px; }
+.view-controls { border-radius:5px; padding:3px; }
+.gauge-toolbar { padding-bottom:18px; }
+.gauge-name { font-size:1.2rem!important; }
+.current-readout { border-left:3px solid #367aa6; padding-left:20px; }
+.current-readout strong { font:600 2.4rem/1.15 Consolas,"Cascadia Mono",monospace; letter-spacing:-.04em; }
+.workflow-card,.pressure-deck,.temperature-panel,.test-operations,.settings-panel,.workflow-config,.workflow-restart,.workflow-records,.equipment-library,.event-notes,.pressure-log,.remote-panel,.tools-workspace { border-radius:5px; padding:22px; background:var(--paper); box-shadow:0 2px 3px #19324703; }
+.page-pressure { grid-template-columns:minmax(0,1fr) 350px; align-items:start; gap:18px; }
+.page-pressure .demo-pressure-panel { grid-column:1/-1; }
+.page-pressure .workflow-card { border-top:3px solid #367aa6; }
+.workflow-heading { align-items:flex-start; flex-direction:column; gap:8px; }
+.workflow-heading h3 { font-size:1.2rem; }
+.workflow-readouts { grid-template-columns:1fr 1fr; border-radius:4px; }
+.workflow-readouts>div { padding:12px; }
+.workflow-readouts>div:nth-child(2) { border-right:0; }
+.workflow-readouts>div:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+.workflow-readouts strong,.stat-row strong,.temperature-current strong { font-family:Consolas,"Cascadia Mono",monospace; font-variant-numeric:tabular-nums; }
+.workflow-card .workflow-fields label { flex-basis:100%; }
+.workflow-strokes { background:#f2f5f8; border-color:var(--line); border-radius:4px; }
+.workflow-card .workflow-timing p,.workflow-card small { font-size:.77rem; }
+.workflow-card .workflow-actions button { flex:1 1 100%; }
+.chart-heading { margin-bottom:16px; }
+.chart-controls { border-radius:4px; border:1px solid var(--line); background:#eef3f7; }
+.chart-wrap { max-width:650px; }
+.pressure-state { border-radius:4px; }
+.stat-row { border-top:1px solid var(--line); }
+.temperature-current-grid { gap:0; margin:20px 0 24px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.temperature-current { border:0; border-radius:0; border-left:3px solid #3f7fbe; padding:14px 20px; margin:14px 0; }
+.temperature-current:nth-child(2) { border-color:#e07832; }
+.temperature-current:nth-child(3) { border-color:#77624c; }
+.temperature-current:nth-child(4) { border-color:#8a55ae; }
+.temperature-current strong { font-size:2rem; letter-spacing:-.05em; }
+.controlroom-temperature-body { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:22px; align-items:start; }
+.controlroom-temperature-chart,.controlroom-devices { min-width:0; }
+.controlroom-temperature-chart { display:flex; flex-direction:column; }
+.controlroom-temperature-chart>.temperature-controls { order:0; }
+.controlroom-temperature-chart>.temperature-canvas-wrap { order:1; }
+.controlroom-temperature-chart>.temperature-analysis { order:2; }
+.controlroom-temperature-chart>.temperature-inspector { order:3; }
+.controlroom-temperature-chart>.temp-zoom-controls { order:4; margin-top:16px; }
+.temperature-bridge-panel { padding:16px; background:#eef3f7; border-radius:4px; }
+.controlroom-devices .temperature-bridge-body { grid-template-columns:1fr; gap:16px; }
+.controlroom-devices .temperature-bridge-body>* { grid-column:1; }
+.controlroom-devices .temperature-bridge-panel h3 { font-size:1rem; }
+.controlroom-devices .temperature-bridge-status { font-size:.8rem; }
+.controlroom-devices .temperature-laptop-power { flex-wrap:wrap; }
+.enabled-probes { border:1px solid var(--line); border-radius:4px; padding:12px; min-width:0; display:flex; gap:8px; flex-wrap:wrap; }
+.enabled-probes legend { font-size:.82rem; font-weight:600; }
+.enabled-probes p { font-size:.75rem; flex-basis:100%; margin-bottom:4px; }
+.enabled-probes label { flex:1 1 44%; }
+.temp-zoom-controls { background:#eef3f7; border-color:var(--line); border-radius:4px; }
+.temperature-controls { gap:14px; }
+.temperature-controls>.temp-chart-expand { margin-left:auto; font-size:.78rem; }
+.temperature-chart { height:330px; }
+.temperature-analysis { font-family:Consolas,monospace; }
+.temperature-inspector-readout strong { font-family:Consolas,monospace; font-size:1rem; }
+.paperwork-sync-panel { background:#eaf1f7; border-color:var(--line); border-radius:4px; }
+table th { background:#eaf0f5; }
+table td { background:#ffffff55; }
+#viewerDashboard { max-width:1500px; }
+#viewerDashboard .gauge-card { border-radius:5px; background:var(--paper); }
+#viewerDashboard .temperature-panel { display:flex; flex-direction:column; }
+#viewerDashboard .temperature-panel>.temperature-header { order:0; }
+#viewerDashboard .temperature-panel>.temperature-current-grid { order:1; }
+#viewerDashboard .temperature-panel>.temperature-controls { order:2; }
+#viewerDashboard .temperature-panel>.temperature-canvas-wrap { order:3; }
+#viewerDashboard .temperature-panel>.temperature-analysis { order:4; }
+#viewerDashboard .temperature-panel>.temperature-inspector { order:5; }
+#viewerDashboard .temperature-panel>.temp-zoom-controls { order:6; margin-top:16px; }
+#viewerDashboard:not([data-dashboard-view="temperature"]) .temperature-panel { display:none; }
+#viewerDashboard .dashboard-tabs { gap:22px; border-bottom:1px solid var(--line); }
+#viewerDashboard .dashboard-tabs button { flex:0 1 auto; border:0; border-bottom:3px solid transparent; padding:12px 18px; background:none; }
+#viewerDashboard .dashboard-tabs button.active { border-color:var(--accent); background:none; }
+#historyApp { max-width:1500px; padding:0 28px 48px; }
+#historyApp>.app-header { margin:0 -28px; padding:16px 28px; }
+#historyStatus { font-size:.75rem; padding:10px 0; min-height:37px; }
+.library-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:22px 0 24px; }
+.library-heading h2 { margin-top:6px; }
+.library-heading p { font-size:.85rem; margin-top:8px; }
+.library-filters { background:var(--paper); border:1px solid var(--line); border-radius:5px; padding:18px; margin:0 0 20px; align-items:end; }
+.library-filters label:first-child { flex:1; }
+.library-filters label:last-child { width:230px; }
+#historyList { display:block; background:var(--paper); border:1px solid var(--line); border-radius:5px; }
+.history-job { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px; border:0; border-bottom:1px solid var(--line); border-radius:0; background:none; }
+.history-job:last-child { border-bottom:0; }
+.history-job h3 { font-size:1.05rem; margin-bottom:6px; }
+.history-job p { font-size:.77rem; }
+.history-job-description { min-width:0; }
+.history-job-actions { margin:0; flex-wrap:nowrap; flex-shrink:0; align-items:center; }
+.history-action-menu { position:relative; }
+.history-action-menu>summary { padding:11px 14px; border:1px solid var(--line); border-radius:5px; min-height:44px; font-size:.85rem; }
+.history-action-menu>div { position:absolute; top:calc(100% + 6px); right:0; z-index:10; display:grid; width:160px; gap:4px; padding:6px; border:1px solid var(--line); border-radius:5px; background:white; box-shadow:0 10px 24px #19324722; }
+.history-action-menu button { border:0; text-align:left; font-size:.85rem; }
+.history-delete { color:#a33232; }
+#historyList>p { padding:32px; text-align:center; }
+.back-link { background:none; padding-left:0; border-color:transparent; font-size:.85rem; margin:4px 0 12px; }
+.replay-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:24px; }
+.replay-heading>div:first-child { min-width:0; }
+#replayTitle { margin:6px 0 8px; overflow-wrap:anywhere; }
+#replaySummary { font-size:.78rem; }
+.replay-actions { display:flex; flex-wrap:wrap; gap:7px; flex-shrink:0; }
+.replay-actions button { font-size:.83rem; padding:10px 13px; }
+.replay-layout { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:20px; align-items:start; }
+#replay .temperature-panel { padding:20px; }
+#replay [data-temperature-panel] { display:flex; flex-direction:column; }
+#replay [data-temperature-panel]>.temperature-inspector-readout { order:0; }
+#replay [data-temperature-panel]>.temperature-controls { order:1; }
+#replay [data-temperature-panel]>.temperature-canvas-wrap { order:2; }
+#replay [data-temperature-panel]>.temperature-inspector { order:3; }
+#replay [data-temperature-panel]>.temp-zoom-controls { order:4; margin-top:16px; }
+#replay .temperature-inspector-readout { justify-content:start; gap:0; margin-bottom:20px; border-bottom:1px solid var(--line); padding-top:0; }
+#replay .temperature-inspector-readout>div { flex:1; padding:0 14px; border-left:2px solid var(--line); min-width:100px; margin-bottom:12px; }
+#replay .temperature-inspector-readout>div:first-child { flex-basis:100%; border:0; padding:0 0 12px; }
+#replay .temperature-inspector-readout>div:nth-child(2) { border-color:#c83d3d; }
+#replay .temperature-inspector-readout>div:nth-child(3) { border-color:#3f7fbe; }
+#replay .temperature-inspector-readout>div:nth-child(4) { border-color:#e07832; }
+#replay .temperature-inspector-readout>div:nth-child(5) { border-color:#77624c; }
+#replay .temperature-inspector-readout>div:nth-child(6) { border-color:#8a55ae; }
+#replay .temperature-inspector-readout strong { font-size:1.5rem; white-space:nowrap; }
+#replay .temperature-inspector-readout>div:first-child strong { font-size:.85rem; }
+.replay-notes,.replay-event-log { padding:22px; background:var(--paper); border:1px solid var(--line); border-radius:5px; min-width:0; }
+.replay-notes h3 { margin:7px 0 14px; }
+#jobDetails { font-size:.85rem; overflow-wrap:anywhere; }
+#replayHighlights { padding:0; margin:22px 0; list-style:none; }
+#replayHighlights li { padding:0 0 18px 14px; border-left:2px solid var(--line); overflow-wrap:anywhere; }
+#replayHighlights time { font-family:Consolas,monospace; font-size:.72rem; color:var(--muted); }
+#replayHighlights p { color:var(--ink); font-size:.85rem; margin-top:5px; }
+.replay-event-log { margin-top:20px; }
+#replayClock { font: .85rem Consolas,monospace; margin-left:auto; }
+#historyEdit { width:min(460px,calc(100vw - 28px)); max-height:calc(100dvh - 40px); border:1px solid var(--line); border-radius:8px; padding:28px; color:var(--ink); background:var(--paper); box-shadow:0 24px 100px #19324744; }
+#historyEdit::backdrop { background:#102b4380; backdrop-filter:blur(3px); }
+#historyEditForm { display:grid; gap:18px; }
+#historyEdit h2 { font-size:1.5rem; }
+#historyEditHelp { font-size:.9rem; overflow-wrap:anywhere; }
+#historyEditError { color:#a33232; font-size:.85rem; }
+#historyEditError:empty { display:none; }
+.dialog-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
+.login-shell { display:grid; place-items:center; min-height:100vh; padding:24px; }
+.login-card { max-width:420px; display:grid; gap:18px; padding:32px; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+@media(min-width:1400px) { .page-pressure { grid-template-columns:minmax(0,1fr) 370px; } }
+@media(max-width:1150px) { .controlroom-temperature-body { grid-template-columns:1fr; }.controlroom-devices { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:20px; }.controlroom-devices .temperature-bridge-body { grid-template-columns:1fr 1fr; }.controlroom-devices .temperature-bridge-body>p,.controlroom-devices .temperature-bridge-body>small { grid-column:1/-1; }.replay-layout { grid-template-columns:1fr; }.replay-heading { align-items:flex-start; flex-direction:column; gap:16px; }.page-pressure { grid-template-columns:minmax(0,1fr) 320px; } }
+@media(max-width:900px) { .page-pressure { grid-template-columns:1fr; }.page-pressure .workflow-card { grid-row:auto; }.dashboard-tabs { gap:18px; }.controlroom-devices { grid-template-columns:1fr; } }
+@media(max-width:760px) {
+  .app-header { padding:14px 16px; gap:12px; flex-wrap:wrap; }.app-header .header-actions { gap:18px; justify-content:flex-start; }.header-actions a { font-size:.75rem; }
+  .console-sidebar { padding:0 14px; }.dashboard-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 12px; }.dashboard-tabs button { padding:12px 2px; min-height:46px; font-size:.82rem; }
+  .console-main { padding:22px 12px; }#cloudSaveStatus { padding:8px 16px; }.workspace-heading h2 { font-size:1.7rem; }
+  .pressure-deck,.workflow-card,.temperature-panel,.settings-panel,.test-operations,.workflow-records,.equipment-library,.event-notes,.pressure-log,.remote-panel,.tools-workspace { padding:14px; }
+  .current-readout { padding-left:12px; }.current-readout strong { font-size:1.9rem; }
+  .temperature-current-grid { grid-template-columns:1fr 1fr; }.temperature-current { padding:10px 14px; margin:8px 0; }.temperature-current strong { font-size:1.7rem; }
+  .controlroom-devices .temperature-bridge-body { grid-template-columns:1fr; }
+  .temperature-inspector-readout { justify-content:flex-start; gap:14px 24px; }
+  #viewerDashboard .dashboard-tabs { display:flex; gap:8px; }#viewerDashboard .dashboard-tabs button { flex:1; padding:12px 6px; }
+  #historyApp { padding:0 12px 30px; }#historyApp>.app-header { margin:0 -12px; padding:14px 16px; }
+  .library-heading { padding:16px 0 20px; }.library-filters { padding:14px; gap:14px; }.library-filters label:first-child,.library-filters label:last-child { width:100%; flex:auto; }
+  .history-job { align-items:flex-start; flex-direction:column; padding:18px; gap:14px; }.history-job-actions { width:100%; justify-content:space-between; }
+  .replay-heading h2 { font-size:1.65rem; }.replay-actions { flex-shrink:1; }.replay-actions button { padding:10px 12px; }
+  #replay .temperature-panel { padding:12px; }#replay .temperature-inspector-readout>div { min-width:90px; }#replay .temperature-inspector-readout strong { font-size:1.25rem; }
+  .replay-event-log { padding:16px; }#replayClock { margin-left:0; width:100%; }.history-toolbar { gap:12px; }
+  #historyEdit { padding:22px; }#historyEditValue { font-size:16px; }
+}
+@media(prefers-reduced-motion:no-preference) { button,a { transition:background-color .15s,border-color .15s; } }

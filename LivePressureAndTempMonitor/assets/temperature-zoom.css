@@ -1,0 +1,49 @@
+.temp-zoom-controls { display:grid; gap:8px; margin:0 0 14px; padding:12px; border:1px solid #d6e1e5; border-radius:8px; background:#f6f9fa; }
+.temp-zoom-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.temp-zoom-actions label { display:flex; align-items:center; gap:8px; font-size:.8rem; }
+.temp-zoom-actions select { width:auto; min-width:125px; }
+.temp-zoom-actions button { min-height:36px; padding:6px 12px; font-size:.8rem; }
+.temp-zoom-actions button:disabled { opacity:.45; cursor:default; }
+.temp-zoom-controls small,.temp-zoom-window { font-size:.75rem; color:#526675; }
+.temp-zoom-window { font-variant-numeric:tabular-nums; }
+.temperature-chart { cursor:crosshair; }
+.temp-zoom-drag { position:absolute; pointer-events:none; background:#137c8540; border:1px solid #137c85; }
+.temp-zoom-drag[hidden] { display:none; }
+@media(max-width:600px) { .temp-zoom-actions label { flex-basis:100%; }.temp-zoom-actions button { flex:1 1 auto; } }
+
+/* Keep the chart readable at its actual CSS size, including high-DPI phones. */
+.temperature-chart { height:330px; }
+.temp-chart-expand { justify-self:end; min-height:44px; padding:8px 16px; }
+.temp-chart-dialog { box-sizing:border-box; width:100vw; max-width:none; height:100dvh; max-height:none; margin:0; padding:0; border:0; background:#fff; color:#173348; }
+.temp-chart-dialog::backdrop { background:#173348aa; }
+.temp-chart-dialog-header { position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left)); background:#fff; border-bottom:1px solid #d6e1e5; }
+.temp-chart-dialog-header small { display:block; font-size:.8rem; color:#526675; margin-top:4px; }
+.temp-chart-close { flex-shrink:0; min-height:44px; padding:8px 16px; }
+.temp-chart-dialog button,.temp-chart-expand { touch-action:manipulation; }
+.temp-chart-dialog-body { padding:12px max(8px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+.temp-chart-dialog .temp-chart-expand { display:none; }
+.temp-chart-dialog .temperature-chart { height:clamp(280px, 52dvh, 650px); touch-action:none; }
+.temp-chart-dialog .temp-zoom-controls { margin-bottom:8px; }
+.temp-chart-dialog .temperature-controls { margin-bottom:8px; }
+.temp-chart-dialog .temp-zoom-actions button { min-height:44px; }
+@media(max-width:760px) {
+  .temp-zoom-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .temp-zoom-actions label { grid-column:1/-1; justify-content:space-between; }
+  .temp-zoom-actions button,.temp-zoom-actions select { min-height:44px; font-size:.9rem; }
+  .temp-zoom-actions [data-zoom="reset"] { grid-column:1/-1; }
+  .temperature-channel-toggles { gap:6px; }
+  .temp-toggle { min-height:44px; padding:4px 8px; border:1px solid #d6e1e5; border-radius:8px; font-size:.85rem; }
+  .temp-toggle input { width:18px; height:18px; }
+  .temperature-controls select { min-height:44px; font-size:16px; }
+  .temp-chart-dialog-header small { max-width:38ch; }
+  .temp-chart-dialog .temp-zoom-controls>small { display:none; }
+  .temp-chart-dialog .temperature-inspector-readout { gap:12px; }
+  .temp-chart-dialog .temp-scrubber { min-height:44px; }
+}
+@media(orientation:landscape) and (max-height:600px) {
+  .temp-chart-dialog-header { padding-top:4px; padding-bottom:4px; }
+  .temp-chart-dialog-header small,.temp-chart-dialog .temp-zoom-controls>small { display:none; }
+  .temp-chart-dialog .temp-zoom-actions { display:flex; flex-wrap:wrap; }
+  .temp-chart-dialog .temp-zoom-actions label { flex-basis:auto; }
+  .temp-chart-dialog .temperature-chart { height:70dvh; }
+}

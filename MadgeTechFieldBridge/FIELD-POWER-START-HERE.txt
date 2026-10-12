@@ -1,0 +1,53 @@
+FIELD LAPTOP UPDATE — BATTERY STATUS AND BATTERY-FRIENDLY MODE
+
+1. Stop the field bridge (Ctrl+C). Leave its existing folder and Data folder intact.
+2. Extract ALL files from this update into that existing field-app folder. Replace
+   matching program files. Keep field-device.settings and Data; this update has no
+   private credentials and does not replace those files.
+3. Start MadgeTech 4 in Real Time mode.
+4. Open Start-Field-Mode.cmd. This starts the bridge with battery-friendly settings.
+   If Windows does not support the profile, it says so and runs the normal bridge.
+5. Refresh the HOST page. In Temperatures, select the logger. The field laptop's
+   battery percentage and plugged-in/charging status appear beneath its controls.
+   Battery reporting does not require an active temperature recording or viewer.
+
+Run-Bridge.cmd still works: battery reporting and sleep protection are included
+there too, but the optional lower-power Windows profile is not applied.
+
+FIELD MODE
+- Screen turns off after 2 minutes on battery / 5 minutes plugged in.
+- Maximum processor setting is 60% on battery; plugged-in processor settings are
+  inherited unchanged. This is not a guaranteed battery-runtime improvement.
+- USB selective suspend is disabled; Wi-Fi is set to maximum performance to favor
+  reliable logger/hotspot connections over additional power savings.
+- The bridge requests that Windows stay awake while it runs, even before a test.
+- Keep the lid open and keep both MadgeTech and the bridge running. Do not choose
+  Sleep, Hibernate, Restart or Shut down. Screen-off is fine; sleep is not.
+- Press Ctrl+C to stop the bridge and let the launcher restore the original plan.
+  Do not close the window with X. If the laptop crashes or the window is killed,
+  reopening Start-Field-Mode.cmd recovers the saved plan before starting again.
+  You can also choose your usual plan manually in Windows Power Options.
+- Critical-battery shutdown/hibernate protection is NOT disabled. An empty battery
+  still interrupts recording. Use reliable continuous power; for long unattended
+  runs, consider a properly sized UPS/backup supply and test its actual runtime.
+
+BEFORE A 12–48+ HOUR RUN
+1. While you are present, complete any pending Windows update/restart. Verify none
+   is pending. Restart early enough to reconnect and test the logger afterward.
+2. In Windows Settings > Windows Update, pause updates for a period covering the
+   full monitoring/test window. Resume after the job. Organizational policies may
+   override this. Active hours alone are not enough for a 48-hour run.
+3. Turn off unrelated apps. Keep ventilation clear and connect reliable power.
+4. Try an unplug/replug test BEFORE the job: verify the host changes from charging
+   to battery and back, and that temperatures continue after the display turns off.
+5. Keep an eye on the host: at 20% or lower on battery, it shows a low-battery warning.
+   If reports stop for 30 seconds, power status is marked stale, not shown as current.
+
+No Windows update service is disabled. This app cannot guarantee protection from
+forced restarts, user actions, hardware faults, dead batteries or network outages.
+Windows laptop power reporting is separate from the MadgeTech logger battery.
+
+Microsoft references:
+https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate
+https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/powercfg-command-line-options
+https://support.microsoft.com/en-US/Windows/Deployment/Updates-Lifecycle/pause-updates-in-windows

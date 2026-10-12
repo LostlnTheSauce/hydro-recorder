@@ -1,0 +1,10 @@
+Options -Indexes
+
+<FilesMatch "^(config(?:\.example)?\.php|.*\.sql|README\.md)$">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^templates(?:/|$) - [F,L,NC]
+</IfModule>
