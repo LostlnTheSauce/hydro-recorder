@@ -412,7 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/workspace.js?v=5"></script>
   <script src="assets/field-power.js?v=2"></script>
   <script src="assets/logbook.js?v=1"></script>
-  <script src="assets/host.js?v=48"></script>
+  <script src="assets/host.js?v=49"></script>
 <?php endif; ?>
 </body>
 </html>

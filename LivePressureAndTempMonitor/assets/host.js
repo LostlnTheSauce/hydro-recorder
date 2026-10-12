@@ -1502,7 +1502,13 @@
       try {
         const port = await findGaugePort(this);
         if (port && await this.openPort(port, true)) {
-          this.showError(afterReload ? '' : `Gauge reconnected automatically at ${new Date().toLocaleTimeString()}. Readings resumed; the gap stays blank in the record.`);
+          const notice = afterReload ? '' : `Gauge reconnected automatically at ${new Date().toLocaleTimeString()}. Readings resumed; the gap stays blank in the record.`;
+          this.showError(notice);
+          // The reconnect notice is informational: clear it after a minute unless something newer replaced it.
+          clearTimeout(this.reconnectNoticeTimer);
+          if (notice) this.reconnectNoticeTimer = setTimeout(() => {
+            if (this.root.querySelector('.gauge-error').textContent === notice) this.showError('');
+          }, this.reconnectNoticeMs ?? 60000);
         }
       } finally {
         this.reconnecting = false;
