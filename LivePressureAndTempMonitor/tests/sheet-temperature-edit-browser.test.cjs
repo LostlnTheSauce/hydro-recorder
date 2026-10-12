@@ -106,6 +106,19 @@ async function main() {
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find((k) => JSON.parse(localStorage.getItem(k) || 'null')?.sheetStartRow !== undefined))).sheetStartRow), 30, 'start row is saved with the test');
     await page.screenshot({ path: path.join(root, '..', 'tmp', 'sheet-start-row.png'), fullPage: false });
 
+    // Test times typed with the planned end still ahead: the start is saved, the end waits.
+    const local = (ms) => { const d = new Date(ms); const pad = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+    const lateStart = Math.floor((Date.now() - 2 * 60 * 60 * 1000) / 60000) * 60000;
+    await page.evaluate(([startValue, endValue]) => {
+      for (const [selector, value] of [['.test-start', startValue], ['.test-end', endValue]]) {
+        const input = document.querySelector(selector); input.value = value; input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }, [local(lateStart), local(Date.now() + 6 * 60 * 60 * 1000)]);
+    await page.locator('[data-act="period"]').first().click();
+    assert.match(await page.locator('.period-message').first().innerText(), /end time is still ahead, so only the start was saved/);
+    assert.equal(await page.evaluate(() => window.testGauges[0].sheetRows().officialRows.length), 9, 'a start entered two hours late builds every 15-minute row back to it');
+    assert.equal(await page.locator('.test-end').first().inputValue(), '', 'planned end is not saved');
+
     assert.deepEqual(errors, []);
     console.log('Google Sheet temperature edits: correction, deletion and replacement Sheet passed.');
   } finally { await browser.close(); server.close(); }

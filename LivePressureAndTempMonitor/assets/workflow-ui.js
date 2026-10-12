@@ -131,6 +131,7 @@
     action(action) {
       if (action === 'new-job') { this.g.startNewJob(); return; }
       if (this.g.jobTransition || !this.g.checkJobCurrent()) return;
+      let note = '';
       try {
         const s = this.state();
         if (action === 'temperatures' || action === 'records') {
@@ -138,7 +139,14 @@
         }
         if (action === 'period') {
           const parse = selector => this.q(selector).value ? new Date(this.q(selector).value).getTime() : 0;
-          const start = parse('.test-start'), end = parse('.test-end');
+          const start = parse('.test-start');
+          let end = parse('.test-end');
+          // An end time still ahead is the planned end, not a recorded one: save the
+          // start and leave the end for later instead of rejecting both.
+          if (end > Date.now() && start && start <= Date.now()) {
+            end = s.officialEnd || 0;
+            note = 'The end time is still ahead, so only the start was saved. Save the end time once the test ends.';
+          }
           W.validatePeriod(start, end, Date.now());
           const previous = { start: s.officialStart, end: s.officialEnd };
           if ((previous.start && previous.start !== start || previous.end && previous.end !== end) &&
@@ -186,7 +194,7 @@
           this.event({ at, type: 'workflow', label: `Attempt ${next.attempt} pressure setup started`, pressure: null });
           this.hydrate(); this.g.renderSheetStatus();
         }
-        this.persist(); this.g.draw(); this.render(true); this.message(window.HydroDemo?.enabled ? 'Recorded in this practice tab only.' : 'Saved locally. Online upload is automatic.');
+        this.persist(); this.g.draw(); this.render(true); this.message(note || (window.HydroDemo?.enabled ? 'Recorded in this practice tab only.' : 'Saved locally. Online upload is automatic.'));
       } catch (error) { this.message(error.message || String(error)); }
     }
     officialRows(at = Date.now()) {
