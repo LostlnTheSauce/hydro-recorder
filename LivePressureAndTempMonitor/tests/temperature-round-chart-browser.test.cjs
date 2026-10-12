@@ -1,4 +1,4 @@
-// Round temperature recorder chart: folded away on the Temperatures view, draws
+// Round temperature recorder chart: open near the top of the viewer's Temperatures view, draws
 // pipe, soil and ambient on a 0–150 °F scale, leaves unplugged (-300 °F)
 // readings out, opens the same full-screen zoom as the pressure chart, and can
 // switch to a separate chart for each probe.
@@ -46,10 +46,10 @@ async function main() {
     await page.locator('[data-dashboard-tab="temperature"]').click();
     const section = page.locator('[data-view-gauge="A"] .temperature-round-panel');
     await section.waitFor();
-    assert.equal(await section.evaluate((el) => el.open), false, 'round chart starts folded away');
+    assert.equal(await section.evaluate((el) => el.open), true, 'viewers see the round chart open, near the top');
+    const top = (selector) => page.locator(`[data-view-gauge="A"] ${selector}`).evaluate((el) => el.getBoundingClientRect().top);
+    assert.ok(await top('.temperature-round-panel') < await top('.temperature-chart'), 'round chart above the line graph for viewers');
     assert.equal(await page.locator('[data-view-gauge="A"] .temperature-chart').isVisible(), true, 'line graph still shown');
-
-    await section.locator('summary').click();
     const canvas = section.locator('[data-round-key="all"] canvas');
     await canvas.waitFor();
     await page.waitForFunction(() => document.querySelector('[data-view-gauge="A"] .temperature-round-chart').width > 700);
@@ -91,7 +91,6 @@ async function main() {
     await page.locator('[data-dashboard-tab="temperature"]:not(.hidden)').waitFor();
     await page.locator('[data-dashboard-tab="temperature"]').click();
     assert.equal(await section.locator('.temperature-round-select').inputValue(), 'separate', 'choice remembered');
-    await section.locator('summary').click();
     await section.locator('[data-round-key="pipe"] canvas').waitFor();
 
     // Folding it away again stops drawing it but keeps the log untouched.

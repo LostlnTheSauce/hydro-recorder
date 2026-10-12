@@ -372,5 +372,5 @@ table td { background:#ffffff55; }
 .temperature-round-panel .chart-wrap { margin-top:12px; width:100%; }
 .temperature-round-panel .chart-wrap[hidden] { display:none !important; }
 .temperature-round-chart { display:block; width:100%; height:auto; cursor:zoom-in; }
-#viewerDashboard .temperature-panel>.temperature-round-panel { order:7; }
+#viewerDashboard .temperature-panel>.temperature-round-panel { order:1; margin-top:0; border-top:0; padding-top:0; margin-bottom:20px; }
 #viewerDashboard[data-dashboard-view="temperature"] .temperature-round-panel .chart-wrap:not([hidden]) { display:block; }
