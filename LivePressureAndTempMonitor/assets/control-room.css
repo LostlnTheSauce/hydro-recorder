@@ -374,3 +374,5 @@ table td { background:#ffffff55; }
 .temperature-round-chart { display:block; width:100%; height:auto; cursor:zoom-in; }
 #viewerDashboard .temperature-panel>.temperature-round-panel { order:1; margin-top:0; border-top:0; padding-top:0; margin-bottom:20px; }
 #viewerDashboard[data-dashboard-view="temperature"] .temperature-round-panel .chart-wrap:not([hidden]) { display:block; }
+/* Phone upright: let the temperature graph run edge to edge instead of sitting inside the panel padding. */
+@media(max-width:600px) { .temperature-canvas-wrap { margin-inline:calc(50% - 50vw); } .temp-chart-dialog .temperature-canvas-wrap { margin-inline:0; } }
