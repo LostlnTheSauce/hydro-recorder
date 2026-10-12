@@ -1349,7 +1349,7 @@
       if (!body) return;
       const events = this.testState.events || [];
       if (!events.length) body.innerHTML = '<tr><td colspan="3" class="event-empty">No entries yet. Add checkpoints or notes from Live pressure whenever you have time.</td></tr>';
-      else body.innerHTML = [...events].sort((a,b) => a.at-b.at).map((event) => `<tr><td>${new Date(event.at).toLocaleString()}</td><td>${escapeHtml(event.label)}</td><td>${event.pressure !== null && Number.isFinite(Number(event.pressure)) ? `${Number(event.pressure).toFixed(1)} psi` : '—'}</td></tr>`).join('');
+      else body.innerHTML = [...events].sort((a,b) => a.at-b.at).map((event) => `<tr><td>${new Date(event.at).toLocaleString()}</td><td>${escapeHtml(event.label)}${event.shared ? ' <span class="shared-tag">Shown to viewers</span>' : ''}</td><td>${event.pressure !== null && Number.isFinite(Number(event.pressure)) ? `${Number(event.pressure).toFixed(1)} psi` : '—'}</td></tr>`).join('');
 
     }
 
@@ -1585,6 +1585,8 @@
       const displayedLow = this.low !== null && Math.abs(this.low - adjustedZero) <= .5 ? 0 : this.low;
       this.root.querySelector('.current-pressure').textContent = latest ? latest.pressure.toFixed(1) : '---.-';
       this.root.querySelector('.current-unit').textContent = latest ? latest.unit : 'PSI';
+      const trend = this.root.querySelector('.pressure-trend');
+      if (trend) trend.textContent = this.trendText();
       this.root.querySelector('.stat-last').textContent = latest ? new Date(latest.at).toLocaleTimeString() : 'No readings';
       this.root.querySelector('.stat-peak').textContent = this.peak === null ? '—' : `${this.peak.toFixed(1)} psi`;
       this.root.querySelector('.stat-low').textContent = displayedLow === null ? '—' : `${displayedLow.toFixed(1)} psi`;
@@ -1592,6 +1594,26 @@
       this.root.querySelector('.download-button').disabled = !this.readings.length;
       this.root.querySelector('.clear-button').disabled = !this.readings.length && !this.temperatureReadings.length;
       this.updateWarning();
+    }
+
+    // Net change over the last five minutes, so a slow drift of a few tenths is visible at a glance.
+    trendText() {
+      const latest = this.readings.at(-1);
+      if (!latest) return '';
+      const from = latest.at - 5 * 60000;
+      let low = 0, high = this.readings.length - 1;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (this.readings[middle].at < from) low = middle + 1;
+        else high = middle;
+      }
+      const first = this.readings[low];
+      const minutes = (latest.at - first.at) / 60000;
+      if (minutes < 0.5) return '';
+      const span = minutes >= 4.5 ? '5 min' : `${Math.max(1, Math.round(minutes))} min`;
+      const delta = latest.pressure - first.pressure;
+      if (Math.abs(delta) < 0.05) return `Steady over ${span}`;
+      return `${delta > 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)} psi in ${span}`;
     }
 
     updateWarning() {
@@ -2562,7 +2584,12 @@
         session_id: remote.session_id,
         publish_token: remote.publish_token,
         gauges: batches,
-        notes: hostNotes.map((note) => ({ at: note.at, text: `${gauges.find((gauge) => gauge.slot === note.slot)?.settings().name || testNameForSlot(note.slot)}: ${note.text}` })),
+        notes: [
+          ...hostNotes.map((note) => ({ at: note.at, text: `${gauges.find((gauge) => gauge.slot === note.slot)?.settings().name || testNameForSlot(note.slot)}: ${note.text}` })),
+          ...gauges.filter((gauge) => gauge.active).flatMap((gauge) => (gauge.testState.events || [])
+            .filter((event) => event.shared && event.type === 'note')
+            .map((event) => ({ at: event.at, text: `${gauge.settings().name || testNameForSlot(gauge.slot)}: ${event.label}` }))),
+        ].sort((a, b) => Number(a.at) - Number(b.at)).slice(-200),
       }, false);
       remote.last_published_at = { ...publishedAt };
       batches.forEach((batch) => {

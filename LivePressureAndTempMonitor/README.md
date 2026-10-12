@@ -10,10 +10,10 @@ The physical charts stay the primary paperwork. The site records and helps fill 
 
 ## Screens on the operator page
 
-- **Live test**: current pressure, the circular chart, inside/outside the pressure window, and the field log ("What happened, and when?"). Log entries can be added in any order, at any time, with the actual event time. Nothing has to be done in sequence and nothing is timed.
+- **Live test**: a large current-pressure readout with its change over the last five minutes, the gauge connection, inside/outside the pressure window, the circular chart, and the field log ("What happened, and when?"). Log entries can be added in any order, at any time, with the actual event time. Nothing has to be done in sequence and nothing is timed. Tick **Show to remote viewers** to also show an entry on the viewer page; it goes to the Sheet exactly as any other field-log entry.
 - **Temperatures**: start and stop the website's temperature recording, choose which probes viewers see, the combined pressure and temperature chart, and manual temperature entry.
-- **Setup**: job details, Atmos design PDF import, equipment, pressure offset, chart scale and window, probe names, **Start new test**, and archiving an unsuccessful attempt.
-- **Records**: official start and end times, the 15-minute official record, Google Sheet buttons, CSV and backup downloads, stroke counts, notes and imports.
+- **Setup**: job details, Atmos design PDF import, equipment, pressure offset, chart scale and window, probe names, then **Start new test** and **Archive attempt** at the bottom. The equipment library is folded away at the end.
+- **Records**: official start and end times, the 15-minute official record, Google Sheet buttons, downloads and the field log. Stroke counts, archived attempts, local backups, imports and the detailed pressure history are folded away below.
 - **Tools**: the hydrotest calculator and the recorder report. The calculator's formulas are not to be changed.
 - **Sharing**: create the viewer link and password. Sharing is optional; recording never depends on it.
 

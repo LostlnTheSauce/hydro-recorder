@@ -19,7 +19,7 @@
         <div class="workflow-heading"><div><span class="eyebrow">FIELD LOG · <b data-wf="attempt"></b></span><h3>What happened, and when?</h3></div></div>
         <p>Add checkpoints, holds or notes whenever you have a moment. Any order, any hold length. This log does not start or stop recording.</p>
         <div class="workflow-fields"><label class="workflow-check"><input type="checkbox" data-input="now" checked> Use current time</label><label>Actual event time<input type="datetime-local" step="1" data-input="at" disabled></label></div>
-        <div class="workflow-fields"><label>What happened?<input type="text" maxlength="500" data-input="note" placeholder="Example: 50% hold, checked for leaks, held 5 min"></label><label>Pressure PSI (optional)<input type="number" step="any" data-input="event-pressure" placeholder="Use reading at that time"></label><button type="button" class="primary" data-act="note">Save entry</button></div>
+        <div class="workflow-fields"><label>What happened?<input type="text" maxlength="500" data-input="note" placeholder="Example: 50% hold, checked for leaks, held 5 min"></label><label>Pressure PSI (optional)<input type="number" step="any" data-input="event-pressure" placeholder="Use reading at that time"></label><label class="workflow-check workflow-share"><input type="checkbox" data-input="share"> Show to remote viewers</label><button type="button" class="primary" data-act="note">Save entry</button></div>
         <small>For a late entry, uncheck Use current time. Leave PSI empty to use the recorded reading at that time, if available.</small>
         <div class="recent-field-entries"></div>
         <div class="workflow-readouts"><div><span>Ambient</span><strong data-live-temp="ambient">—</strong></div><div><span>Pipe</span><strong data-live-temp="pipe">—</strong></div><div><span>Soil</span><strong data-live-temp="soil">—</strong></div><div><span>Temperature feed</span><strong data-wf="temp-health">—</strong></div></div>
@@ -144,9 +144,11 @@
           if (!this.q('[data-input="event-pressure"]').reportValidity()) return;
           const reading = this.g.nearestPressureReading(at);
           const pressure = value !== '' ? W.number(value) : reading && Math.abs(reading.at - at) <= 30000 ? reading.pressure : null;
+          const shared = this.q('[data-input="share"]').checked;
           this.event({ at, type: 'note', label, pressure, enteredAt: Date.now(), attempt: s.attempt,
-            pressureSource: value !== '' ? 'manual' : pressure === null ? 'missing' : 'gauge' });
+            pressureSource: value !== '' ? 'manual' : pressure === null ? 'missing' : 'gauge', ...(shared ? { shared: true } : {}) });
           this.q('[data-input="note"]').value = ''; this.q('[data-input="event-pressure"]').value = '';
+          this.q('[data-input="share"]').checked = false;
         } else if (action === 'stroke') {
           const at = this.time(), counter = W.number(this.q('[data-input="counter"]').value);
           const entered = this.q('[data-input="stroke-pressure"]').value;

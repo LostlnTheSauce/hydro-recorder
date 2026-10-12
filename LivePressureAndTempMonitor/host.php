@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Grant G Solutions — Live Pressure Host</title>
+  <title>Field recorder · Grant G Solutions</title>
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/field-power.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       <article class="gauge-card<?= $slot === 'B' ? ' inactive-test' : '' ?>" data-gauge="<?= $slot ?>" data-color="<?= $color ?>">
         <div class="gauge-toolbar">
           <div><div class="eyebrow">Test <?= $testNumber ?></div><input class="gauge-name" value="Test <?= $testNumber ?>" aria-label="Test <?= $testNumber ?> name"></div>
-          <div class="current-readout"><span>Current pressure</span><strong><b class="current-pressure">---.-</b> <small class="current-unit">PSI</small></strong></div>
+          <div class="current-readout"><span>Current pressure</span><strong><b class="current-pressure">---.-</b> <small class="current-unit">PSI</small></strong><em class="pressure-trend"></em></div>
           <label class="live-scale-control"><span>Chart maximum</span><strong><input class="live-chart-max" type="number" min="1" step="100" value="1000" inputmode="decimal" aria-label="Live chart maximum pressure"> <small>PSI</small></strong></label>
           <label class="pen-control live-pen-control"><span>Pen size</span><input class="pen-size" type="range" min="0.1" max="5" step="0.1" value="1" aria-label="Pressure trace pen size"><strong>1.0</strong></label>
           <span class="pill connection-status"><i></i> Not connected</span>

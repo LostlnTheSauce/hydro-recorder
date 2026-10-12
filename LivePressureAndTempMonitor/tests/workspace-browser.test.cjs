@@ -70,6 +70,8 @@ async function main() {
     await a.locator('.temp-chart-expand').click();
     assert.equal(await a.locator('.temp-chart-dialog').evaluate(d=>d.open),true);
     await a.locator('.temp-chart-close').click();
+    // The dialog's close event is queued, so wait for the chart to move back.
+    await page.waitForFunction(()=>document.querySelectorAll('[data-gauge="A"] .controlroom-temperature-chart .temperature-canvas-wrap').length===1,null,{timeout:3000}).catch(()=>{});
     assert.equal(await a.locator('.controlroom-temperature-chart .temperature-canvas-wrap').count(),1,'Expanded chart returns to new layout');
     await a.locator('.temperature-device-disconnect').click();
     await page.waitForFunction(()=>document.querySelector('.temperature-device-connect').disabled===false);

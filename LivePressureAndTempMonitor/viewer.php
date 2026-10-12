@@ -9,7 +9,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Grant G Solutions — Live Pressure Viewer</title>
+  <title>Live test viewer · Grant G Solutions</title>
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/viewer-workspace.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">

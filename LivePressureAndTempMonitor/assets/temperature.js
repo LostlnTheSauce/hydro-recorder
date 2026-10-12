@@ -304,7 +304,15 @@
     return Math.abs(Number(previous.at) - timestamp) <= Math.abs(Number(current.at) - timestamp) ? previous : current;
   }
 
-  function extent(values, minimumSpan) {
+  // Round axis steps (1, 2, 2.5, 5 × 10ⁿ) on the chart's five shared gridlines,
+  // so labels read 1,000.0 / 1,000.5 rather than 1,119.8, and never go below zero psi.
+  function niceStep(rough) {
+    const power = Math.pow(10, Math.floor(Math.log10(rough)));
+    const fraction = rough / power;
+    return (fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 2.5 ? 2.5 : fraction <= 5 ? 5 : 10) * power;
+  }
+
+  function niceScale(values, minimumSpan, { floorAtZero = false, wholeSteps = false } = {}) {
     let minimum = Infinity;
     let maximum = -Infinity;
     values.forEach((value) => {
@@ -313,12 +321,26 @@
       minimum = Math.min(minimum, number);
       maximum = Math.max(maximum, number);
     });
-    if (!Number.isFinite(minimum) || !Number.isFinite(maximum)) return [0, minimumSpan];
-    const span = Math.max(minimumSpan, maximum - minimum);
-    const padding = span * .12;
-    minimum -= padding;
-    maximum += padding;
-    return [minimum, maximum];
+    if (!Number.isFinite(minimum)) return { min: 0, max: 5, decimals: 0 };
+    let low = minimum, high = maximum;
+    if (high - low < minimumSpan) { const middle = (low + high) / 2; low = middle - minimumSpan / 2; high = middle + minimumSpan / 2; }
+    const padding = (high - low) * .06;
+    low -= padding; high += padding;
+    // A gauge reading a few psi below zero after a bleed-off still gets a 0 baseline.
+    const keepPositive = floorAtZero && minimum >= -0.02 * Math.max(1, maximum);
+    if (keepPositive) low = Math.max(0, low);
+    let step = niceStep((high - low) / 5);
+    if (wholeSteps) step = Math.max(1, step);
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      let start = Math.floor(low / step + 1e-9) * step;
+      if (keepPositive) start = Math.max(0, start);
+      if (start + 5 * step >= high - 1e-9) {
+        const decimals = (String(Number(step.toPrecision(6))).split('.')[1] || '').length;
+        return { min: start, max: start + 5 * step, decimals };
+      }
+      step = niceStep(step * 1.01);
+    }
+    return { min: low, max: high, decimals: 1 };
   }
 
   function analysis(pressureReadings, temperatureReadings, channelKey, testPeriod) {
@@ -510,7 +532,7 @@
       canvas._temperatureMeta = null;
       return;
     }
-    if (end === start) end = start + 60000;
+    if (end - start < 60000) end = start + 60000;
     const fullStart = start, fullEnd = end;
     const zoom = clampZoom(options.zoom, fullStart, fullEnd);
     if (zoom) { start = zoom.start; end = zoom.end; }
@@ -521,8 +543,10 @@
       const value = validNumber(item[key]);
       if (value !== null) temperatureValues.push(value);
     }));
-    const [pressureMin, pressureMax] = extent(pressure.map((item) => item.pressure), 2);
-    const [temperatureMin, temperatureMax] = extent(temperatureValues, 4);
+    const pressureScale = niceScale(pressure.map((item) => item.pressure), 2, { floorAtZero: true });
+    const temperatureScale = niceScale(temperatureValues, 4, { wholeSteps: options.wholeDegrees });
+    const { min: pressureMin, max: pressureMax } = pressureScale;
+    const { min: temperatureMin, max: temperatureMax } = temperatureScale;
     const showTemperatureScale = options.visibleKeys.length > 0;
     const showPressure = options.showPressure !== false;
     const box = chartFrame(context, width, height, showPressure ? 'PRESSURE (PSI)' : '', showTemperatureScale ? 'TEMPERATURE (°F)' : '');
@@ -536,11 +560,11 @@
       const y = box.top + (box.bottom - box.top) * index / 5;
       context.fillStyle = '#b43b3b';
       context.textAlign = 'right';
-      if (showPressure) context.fillText((pressureMax - (pressureMax - pressureMin) * index / 5).toFixed(1), box.left - 7, y);
+      if (showPressure) context.fillText((pressureMax - (pressureMax - pressureMin) * index / 5).toLocaleString(undefined, { minimumFractionDigits: pressureScale.decimals, maximumFractionDigits: pressureScale.decimals }), box.left - 7, y);
       if (showTemperatureScale) {
         context.fillStyle = '#526b7f';
         context.textAlign = 'left';
-        context.fillText(`${(temperatureMax - (temperatureMax - temperatureMin) * index / 5).toFixed(options.wholeDegrees ? 0 : 1)}°`, box.right + 7, y);
+        context.fillText(`${(temperatureMax - (temperatureMax - temperatureMin) * index / 5).toFixed(temperatureScale.decimals)}°`, box.right + 7, y);
       }
     }
     const timeTicks = width < 500 ? 2 : 4;
