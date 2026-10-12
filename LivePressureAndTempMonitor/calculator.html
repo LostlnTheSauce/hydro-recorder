@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grants Hydrotest Calculator</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
   :root {
     --bg: #0d1117;
@@ -677,6 +677,24 @@
   .card-title { color: var(--accent2); }
   input[type="number"] { min-height: 42px; border-radius: 8px; }
   .btn { min-height: 40px; border-radius: 8px; }
+</style>
+<style>
+  /* Field recorder light theme. Presentation only; no calculation changes. */
+  :root {
+    --bg: #eef2f5; --surface: #ffffff; --surface2: #f3f6f9; --border: #d5dee6;
+    --accent: #1f5b85; --accent2: #2b6f9e; --text: #14283a; --muted: #56697a;
+    --green: #1d7a4f; --red: #a8321f; --blue: #1f5b85; --yellow: #8a5d0a;
+  }
+  body { background: var(--bg); font-family: "Segoe UI", system-ui, sans-serif; }
+  header { padding: 16px 22px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  header h1 { color: var(--text); font: 650 1.4rem "Segoe UI", system-ui, sans-serif; letter-spacing: -.02em; }
+  header span { color: var(--muted); }
+  .card { border-radius: 10px; box-shadow: none; }
+  .card-header { background: var(--surface2); }
+  .card-header h2, .card-title { color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; letter-spacing: 0; }
+  input, select, textarea { background: #fff; color: var(--text); }
+  .btn-update:hover { background: #17476a; }
+  .breakdown-table tr:hover td, .wf-history-table tr:hover td { background: #f6f8fa; }
 </style>
 </head>
 <body>

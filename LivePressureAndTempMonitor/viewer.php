@@ -9,11 +9,11 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Grant G Solutions — Live Pressure Viewer</title>
+  <title>Live test viewer · Grant G Solutions</title>
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/viewer-workspace.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=1">
+  <link rel="stylesheet" href="assets/control-room.css?v=2">
 </head>
 <body>
 <?php if (!$validId): ?>
@@ -115,9 +115,9 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
     </div>
   </main>
   <script src="assets/chart.js?v=13"></script>
-<script src="assets/temperature.js?v=25"></script>
+<script src="assets/temperature.js?v=26"></script>
   <script src="assets/jobs.js?v=1"></script>
-  <script src="assets/viewer.js?v=22"></script>
+  <script src="assets/viewer.js?v=23"></script>
 <?php endif; ?>
 </body>
 </html>

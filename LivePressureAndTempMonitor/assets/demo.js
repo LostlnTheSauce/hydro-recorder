@@ -55,8 +55,8 @@
       panel.className = 'demo-pressure-panel';
       panel.setAttribute('aria-label', `Demo pressure controls for Test ${g.slot === 'A' ? '1' : '2'}`);
       panel.innerHTML = `<div class="demo-pressure-heading"><strong>Simulated gauge pressure</strong><output class="demo-pressure-value">0 PSI</output></div>
-        <label class="demo-slider-label">Pressure slider<input class="demo-pressure-slider" type="range" min="0" max="1500" step="1" value="0" aria-label="Simulated gauge pressure PSI"></label>
-        <div class="workflow-fields"><label>Pressure (PSI)<input class="demo-pressure-number" type="number" min="0" max="1500" step="1" value="0"></label><label>Arrow-key step<select class="demo-pressure-step"><option value="1">1 PSI</option><option value="10">10 PSI</option><option value="25">25 PSI</option><option value="50">50 PSI</option></select></label><label>Slider / chart maximum (PSI)<input class="demo-pressure-max" type="number" min="100" max="100000" step="100" value="1500"></label></div>
+        <label class="demo-slider-label">Pressure slider<input class="demo-pressure-slider" type="range" min="0" max="1500" step="0.1" value="0" aria-label="Simulated gauge pressure PSI"></label>
+        <div class="workflow-fields"><label>Pressure (PSI)<input class="demo-pressure-number" type="number" min="0" max="1500" step="0.1" value="0"></label><label>Arrow-key step<select class="demo-pressure-step"><option value="0.1">0.1 PSI</option><option value="1" selected>1 PSI</option><option value="10">10 PSI</option><option value="25">25 PSI</option><option value="50">50 PSI</option></select></label><label>Slider / chart maximum (PSI)<input class="demo-pressure-max" type="number" min="100" max="100000" step="100" value="1500"></label></div>
         <p>Click the slider, then use ← / ↓ to decrease or → / ↑ to increase pressure. A simulated reading is recorded every second. Your configured offset is applied normally.</p>
         <div class="demo-time-actions"><label>Skip ahead<select class="demo-time-step"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="480">8 hours</option><option value="1440">24 hours</option><option value="2880">48 hours</option></select></label><button type="button" class="demo-skip-time">Advance demo time</button></div>
         <small>Skipping holds pressure steady and generates readings every 15 simulated seconds. Both tests share the demo clock. Stages never advance automatically.</small><p class="demo-status" role="status"></p>`;
@@ -65,9 +65,9 @@
       const slider = panel.querySelector('.demo-pressure-slider');
       const input = panel.querySelector('.demo-pressure-number');
       const setPressure = value => {
-        c.pressure = Math.max(0, Math.min(Number(slider.max), Math.round(Number(value) || 0)));
+        c.pressure = Math.max(0, Math.min(Number(slider.max), Math.round((Number(value) || 0) * 10) / 10));
         slider.value = input.value = String(c.pressure);
-        panel.querySelector('output').textContent = `${c.pressure.toLocaleString()} PSI`;
+        panel.querySelector('output').textContent = `${c.pressure.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} PSI`;
         sampleAll();
       };
       slider.addEventListener('input', () => setPressure(slider.value));

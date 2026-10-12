@@ -194,19 +194,25 @@ if ($action === 'publish') {
         throw $error;
     }
 
+    // A test that is still publishing keeps all of its live readings, however
+    // long it runs. Readings are removed once a test has been idle for
+    // retention_hours, and anything older than 14 days is removed regardless.
     $retention = max(24, min(720, (int) app_config('retention_hours', 72)));
     if (random_int(1, 60) === 1) {
-        $cutoff = (int) round((microtime(true) - $retention * 3600) * 1000);
+        $nowSeconds = microtime(true);
+        $idleCutoff = (int) round(($nowSeconds - $retention * 3600) * 1000);
+        $cleanup = db()->prepare('DELETE r FROM live_readings r JOIN live_sessions s ON s.id = r.session_id WHERE s.updated_at < :cutoff');
+        $cleanup->execute(['cutoff' => $idleCutoff]);
+        $hardCutoff = (int) round(($nowSeconds - max($retention, 14 * 24) * 3600) * 1000);
         $cleanup = db()->prepare('DELETE FROM live_readings WHERE captured_at < :cutoff');
-        $cleanup->execute(['cutoff' => $cutoff]);
+        $cleanup->execute(['cutoff' => $hardCutoff]);
     }
     json_response(['ok' => true, 'accepted' => $accepted, 'updated_at' => $now]);
 }
 
 if ($action === 'view') {
     $sessionId = (string) ($payload['session_id'] ?? '');
-    $viewerPassword = (string) ($payload['viewer_password'] ?? '');
-    if (!preg_match('/^[a-f0-9]{16}$/', $sessionId) || $viewerPassword === '') {
+    if (!preg_match('/^[a-f0-9]{16}$/', $sessionId) || (($payload['viewer_password'] ?? '') === '' && ($payload['viewer_token'] ?? '') === '')) {
         json_response(['error' => 'Enter the viewer password.'], 400);
     }
     $sessionStatement = db()->prepare(
@@ -214,7 +220,7 @@ if ($action === 'view') {
     );
     $sessionStatement->execute(['id' => $sessionId]);
     $session = $sessionStatement->fetch();
-    if (!$session || !password_verify($viewerPassword, (string) $session['viewer_password_hash'])) {
+    if (!$session || !viewer_authorized($sessionId, (string) $session['viewer_password_hash'], $payload)) {
         usleep(250000);
         json_response(['error' => 'That viewer password is not correct.'], 403);
     }
@@ -249,6 +255,7 @@ if ($action === 'view') {
         'readings' => $readings,
         'last_id' => $lastId,
         'has_more' => $hasMore,
+        'viewer_token' => viewer_token($sessionId, (string) $session['viewer_password_hash']),
     ]);
 }
 

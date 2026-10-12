@@ -84,9 +84,40 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
 
+  // A failed laptop save is never silent: the operator sees it, and the missed
+  // readings are written again from memory once storage works.
+  const localSaveHealth = (() => {
+    let failingSince = 0;
+    let missed = 0;
+    const show = (text, tone) => {
+      const banner = document.getElementById('localSaveAlert');
+      if (!banner) return;
+      banner.textContent = text;
+      banner.className = `save-alert ${tone || ''}`;
+      banner.hidden = !text;
+    };
+    return {
+      onRecover: null,
+      failed(error) {
+        if (!failingSince) { failingSince = Date.now(); staleDing(); }
+        missed += 1;
+        show(`Laptop backup is failing since ${new Date(failingSince).toLocaleTimeString()} (${missed} reading${missed === 1 ? '' : 's'} not saved to this laptop${error?.name ? `: ${error.name}` : ''}). Recording continues on screen and online. Check free disk space and download a full backup from Records.`, 'error');
+      },
+      ok() {
+        if (!failingSince) return;
+        const since = failingSince;
+        failingSince = 0;
+        missed = 0;
+        show(`Laptop backup recovered at ${new Date().toLocaleTimeString()}. Readings from ${new Date(since).toLocaleTimeString()} on were saved again from memory.`, 'warn');
+        this.onRecover?.(since);
+      },
+    };
+  })();
+
   function makeReadingStore() {
     if (demo?.enabled) return null;
     if (!('indexedDB' in window)) return null;
+    navigator.storage?.persist?.().catch(() => {});
     let databasePromise = null;
     const open = () => {
       if (databasePromise) return databasePromise;
@@ -99,9 +130,14 @@
             store.createIndex('slot_at', ['slot', 'at'], { unique: false });
           }
         };
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+          request.result.onclose = () => { databasePromise = null; };
+          resolve(request.result);
+        };
         request.onerror = () => reject(request.error);
       });
+      // Retry opening on the next reading instead of failing forever.
+      databasePromise.catch(() => { databasePromise = null; });
       return databasePromise;
     };
     return {
@@ -110,7 +146,12 @@
           const database = await open();
           const transaction = database.transaction('readings', 'readwrite');
           transaction.objectStore('readings').put({ ...reading, id: `${slot}:${reading.at}`, slot });
-        } catch (_) {}
+          transaction.oncomplete = () => localSaveHealth.ok();
+          transaction.onabort = () => localSaveHealth.failed(transaction.error);
+        } catch (error) {
+          databasePromise = null;
+          localSaveHealth.failed(error);
+        }
       },
       async load(slot, strict = false) {
         try {
@@ -142,6 +183,88 @@
 
   const readingStore = makeReadingStore();
   let audioContext = null;
+
+  // Chrome slows timers in a minimized window to about once a minute; a
+  // worker's timer is not slowed, so the gauge is still asked every second.
+  const gaugeTicker = (() => {
+    const listeners = new Set();
+    let source = null;
+    const tick = () => listeners.forEach((listener) => { try { listener(); } catch (_) {} });
+    return {
+      add(listener) {
+        listeners.add(listener);
+        if (source) return;
+        try {
+          const url = URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 1000);'], { type: 'text/javascript' }));
+          const worker = new Worker(url);
+          URL.revokeObjectURL(url);
+          worker.onmessage = tick;
+          source = () => worker.terminate();
+        } catch (_) {
+          const timer = setInterval(tick, 1000);
+          source = () => clearInterval(timer);
+        }
+      },
+      remove(listener) {
+        listeners.delete(listener);
+        if (!listeners.size && source) { source(); source = null; }
+      },
+    };
+  })();
+
+  // Keep the trailer laptop's screen (and with it the page) awake while a gauge is connected.
+  const screenAwake = (() => {
+    let lock = null;
+    const wanted = () => gauges.some((gauge) => gauge.port || gauge.reconnectWanted);
+    async function update() {
+      if (!('wakeLock' in navigator) || demo?.enabled) return;
+      if (wanted() && !lock && document.visibilityState === 'visible') {
+        try {
+          lock = await navigator.wakeLock.request('screen');
+          lock.addEventListener('release', () => { lock = null; });
+        } catch (_) {}
+      } else if (!wanted() && lock) {
+        const held = lock;
+        lock = null;
+        held.release().catch(() => {});
+      }
+    }
+    document.addEventListener('visibilitychange', update);
+    return { update };
+  })();
+
+  const gaugePortKey = (slot) => `grantg-gauge-port-${slot}`;
+  function rememberGaugePort(slot, info) {
+    try { localStorage.setItem(gaugePortKey(slot), JSON.stringify(info || {})); } catch (_) {}
+  }
+  function forgetGaugePort(slot) {
+    try { localStorage.removeItem(gaugePortKey(slot)); } catch (_) {}
+  }
+  function savedGaugePort(slot) {
+    try { return JSON.parse(localStorage.getItem(gaugePortKey(slot)) || 'null'); } catch (_) { return null; }
+  }
+  const sameGaugeModel = (a, b) => (a?.usbVendorId ?? null) === (b?.usbVendorId ?? null) && (a?.usbProductId ?? null) === (b?.usbProductId ?? null);
+
+  // Reopen a gauge only when the choice is unambiguous; with two identical
+  // gauges waiting, the operator picks so tests never swap.
+  async function findGaugePort(gauge) {
+    if (!('serial' in navigator)) return null;
+    const wanted = gauge.portInfo || savedGaugePort(gauge.slot);
+    if (!wanted) return null;
+    const ports = await navigator.serial.getPorts().catch(() => []);
+    const busy = new Set(gauges.map((other) => other.port).filter(Boolean));
+    const matches = ports.filter((port) => !busy.has(port) && sameGaugeModel(port.getInfo?.(), wanted));
+    const competing = gauges.some((other) => other !== gauge && !other.port && (other.reconnectWanted || savedGaugePort(other.slot))
+      && other.active && sameGaugeModel(other.portInfo || savedGaugePort(other.slot), wanted));
+    if (matches.length === 1 && !competing) return matches[0];
+    if (matches.length && gauge.reconnectWanted) {
+      gauge.cancelReconnect();
+      gauge.setConnection('Gauge disconnected • press Connect gauge and pick it', false);
+      gauge.showError('More than one matching gauge is plugged in, so it was not reconnected automatically. Press Connect gauge and choose the right one.');
+      screenAwake.update();
+    }
+    return null;
+  }
 
   function staleDing() {
     try {
@@ -194,6 +317,11 @@
       this.decoder = new TextDecoder();
       this.connectedAt = 0;
       this.staleAlerted = false;
+      this.portInfo = null;
+      this.reconnectWanted = false;
+      this.reconnectTimer = null;
+      this.unitWarning = '';
+      this.queryTick = () => this.query().catch((error) => this.showError(error.message));
       this.active = !root.classList.contains('inactive-test');
       this.pendingDesign = null;
       this.sheetSyncInFlight = false;
@@ -210,7 +338,7 @@
     }
 
     bind() {
-      this.root.querySelector('.connect-button').addEventListener('click', () => this.connected() ? this.disconnect() : this.connect());
+      this.root.querySelector('.connect-button').addEventListener('click', () => this.connected() || this.reconnectWanted ? this.disconnect() : this.connect());
       this.root.querySelector('.download-button').addEventListener('click', () => this.downloadCsv());
       this.root.querySelector('.demo-button').addEventListener('click', () => this.loadDemo());
       this.root.querySelector('.paste-test-button').addEventListener('click', () => {
@@ -859,7 +987,7 @@
       let committed = false;
       try {
         if (!this.checkJobCurrent()) return;
-        if (this.connected()) throw new Error('Disconnect this test’s pressure gauge first. The other test can keep recording.');
+        if (this.connected() || this.reconnectWanted) throw new Error('Disconnect this test’s pressure gauge first. The other test can keep recording.');
         if (this.sheetSyncInFlight || this.temperatureControlInFlight || this.restoringBackup || this.importingDesign) throw new Error('Wait for this test’s current save or connection operation to finish.');
         if (!window.confirm(`Start a new job in ${testNameForSlot(this.slot)}? Readings, notes, workflow, offset and Sheet link will start fresh. Equipment defaults stay saved. The other test is not reset.`)) return;
         this.root.inert = true;
@@ -1221,7 +1349,7 @@
       if (!body) return;
       const events = this.testState.events || [];
       if (!events.length) body.innerHTML = '<tr><td colspan="3" class="event-empty">No entries yet. Add checkpoints or notes from Live pressure whenever you have time.</td></tr>';
-      else body.innerHTML = [...events].sort((a,b) => a.at-b.at).map((event) => `<tr><td>${new Date(event.at).toLocaleString()}</td><td>${escapeHtml(event.label)}</td><td>${event.pressure !== null && Number.isFinite(Number(event.pressure)) ? `${Number(event.pressure).toFixed(1)} psi` : '—'}</td></tr>`).join('');
+      else body.innerHTML = [...events].sort((a,b) => a.at-b.at).map((event) => `<tr><td>${new Date(event.at).toLocaleString()}</td><td>${escapeHtml(event.label)}${event.shared ? ' <span class="shared-tag">Shown to viewers</span>' : ''}</td><td>${event.pressure !== null && Number.isFinite(Number(event.pressure)) ? `${Number(event.pressure).toFixed(1)} psi` : '—'}</td></tr>`).join('');
 
     }
 
@@ -1286,28 +1414,98 @@
         return;
       }
       this.showError('');
+      this.cancelReconnect();
       this.setConnection('Choose the gauge…', false);
+      let port;
       try {
-        this.port = await navigator.serial.requestPort();
-        await this.port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none' });
-        this.keepReading = true;
-        this.connectedAt = Date.now();
-        this.staleAlerted = false;
-        this.buffer = '';
-        this.setConnection('Connected • receiving readings', true);
-        this.readLoop();
-        await new Promise((resolve) => setTimeout(resolve, 180));
-        await this.query();
-        this.queryTimer = setInterval(() => this.query().catch((error) => this.showError(error.message)), 1000);
+        port = await navigator.serial.requestPort();
       } catch (error) {
         if (error && error.name === 'NotFoundError') {
           this.setConnection('No gauge selected', false);
-          this.port = null;
           return;
         }
         this.showError(error.message || String(error));
         this.setConnection('Could not connect', false);
-        this.port = null;
+        return;
+      }
+      if (gauges.some((gauge) => gauge !== this && gauge.port === port)) {
+        this.showError('That gauge is already connected to the other test.');
+        this.setConnection('Not connected', false);
+        return;
+      }
+      await this.openPort(port);
+    }
+
+    async openPort(port, automatic = false) {
+      try {
+        await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none' });
+      } catch (error) {
+        if (!automatic) {
+          this.showError(error.message || String(error));
+          this.setConnection('Could not connect', false);
+        }
+        return false;
+      }
+      this.port = port;
+      this.portInfo = port.getInfo?.() || {};
+      rememberGaugePort(this.slot, this.portInfo);
+      this.cancelReconnect();
+      this.keepReading = true;
+      this.connectedAt = Date.now();
+      this.staleAlerted = false;
+      this.buffer = '';
+      this.setConnection(automatic ? 'Reconnected • receiving readings' : 'Connected • receiving readings', true);
+      this.readLoop();
+      screenAwake.update();
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      await this.query().catch(() => {});
+      // Ticks come from a worker so a minimized window still asks every second.
+      gaugeTicker.add(this.queryTick);
+      return true;
+    }
+
+    // The cable was pulled or Windows dropped the USB device. Recording stops
+    // (the gap stays blank) and the same gauge is reopened as soon as it returns.
+    async handleLost() {
+      gaugeTicker.remove(this.queryTick);
+      this.keepReading = false;
+      const port = this.port;
+      this.port = null;
+      this.reader = null;
+      this.connectedAt = 0;
+      try { await port?.close(); } catch (_) {}
+      const lostAt = new Date().toLocaleTimeString();
+      this.setConnection('Gauge disconnected • reconnecting automatically…', false);
+      this.root.querySelector('.connection-status').classList.add('stale');
+      this.root.querySelector('.connect-button').textContent = 'Stop reconnecting';
+      this.showError(`The USB connection to the gauge dropped at ${lostAt}. It will reconnect automatically when the gauge is available again; check the cable if this does not clear. Nothing is recorded while it is disconnected.`);
+      staleDing();
+      this.startReconnect();
+    }
+
+    startReconnect() {
+      this.reconnectWanted = true;
+      if (!this.reconnectTimer) this.reconnectTimer = setInterval(() => this.tryReconnect(), 3000);
+      screenAwake.update();
+      this.tryReconnect();
+    }
+
+    cancelReconnect() {
+      this.reconnectWanted = false;
+      clearInterval(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    async tryReconnect(afterReload = false) {
+      if ((!this.reconnectWanted && !afterReload) || this.port || this.reconnecting || !this.active || demo?.enabled) return;
+      this.reconnecting = true;
+      try {
+        const port = await findGaugePort(this);
+        if (port && await this.openPort(port, true)) {
+          this.showError(afterReload ? '' : `Gauge reconnected automatically at ${new Date().toLocaleTimeString()}. Readings resumed; the gap stays blank in the record.`);
+        }
+      } finally {
+        this.reconnecting = false;
       }
     }
 
@@ -1319,7 +1517,8 @@
     }
 
     async readLoop() {
-      while (this.port && this.port.readable && this.keepReading) {
+      const port = this.port;
+      while (this.port === port && port.readable && this.keepReading) {
         const reader = this.port.readable.getReader();
         this.reader = reader;
         try {
@@ -1335,6 +1534,7 @@
           this.reader = null;
         }
       }
+      if (this.port === port && this.keepReading) this.handleLost();
     }
 
     consume(text) {
@@ -1351,7 +1551,18 @@
       if (!match) return;
       const pressure = Number(match[1]);
       if (!Number.isFinite(pressure)) return;
-      this.add({ at: Date.now(), pressure: this.recordedPressure(pressure), unit: match[2].toUpperCase() });
+      const unit = match[2].toUpperCase();
+      this.checkUnit(unit);
+      this.add({ at: Date.now(), pressure: this.recordedPressure(pressure), unit });
+    }
+
+    // Readings are recorded as reported; a non-PSI unit is flagged, never converted.
+    checkUnit(unit) {
+      const warning = /^PSIG?$/.test(unit) ? '' : `The gauge is reporting ${unit}, not PSI. Set the gauge to PSI. Readings are recorded exactly as the gauge reports them and are not converted.`;
+      if (warning === this.unitWarning) return;
+      if (warning) staleDing();
+      if (warning || this.root.querySelector('.gauge-error').textContent === this.unitWarning) this.showError(warning);
+      this.unitWarning = warning;
     }
 
     add(reading) {
@@ -1374,6 +1585,8 @@
       const displayedLow = this.low !== null && Math.abs(this.low - adjustedZero) <= .5 ? 0 : this.low;
       this.root.querySelector('.current-pressure').textContent = latest ? latest.pressure.toFixed(1) : '---.-';
       this.root.querySelector('.current-unit').textContent = latest ? latest.unit : 'PSI';
+      const trend = this.root.querySelector('.pressure-trend');
+      if (trend) trend.textContent = this.trendText();
       this.root.querySelector('.stat-last').textContent = latest ? new Date(latest.at).toLocaleTimeString() : 'No readings';
       this.root.querySelector('.stat-peak').textContent = this.peak === null ? '—' : `${this.peak.toFixed(1)} psi`;
       this.root.querySelector('.stat-low').textContent = displayedLow === null ? '—' : `${displayedLow.toFixed(1)} psi`;
@@ -1381,6 +1594,26 @@
       this.root.querySelector('.download-button').disabled = !this.readings.length;
       this.root.querySelector('.clear-button').disabled = !this.readings.length && !this.temperatureReadings.length;
       this.updateWarning();
+    }
+
+    // Net change over the last five minutes, so a slow drift of a few tenths is visible at a glance.
+    trendText() {
+      const latest = this.readings.at(-1);
+      if (!latest) return '';
+      const from = latest.at - 5 * 60000;
+      let low = 0, high = this.readings.length - 1;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (this.readings[middle].at < from) low = middle + 1;
+        else high = middle;
+      }
+      const first = this.readings[low];
+      const minutes = (latest.at - first.at) / 60000;
+      if (minutes < 0.5) return '';
+      const span = minutes >= 4.5 ? '5 min' : `${Math.max(1, Math.round(minutes))} min`;
+      const delta = latest.pressure - first.pressure;
+      if (Math.abs(delta) < 0.05) return `Steady over ${span}`;
+      return `${delta > 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)} psi in ${span}`;
     }
 
     updateWarning() {
@@ -1445,6 +1678,9 @@
     async disconnect() {
       clearInterval(this.queryTimer);
       this.queryTimer = null;
+      gaugeTicker.remove(this.queryTick);
+      this.cancelReconnect();
+      forgetGaugePort(this.slot);
       this.keepReading = false;
       try {
         if (this.reader) await this.reader.cancel();
@@ -1453,7 +1689,9 @@
       this.port = null;
       this.connectedAt = 0;
       this.staleAlerted = false;
+      this.unitWarning = '';
       this.setConnection('Not connected', false);
+      screenAwake.update();
     }
 
     setConnection(text, connected) {
@@ -1937,7 +2175,19 @@
   applySecondTestUi();
   maybeRenderHostLog(true);
   setInterval(() => maybeRenderHostLog(), 1000);
-  setInterval(() => gauges.forEach((gauge) => gauge.checkStale()), 1000);
+  gaugeTicker.add(() => gauges.forEach((gauge) => gauge.checkStale()));
+  localSaveHealth.onRecover = (since) => {
+    if (!readingStore) return;
+    gauges.forEach((gauge) => {
+      const key = window.HydroJobs.pressureKey(gauge.testState);
+      gauge.readings.filter((reading) => reading.at >= since).forEach((reading) => readingStore.add(key, reading));
+    });
+  };
+  if (!demo?.enabled && 'serial' in navigator) {
+    navigator.serial.addEventListener('connect', () => gauges.forEach((gauge) => gauge.tryReconnect()));
+    // After a reload or crash, reopen each test's gauge when that is unambiguous.
+    gauges.filter((gauge) => gauge.active && savedGaugePort(gauge.slot)).forEach((gauge) => gauge.tryReconnect(true));
+  }
   const remotePanel = document.getElementById('remotePanel');
   const remoteStart = document.getElementById('remoteStart');
   const remoteActive = document.getElementById('remoteActive');
@@ -2334,7 +2584,12 @@
         session_id: remote.session_id,
         publish_token: remote.publish_token,
         gauges: batches,
-        notes: hostNotes.map((note) => ({ at: note.at, text: `${gauges.find((gauge) => gauge.slot === note.slot)?.settings().name || testNameForSlot(note.slot)}: ${note.text}` })),
+        notes: [
+          ...hostNotes.map((note) => ({ at: note.at, text: `${gauges.find((gauge) => gauge.slot === note.slot)?.settings().name || testNameForSlot(note.slot)}: ${note.text}` })),
+          ...gauges.filter((gauge) => gauge.active).flatMap((gauge) => (gauge.testState.events || [])
+            .filter((event) => event.shared && event.type === 'note')
+            .map((event) => ({ at: event.at, text: `${gauge.settings().name || testNameForSlot(gauge.slot)}: ${event.label}` }))),
+        ].sort((a, b) => Number(a.at) - Number(b.at)).slice(-200),
       }, false);
       remote.last_published_at = { ...publishedAt };
       batches.forEach((batch) => {
