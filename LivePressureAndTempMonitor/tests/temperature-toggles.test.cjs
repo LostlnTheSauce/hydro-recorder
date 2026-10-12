@@ -23,7 +23,7 @@ const root = path.resolve(__dirname, '..');
         window.original = JSON.stringify(opts);
         for (const id of ['a', 'b']) {
           const panel = document.getElementById(id);
-          panel.innerHTML = controls + '<div class="temperature-canvas-wrap"><canvas class="temperature-chart"></canvas><div class="temperature-tooltip hidden"></div></div><span class="temp-pressure-change"></span>';
+          panel.innerHTML = controls + '<div class="temperature-canvas-wrap"><canvas class="temperature-chart"></canvas><div class="temperature-tooltip hidden"></div></div>';
           const context = panel.querySelector('canvas').getContext('2d');
           const fill = context.fillText.bind(context), stroke = context.stroke.bind(context);
           panel.drawn = { labels: [], strokes: [] };
@@ -36,7 +36,7 @@ const root = path.resolve(__dirname, '..');
       }, fixture(filename));
       const status = () => page.evaluate(() => {
         const a = document.getElementById('a'), m = a.querySelector('canvas')._temperatureMeta;
-        return { keys: m.visibleKeys, pressure: m.showPressure, labels: a.drawn.labels, strokes: a.drawn.strokes, change: a.querySelector('.temp-pressure-change').textContent, start: m.start, end: m.end };
+        return { keys: m.visibleKeys, pressure: m.showPressure, labels: a.drawn.labels, strokes: a.drawn.strokes, start: m.start, end: m.end };
       });
       let state = await status();
       assert.deepEqual(state.keys, ['ambient', 'pipe', 'soil'], filename + ' defaults');
@@ -46,7 +46,6 @@ const root = path.resolve(__dirname, '..');
       state = await status();
       assert(!state.pressure && !state.labels.includes('PRESSURE (PSI)') && !state.strokes.includes('#c83d3d'));
       assert.deepEqual(state.keys, before.keys);
-      assert.equal(state.change, before.change, 'Analysis unchanged');
       assert.equal(state.start, before.start); assert.equal(state.end, before.end);
       assert(await page.locator('#b .temp-pressure-toggle').isChecked(), 'Other test independent');
       const box = await page.locator('#a canvas').boundingBox();
@@ -68,6 +67,6 @@ const root = path.resolve(__dirname, '..');
       await page.setViewportSize({ width: 1100, height: 900 });
     }
     assert.deepEqual(errors, []);
-    console.log('Host/viewer defaults, pressure line/axis/tooltip toggle, independent panels, all hidden, unchanged source data/analysis, and mobile passed.');
+    console.log('Host/viewer defaults, pressure line/axis/tooltip toggle, independent panels, all hidden, unchanged source data, and mobile passed.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

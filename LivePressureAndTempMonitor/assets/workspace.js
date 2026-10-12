@@ -70,7 +70,7 @@
       devices.append(temperature.querySelector('.temperature-bridge-panel'));
       const probes = temperature.querySelector('.enabled-probes'); if (probes) devices.append(probes);
       for (const node of [...temperature.children]) {
-        if (node.matches('.temperature-controls,.temp-zoom-controls,.temp-chart-expand,.temperature-canvas-wrap,.temperature-analysis,.temperature-inspector')) temperatureChart.append(node);
+        if (node.matches('.temperature-controls,.temp-zoom-controls,.temp-chart-expand,.temperature-canvas-wrap,.temperature-inspector')) temperatureChart.append(node);
       }
       temperatureBody.append(temperatureChart, devices);
       temperature.querySelector('.manual-temperature-panel').before(temperatureBody);

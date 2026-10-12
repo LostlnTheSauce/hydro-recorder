@@ -142,7 +142,6 @@ label { font-size:.82rem; }
 .controlroom-temperature-chart { display:flex; flex-direction:column; }
 .controlroom-temperature-chart>.temperature-controls { order:0; }
 .controlroom-temperature-chart>.temperature-canvas-wrap { order:1; }
-.controlroom-temperature-chart>.temperature-analysis { order:2; }
 .controlroom-temperature-chart>.temperature-inspector { order:3; }
 .controlroom-temperature-chart>.temp-zoom-controls { order:4; margin-top:16px; }
 .temperature-bridge-panel { padding:16px; background:#f3f6f9; border-radius:8px; }
@@ -159,7 +158,6 @@ label { font-size:.82rem; }
 .temperature-controls { gap:14px; }
 .temperature-controls>.temp-chart-expand { margin-left:auto; font-size:.78rem; }
 .temperature-chart { height:330px; }
-.temperature-analysis { font-family:var(--mono); }
 .temperature-inspector-readout strong { font-family:var(--mono); font-size:1rem; }
 
 /* Setup */
@@ -197,7 +195,6 @@ table td { background:#ffffff55; }
 #viewerDashboard .temperature-panel>.temperature-current-grid { order:1; }
 #viewerDashboard .temperature-panel>.temperature-controls { order:2; }
 #viewerDashboard .temperature-panel>.temperature-canvas-wrap { order:3; }
-#viewerDashboard .temperature-panel>.temperature-analysis { order:4; }
 #viewerDashboard .temperature-panel>.temperature-inspector { order:5; }
 #viewerDashboard .temperature-panel>.temp-zoom-controls { order:6; margin-top:16px; }
 #viewerDashboard:not([data-dashboard-view="temperature"]) .temperature-panel { display:none; }
