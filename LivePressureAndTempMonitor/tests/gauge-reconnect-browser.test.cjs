@@ -90,6 +90,17 @@ async function main() {
     await page.evaluate(() => window.__gauge.setReply('1234.5 PSI'));
     await waitFor(async () => (await page.locator('[data-gauge="A"] .gauge-error').innerText()) === '', 'unit warning cleared');
 
+    // Small readings near zero are shown exactly as the gauge reports them, with no offset applied.
+    const shown = () => page.locator('[data-gauge="A"] .current-pressure').innerText();
+    await page.evaluate(() => window.__gauge.setReply('0.1 PSI'));
+    await waitFor(async () => (await shown()) === '0.1', 'gauge 0.1 psi shown as 0.1');
+    await page.evaluate(() => { const o = document.querySelector('[data-gauge="A"] .pressure-offset'); o.value = '-2'; o.dispatchEvent(new Event('change')); });
+    await page.waitForTimeout(400);
+    assert.equal(await shown(), '0.1', 'offset is not applied near zero');
+    await page.evaluate(() => window.__gauge.setReply('110.0 PSI'));
+    await waitFor(async () => (await shown()) === '108.0', 'offset applied away from zero');
+    await page.evaluate(() => { const o = document.querySelector('[data-gauge="A"] .pressure-offset'); o.value = '0'; o.dispatchEvent(new Event('change')); window.__gauge.setReply('1234.5 PSI'); });
+
     await page.evaluate(() => { window.__realPut = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = () => { throw new DOMException('disk full', 'QuotaExceededError'); }; });
     await waitFor(async () => /Laptop backup is failing/.test(await page.locator('#localSaveAlert').innerText()), 'backup failure banner');
     await page.evaluate(() => { IDBObjectStore.prototype.put = window.__realPut; });
