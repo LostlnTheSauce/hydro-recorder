@@ -58,9 +58,11 @@
     return { rows, more };
   }
 
-  function cell(text, recorded, rowAt, className) {
+  // `extra` is a trailing word (unit, "latest") that phones hide to save width.
+  function cell(text, recorded, rowAt, className, extra) {
     const td = document.createElement('td');
     td.textContent = text;
+    if (extra) { const span = document.createElement('span'); span.className = 'logbook-extra'; span.textContent = extra; td.append(span); }
     if (className) td.className = className;
     if (recorded && Math.abs(recorded - rowAt) >= 1000) td.title = `Recorded ${new Date(recorded).toLocaleTimeString()}`;
     return td;
@@ -72,6 +74,7 @@
     const head = document.createElement('tr');
     for (const title of ['Time', 'Pressure', 'Change', ...channels.map((channel) => channel.name)]) {
       const th = document.createElement('th'); th.textContent = title; head.append(th);
+      if (title === 'Pressure') { const unit = document.createElement('span'); unit.className = 'logbook-head-unit'; unit.textContent = ' psi'; th.append(unit); }
     }
     table.tHead.replaceChildren(head);
     const body = document.createDocumentFragment();
@@ -90,8 +93,8 @@
       const tr = document.createElement('tr');
       if (row.latest) tr.className = 'logbook-latest';
       const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(withSeconds || row.latest ? { second: '2-digit' } : {}) });
-      tr.append(cell(row.latest ? `${time} · latest` : time, null, row.at, 'logbook-time'));
-      tr.append(cell(row.pressure ? `${row.pressure.value.toFixed(1)} psi` : '—', row.pressure?.at, row.at, 'logbook-pressure'));
+      tr.append(cell(time, null, row.at, 'logbook-time', row.latest ? ' · latest' : ''));
+      tr.append(cell(row.pressure ? row.pressure.value.toFixed(1) : '—', row.pressure?.at, row.at, 'logbook-pressure', row.pressure ? ' psi' : ''));
       const change = row.change;
       tr.append(cell(change === null ? '' : Math.abs(change) < 0.05 ? '0.0' : `${change > 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}`, null, row.at,
         change === null || Math.abs(change) < 0.05 ? 'logbook-change' : change > 0 ? 'logbook-change up' : 'logbook-change down'));

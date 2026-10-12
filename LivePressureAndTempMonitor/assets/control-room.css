@@ -9,6 +9,8 @@
 }
 body { background:var(--wash); }
 button,.test-design-file-button,.backup-import-button { border-radius:7px; font-size:.88rem; min-height:42px; padding:9px 14px; }
+.test-design-file-button,.backup-import-button { display:inline-flex; align-items:center; justify-content:center; }
+.test-operations label { align-content:start; }
 input:not([type="checkbox"]):not([type="range"]),select,textarea { border-radius:7px; min-height:42px; }
 button:hover { background:#edf3f8; }
 button.primary,.test-design-file-button { background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -181,7 +183,7 @@ label { font-size:.82rem; }
 .paperwork-sync-panel { background:#f3f6f9; border:1px solid var(--line); border-radius:8px; padding:16px; }
 .ramp-panel h3 { margin-bottom:10px; }
 .records-more { border-top:1px solid var(--line); }
-.records-more>details { border-bottom:1px solid var(--line); padding:12px 0; }
+.records-more>details { border-bottom:1px solid var(--line); border-top:0; margin-top:0; padding:12px 0; }
 .records-more>details>summary { font-size:.88rem; }
 .records-more>details[open]>summary { margin-bottom:10px; }
 .event-notes:has(#hostNotesList .note-empty) { display:none!important; }
@@ -301,7 +303,25 @@ table td { background:#ffffff55; }
 .host-alert span { flex:1; }
 .host-alert button { min-height:32px; padding:4px 12px; font-size:.8rem; }
 .host-alert.silenced { background:var(--warn-soft); border-color:#e8cf8f; color:var(--warn); font-weight:500; }
-@media(max-width:760px) { .logbook-card { padding:14px; } .logbook-table td { padding:6px 8px; } .logbook-help { display:none; } }
+.current-pressure.waiting { color:var(--muted); opacity:.45; }
+.logbook-head-unit { display:none; }
+@media(hover:none) { .logbook-table td[title] { text-decoration:none; } }
+/* Phones: fit the whole table and all seven interval buttons on screen. */
+@media(max-width:760px) {
+  .logbook-card { padding:12px; } .logbook-help { display:none; }
+  .logbook-header { gap:10px; } .logbook-header h3 { font-size:1rem; }
+  .logbook-intervals { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); width:100%; gap:2px; }
+  .logbook-intervals button { min-height:36px; padding:4px 0; font-size:.72rem; white-space:nowrap; }
+  .logbook-table { font-size:.74rem; }
+  .logbook-table .logbook-pressure,.logbook-table .logbook-temp,.logbook-table .logbook-change { font-size:.72rem; letter-spacing:-.02em; }
+  .logbook-table th { padding:8px 4px; white-space:normal; line-height:1.2; vertical-align:bottom; }
+  .logbook-table td { padding:6px 4px; }
+  .logbook-table th:first-child,.logbook-table td:first-child { padding-left:8px; }
+  .logbook-table .logbook-day td { padding:5px 8px; }
+  .logbook-table .logbook-extra { display:none; }
+  .logbook-head-unit { display:inline; text-transform:none; }
+  .pressure-log.viewer-logbooks { padding:0; }
+}
 
 @media(min-width:1400px) { .page-pressure { grid-template-columns:minmax(0,1fr) 380px; } }
 @media(max-width:1150px) { .controlroom-temperature-body { grid-template-columns:1fr; }.controlroom-devices { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:20px; }.controlroom-devices .temperature-bridge-body { grid-template-columns:1fr 1fr; }.controlroom-devices .temperature-bridge-body>p,.controlroom-devices .temperature-bridge-body>small { grid-column:1/-1; }.replay-layout { grid-template-columns:1fr; }.replay-heading { align-items:flex-start; flex-direction:column; gap:16px; }.page-pressure { grid-template-columns:minmax(0,1fr) 320px; } }
@@ -312,7 +332,7 @@ table td { background:#ffffff55; }
 }
 @media(max-width:760px) {
   .app-header { padding:10px 16px; gap:10px; flex-wrap:wrap; min-height:0; }.app-header .header-actions { gap:16px; justify-content:flex-start; }.header-actions a { font-size:.78rem; }
-  .console-sidebar { padding:0 12px; }.dashboard-tabs { gap:18px; }.dashboard-tabs button { padding:12px 2px 10px; min-height:44px; font-size:.86rem; }
+  .console-sidebar { padding:0 12px; }.dashboard-tabs { gap:10px; justify-content:space-between; }.dashboard-tabs button { padding:12px 0 10px; min-height:44px; font-size:.8rem; }
   .console-main { padding:14px 12px 24px; }#cloudSaveStatus,.save-alert { padding-left:16px; padding-right:16px; }
   .workspace-heading { margin-bottom:12px; }.workspace-heading h2 { font-size:1.25rem; }.workspace-heading p { display:none; }
   .pressure-deck,.workflow-card,.temperature-panel,.settings-panel,.test-operations,.workflow-records,.equipment-library,.event-notes,.pressure-log,.remote-panel,.tools-workspace { padding:14px; }
