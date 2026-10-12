@@ -972,7 +972,9 @@
           return;
         }
         const rows = result.officialFirstRow ? ` on ${result.officialFirstRow === result.officialLastRow ? `LOG row ${result.officialFirstRow}` : `LOG rows ${result.officialFirstRow}–${result.officialLastRow}`}` : '';
-        const message = `Synced ${result.officialRowsWritten || 0} official row${result.officialRowsWritten === 1 ? '' : 's'}${rows} using the ${this.pressureOffset()} psi offset. Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'} from the Sheet. Manual-only mode remains on.`;
+        const noStart = !result.officialRowsWritten && !this.sheetRows().officialRows.length
+          ? ' No official start time is saved yet, so there are no 15-minute rows. Enter the start under Test times for paperwork, press Save test times, then sync again.' : '';
+        const message = `Synced ${result.officialRowsWritten || 0} official row${result.officialRowsWritten === 1 ? '' : 's'}${rows} using the ${this.pressureOffset()} psi offset. Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'} from the Sheet.${noStart || ' Manual-only mode remains on.'}`;
         this.renderSheetStatus(message, 'complete');
       } catch (error) {
         this.renderSheetStatus(`${error?.message || 'Google Sheet synchronization failed.'} The local recording is still safe.`, 'error');
