@@ -286,15 +286,6 @@
     return slot === 'A' ? 'Test 1' : 'Test 2';
   }
 
-  function localStamp(date) {
-    return date.toLocaleString();
-  }
-
-  function localDateValue(date) {
-    const pad = (value) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  }
-
   function csvCell(value) {
     const text = String(value ?? '');
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -339,19 +330,6 @@
 
     bind() {
       this.root.querySelector('.connect-button').addEventListener('click', () => this.connected() || this.reconnectWanted ? this.disconnect() : this.connect());
-      this.root.querySelector('.download-button').addEventListener('click', () => this.downloadCsv());
-      this.root.querySelector('.demo-button').addEventListener('click', () => this.loadDemo());
-      this.root.querySelector('.paste-test-button').addEventListener('click', () => {
-        const panel = this.root.querySelector('.paste-test-panel');
-        panel.open = true;
-        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        setTimeout(() => this.root.querySelector('.paste-test-input').focus(), 250);
-      });
-      this.root.querySelector('.clear-button').addEventListener('click', () => {
-        const manualCount = this.temperatureReadings.filter((entry) => entry.source === 'manual').length;
-        if (manualCount && !window.confirm(`Clear all pressure readings and ${manualCount} manually entered temperature reading${manualCount === 1 ? '' : 's'} for this test?`)) return;
-        this.clear();
-      });
       const pen = this.root.querySelector('.pen-size');
       pen.addEventListener('input', () => {
         pen.nextElementSibling.textContent = Number(pen.value).toFixed(1);
@@ -370,16 +348,6 @@
       this.root.querySelectorAll('.temp-name').forEach((input) => input.addEventListener('input', () => this.drawTemperature()));
       window.TemperatureChartRenderer.bindPanel(this.temperaturePanel, () => this.drawTemperature());
       this.bindManualTemperatures();
-      const pasteDate = this.root.querySelector('.paste-test-date');
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      pasteDate.value = localDateValue(yesterday);
-      this.root.querySelector('.import-paste-button').addEventListener('click', () => this.importPastedTest());
-      this.root.querySelector('.bleed-demo-button').addEventListener('click', () => this.loadBleedDemo());
-      this.root.querySelector('.paste-clear-button').addEventListener('click', () => {
-        this.root.querySelector('.paste-test-input').value = '';
-        this.showPasteStatus('');
-      });
     }
 
     connected() { return Boolean(this.port); }
@@ -624,7 +592,6 @@
         this.saveTestState();
       });
       this.root.querySelector('.download-atmos-log').addEventListener('click', (event) => this.downloadAtmosLog(event.currentTarget));
-      this.root.querySelector('.download-test-backup').addEventListener('click', (event) => this.downloadTestBackup(event.currentTarget));
       this.root.querySelector('.restore-test-backup').addEventListener('change', (event) => this.restoreTestBackup(event.target.files[0], event.target));
 
     }
@@ -1106,7 +1073,6 @@
         this.temperaturePanel._temperatureZoom = null;
         this.applyEquipmentOptions();
         this.updateUi(); this.draw(); this.drawTemperature();
-        renderHostNotes();
         this.workflowController.hydrate(); this.workflowController.render(true);
         this.workflowController.renderJobs();
         this.workflowController.message('New test ready. Previous job saved to Test history (backup copy under Records → Local backup copies). Press Start recording temps when ready.');
@@ -1653,8 +1619,6 @@
       this.root.querySelector('.stat-peak').textContent = this.peak === null ? '—' : `${this.peak.toFixed(1)} psi`;
       this.root.querySelector('.stat-low').textContent = displayedLow === null ? '—' : `${displayedLow.toFixed(1)} psi`;
       this.root.querySelector('.stat-count').textContent = this.readings.length.toLocaleString();
-      this.root.querySelector('.download-button').disabled = !this.readings.length;
-      this.root.querySelector('.clear-button').disabled = !this.readings.length && !this.temperatureReadings.length;
       this.updateWarning();
     }
 
@@ -1791,88 +1755,6 @@
       if (readingStore) readingStore.clear(window.HydroJobs.pressureKey(this.testState));
     }
 
-    loadDemo() {
-      this.clear();
-      const demo = window.TemperatureChartRenderer.demoData();
-      this.applyHistoricalTest(demo, { noteKind: 'demo', chartMax: 1100, windowBottom: 1019, windowTop: 1069, visibleKeys: ['pipe'] });
-      this.setConnection('Historical field demo • not connected', false);
-    }
-
-    loadBleedDemo() {
-      this.clear();
-      const demo = window.TemperatureChartRenderer.bleedDemoData();
-      this.applyHistoricalTest(demo, { noteKind: 'bleed', chartMax: 4400, visibleKeys: ['ambient', 'pipe', 'soil'] });
-      this.setConnection('Historical bleed-off demo • not connected', false);
-      this.showPasteStatus(`Loaded the attached bleed-off example: ${demo.pressureReadings.length} rows, ${demo.notes.length} operational notes, and an inferred eight-hour test window.`);
-    }
-
-    importPastedTest() {
-      try {
-        const imported = window.TemperatureChartRenderer.parsePastedTest(
-          this.root.querySelector('.paste-test-input').value,
-          this.root.querySelector('.paste-test-date').value,
-        );
-        const maximumPressure = imported.pressureReadings.reduce((maximum, reading) => Math.max(maximum, Number(reading.pressure) || 0), 0);
-        const chartStep = maximumPressure <= 1200 ? 100 : maximumPressure <= 5000 ? 500 : 1000;
-        const chartMax = Math.max(chartStep, Math.ceil(maximumPressure * 1.05 / chartStep) * chartStep);
-        this.clear();
-        this.applyHistoricalTest(imported, {
-          noteKind: 'import',
-          chartMax,
-          visibleKeys: ['ambient', 'pipe', 'soil'],
-        });
-        this.setConnection('Pasted historical test • not connected', false);
-        const windowMessage = imported.inferredWindow ? 'Official test window found from the remarks.' : 'No official start/end remarks were found, so the graph shows the complete recording.';
-        const skippedMessage = imported.skipped ? ` ${imported.skipped} incomplete row${imported.skipped === 1 ? ' was' : 's were'} skipped.` : '';
-        this.showPasteStatus(`Imported ${imported.rowCount} rows and ${imported.notes.length} operational notes. ${windowMessage}${skippedMessage}`);
-      } catch (error) {
-        this.showPasteStatus(error.message || String(error), true);
-      }
-    }
-
-    applyHistoricalTest(data, options = {}) {
-      this.readings = data.pressureReadings;
-      this.temperatureReadings = data.temperatureReadings;
-      this.root.querySelector('.chart-max').value = String(options.chartMax || this.root.querySelector('.chart-max').value || 1000);
-      this.root.querySelector('.live-chart-max').value = this.root.querySelector('.chart-max').value;
-      this.root.querySelector('.window-bottom').value = options.windowBottom ?? '';
-      this.root.querySelector('.window-top').value = options.windowTop ?? '';
-      this.root.querySelector('.test-start').value = data.testStart || '';
-      this.root.querySelector('.test-end').value = data.testEnd || '';
-      this.testState.officialStart = data.testStart || '';
-      this.testState.officialEnd = data.testEnd || '';
-      this.peak = this.readings.reduce((maximum, reading) => Math.max(maximum, Number(reading.pressure)), -Infinity);
-      this.low = this.readings.reduce((minimum, reading) => Math.min(minimum, Number(reading.pressure)), Infinity);
-      const panel = this.temperaturePanel;
-      const visibleKeys = options.visibleKeys || ['pipe'];
-      panel.querySelectorAll('.temp-toggle input').forEach((input) => { input.checked = visibleKeys.includes(input.value); });
-      loadHistoricalNotes(data.notes, this.slot, options.noteKind || 'import');
-      this.updateUi();
-      this.draw();
-    }
-
-    showPasteStatus(message, error = false) {
-      const status = this.root.querySelector('.paste-test-status');
-      status.textContent = message;
-      status.className = `paste-test-status${error ? ' error' : ''}${message ? '' : ' hidden'}`;
-    }
-
-    downloadCsv() {
-      if (demo?.enabled) return this.showError('Demo records are for practice only; exports are disabled.');
-      if (!this.readings.length) return;
-      const rows = [['Timestamp UTC', 'Timestamp Local', 'Recorded Pressure', 'Unit', 'Ambient Temperature F', 'Pipe Temperature F', 'Ground Temperature F', 'Auxiliary Temperature F']];
-      this.readings.forEach((reading) => {
-        const temperature = window.TemperatureChartRenderer.nearest(this.temperatureReadings, Number(reading.at)) || {};
-        rows.push([new Date(reading.at).toISOString(), localStamp(new Date(reading.at)), reading.pressure, reading.unit, temperature.ambient ?? '', temperature.pipe ?? '', temperature.soil ?? '', temperature.aux ?? '']);
-      });
-      const blob = new Blob([rows.map((row) => row.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${this.settings().name.replace(/[^a-z0-9]+/gi, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
   }
 
   const gauges = Array.from(document.querySelectorAll('[data-gauge]')).map((root) => new GaugeHost(root));
@@ -1968,14 +1850,6 @@
   renderEquipmentLibrary();
   const hostGrid = document.getElementById('hostGaugeGrid');
   const notesStorageKey = 'grantg-live-test-notes';
-  const notesList = document.getElementById('hostNotesList');
-  const noteForm = document.getElementById('hostNoteForm');
-  const noteInput = document.getElementById('hostNoteText');
-  const noteTest = document.getElementById('hostNoteTest');
-  const noteDate = document.getElementById('hostNoteDate');
-  const noteTime = document.getElementById('hostNoteTime');
-  const noteUseNow = document.getElementById('hostNoteUseNow');
-  const clearNotesButton = document.getElementById('clearHostNotes');
   const activeTestLabel = document.getElementById('activeTestLabel');
   const addSecondTestButton = document.getElementById('addSecondTest');
   const hideSecondTestButton = document.getElementById('hideSecondTest');
@@ -1991,7 +1865,6 @@
     const nameA = gaugeFor('A').settings().name;
     const nameB = gaugeFor('B').settings().name;
     activeTestLabel.textContent = allowedMode === 'both' ? 'Both tests' : allowedMode === 'B' ? nameB : nameA;
-    noteTest.value = allowedMode === 'B' ? 'B' : 'A';
     requestAnimationFrame(() => gauges.filter((gauge) => gauge.active).forEach((gauge) => gauge.draw()));
   }
 
@@ -2002,12 +1875,8 @@
     document.querySelectorAll('.second-test-control').forEach((control) => control.classList.toggle('hidden', !secondTestActive));
     addSecondTestButton.classList.toggle('hidden', secondTestActive);
     hideSecondTestButton.classList.toggle('hidden', !secondTestActive);
-    const secondNoteOption = noteTest.querySelector('option[value="B"]');
-    secondNoteOption.hidden = !secondTestActive;
-    secondNoteOption.disabled = !secondTestActive;
     const requestedMode = focusNewTest && secondTestActive ? 'B' : hostGrid.dataset.viewMode;
     setLayout(requestedMode);
-    renderHostNotes();
   }
 
   addSecondTestButton.addEventListener('click', () => {
@@ -2033,56 +1902,6 @@
     localStorage.setItem(notesStorageKey, JSON.stringify(hostNotes));
   }
 
-  function setNoteTimestampNow() {
-    const [date, time] = dateTimeInputValue(new Date()).split('T');
-    noteDate.value = date;
-    noteTime.value = time;
-    noteTime.setCustomValidity('');
-  }
-
-  function selectedNoteTimestamp() {
-    const dateParts = noteDate.value.split('-').map(Number);
-    const timeParts = noteTime.value.split(':').map(Number);
-    if (dateParts.length !== 3 || timeParts.length < 2 || [...dateParts, ...timeParts].some((value) => !Number.isFinite(value))) return null;
-    const selected = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], timeParts[0], timeParts[1], 0, 0);
-    return Number.isFinite(selected.getTime()) ? selected.getTime() : null;
-  }
-
-  function renderHostNotes() {
-    const fragment = document.createDocumentFragment();
-    const visibleNotes = hostNotes.filter((note) => note.slot === 'A' || secondTestActive).sort((a, b) => Number(b.at) - Number(a.at));
-    if (!visibleNotes.length) {
-      const empty = document.createElement('p');
-      empty.className = 'note-empty';
-      empty.textContent = 'No notes have been added.';
-      fragment.appendChild(empty);
-    } else {
-      visibleNotes.forEach((note) => {
-        const row = document.createElement('article');
-        row.className = 'event-note';
-        const copy = document.createElement('div');
-        const test = document.createElement('strong');
-        test.className = 'note-test-name';
-        test.textContent = gauges.find((gauge) => gauge.slot === note.slot)?.settings().name || testNameForSlot(note.slot);
-        const time = document.createElement('time');
-        time.dateTime = new Date(note.at).toISOString();
-        time.textContent = new Date(note.at).toLocaleString();
-        const text = document.createElement('p');
-        text.textContent = note.text;
-        copy.append(test, time, text);
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'ghost note-remove';
-        remove.textContent = 'Delete';
-        remove.dataset.noteId = note.id;
-        row.append(copy, remove);
-        fragment.appendChild(row);
-      });
-    }
-    notesList.replaceChildren(fragment);
-    clearNotesButton.disabled = !hostNotes.length;
-  }
-
   function loadHostNotes() {
     try {
       const saved = JSON.parse(localStorage.getItem(notesStorageKey) || '[]');
@@ -2095,75 +1914,8 @@
         })).filter(note => note.at >= (Number(gaugeFor(note.slot).testState.jobStartedAt) || 0));
       }
     } catch (_) { hostNotes = []; }
-    renderHostNotes();
   }
 
-  function loadHistoricalNotes(notes, slot, kind) {
-    const prefixes = ['demo', 'bleed', 'import'].map((name) => `${name}-${slot}-`);
-    hostNotes = hostNotes.filter((note) => !prefixes.some((prefix) => String(note.id).startsWith(prefix)));
-    const prefix = `${kind}-${slot}-`;
-    (notes || []).forEach((note) => hostNotes.push({
-      id: `${prefix}${note.at}-${note.text}`,
-      at: Number(note.at),
-      text: String(note.text),
-      slot,
-    }));
-    hostNotes = hostNotes.slice(-200);
-    saveHostNotes();
-    renderHostNotes();
-    gauges.forEach((gauge) => gauge.drawTemperature());
-  }
-
-  noteForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const selectedGauge = gaugeFor(noteTest.value);
-    if (selectedGauge?.jobTransition || (selectedGauge && !selectedGauge.checkJobCurrent())) return;
-    const text = noteInput.value.trim();
-    if (!text) return;
-    const at = selectedNoteTimestamp();
-    if (at === null) {
-      noteTime.setCustomValidity('Choose the date and time when this event happened.');
-      noteTime.reportValidity();
-      return;
-    }
-    noteTime.setCustomValidity('');
-    const slot = noteTest.value === 'B' ? 'B' : 'A';
-    hostNotes.push({
-      id: (window.crypto && typeof window.crypto.randomUUID === 'function') ? window.crypto.randomUUID() : `${at}-${Math.random().toString(36).slice(2)}`,
-      at,
-      text: text.slice(0, 500),
-      slot,
-    });
-    hostNotes = hostNotes.slice(-200);
-    saveHostNotes();
-    renderHostNotes();
-    noteInput.value = '';
-    setNoteTimestampNow();
-    noteInput.focus();
-    publish();
-  });
-
-  noteUseNow.addEventListener('click', setNoteTimestampNow);
-
-  notesList.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-note-id]');
-    if (!button) return;
-    const removed = hostNotes.find((note) => note.id === button.dataset.noteId);
-    hostNotes = hostNotes.filter((note) => note.id !== button.dataset.noteId);
-    saveHostNotes();
-    renderHostNotes();
-    publish();
-  });
-
-  clearNotesButton.addEventListener('click', () => {
-    if (!hostNotes.length || !window.confirm('Clear all test notes from this host and the remote viewer?')) return;
-    hostNotes = [];
-    saveHostNotes();
-    renderHostNotes();
-    publish();
-  });
-
-  setNoteTimestampNow();
   loadHostNotes();
 
   document.querySelectorAll('[data-layout-mode]').forEach((button) => {

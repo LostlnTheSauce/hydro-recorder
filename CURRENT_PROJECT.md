@@ -12,7 +12,6 @@ This is the October 11, 2026 source of the PHP website used at `https://grantgso
 - `assets/history.js`, `history-log.js`, `history.css`: current history UI and read-only interval sampling. `assets/temperature.js` handles graph rendering, replay, zoom and expansion.
 - `assets/cloud-history.js`, `jobs.js`, `inc/job-history.php`, `history-api.php`: durable local snapshots, incremental online saves, immutable reading chunks and independent history organization.
 - `MadgeTechFieldBridge/`: current C# source, built bridge, launchers and power helpers. Real installed MadgeTech 4 libraries are needed on Windows; not bundled. The current `MadgeTechFieldBridge.exe` is included. Device settings and encrypted Interop credentials are excluded.
-- `MadgeTechProbe/`: earlier Interop diagnostic tool.
 - `LandingPageUpdate/index.html`: main landing-page source, separate from the recorder.
 - `recordings/index.json`: catalog of ten exported online snapshots with names, folders and sample counts. `recordings/online/*.json` are complete JSON backups; `recordings/field/*.jsonl` contains the local temperature journal. These are snapshots, not ongoing GitHub synchronization.
 

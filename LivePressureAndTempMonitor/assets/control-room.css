@@ -186,8 +186,6 @@ label { font-size:.82rem; }
 .records-more>details { border-bottom:1px solid var(--line); border-top:0; margin-top:0; padding:12px 0; }
 .records-more>details>summary { font-size:.88rem; }
 .records-more>details[open]>summary { margin-bottom:10px; }
-.event-notes:has(#hostNotesList .note-empty) { display:none!important; }
-.event-notes .note-entry-form { display:none; }
 .practice-sharing-note { display:none; }
 .practice-mode .practice-sharing-note:not([hidden]) { display:block; padding:20px; border:1px dashed var(--line); border-radius:10px; background:var(--paper); }
 table th { background:#eef3f7; }

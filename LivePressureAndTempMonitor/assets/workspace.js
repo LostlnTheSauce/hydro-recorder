@@ -78,17 +78,13 @@
       if (expand) temperatureChart.querySelector('.temperature-controls').append(expand);
       move('.test-operations', 'setup');
       move('.workflow-config', 'setup');
-      move('.settings-panel:not(.utility-panel):not(.paste-test-panel)', 'setup');
+      move('.settings-panel', 'setup');
       panels.setup.querySelectorAll('details').forEach(node => openSection(node));
       const finish = document.createElement('section'); finish.className = 'finish-test settings-panel';
-      finish.innerHTML = '<h3>Finish or restart</h3><p><b>Start new test</b> saves this job to history and clears the screen for the next one. <b>Archive attempt</b> keeps this job and its readings but starts fresh paperwork times.</p><div class="finish-actions"></div>';
-      const restart = root.querySelector('.workflow-restart');
-      finish.querySelector('.finish-actions').append(root.querySelector('[data-act="new-job"]'), restart.querySelector('[data-act="restart"]'));
-      restart.remove();
+      finish.innerHTML = '<h3>Finish test</h3><p><b>Start new test</b> saves this job to history and clears the screen for the next one.</p><div class="finish-actions"></div>';
+      finish.querySelector('.finish-actions').append(root.querySelector('[data-act="new-job"]'));
       panels.setup.append(finish);
       move('.workflow-records', 'logs');
-      move('.utility-panel,.paste-test-panel', 'logs');
-      root.querySelector('.paste-test-button').addEventListener('click', () => navigate('logs'));
       const records = root.querySelector('.workflow-records');
       records.querySelector('a[href="history.php"]')?.closest('p')?.remove();
       const downloads = records.querySelector('.workflow-record-actions');
@@ -100,9 +96,6 @@
       const more = document.createElement('div'); more.className = 'records-more';
       records.querySelectorAll(':scope > details').forEach(node => more.append(node));
       records.append(more);
-      root.querySelectorAll('.utility-panel summary').forEach(node => { node.textContent = 'Import a previous test'; });
-      // Old in-place demo buttons remain wired for compatibility but are not entry points.
-      root.querySelectorAll('.demo-button,.bleed-demo-button,.clear-button').forEach(node => { node.hidden = true; });
     }
     const main = app.querySelector('.console-main');
     const remote = document.getElementById('remotePanel'); main.append(remote);
@@ -110,8 +103,6 @@
     const library = document.getElementById('equipmentLibrary');
     library.dataset.workspacePanel = 'setup';
     app.querySelector('.tools-workspace').dataset.workspacePanel = 'tools';
-    app.querySelector('.event-notes').dataset.workspacePanel = 'logs';
-    openSection(app.querySelector('.event-notes'), 'Earlier notes shown to viewers');
     const practice = document.createElement('p'); practice.className = 'practice-sharing-note'; practice.dataset.workspacePanel = 'sharing';
     practice.textContent = 'Sharing is turned off in the practice demo.';
     main.append(practice);

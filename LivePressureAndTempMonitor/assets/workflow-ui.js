@@ -30,7 +30,7 @@
       this.root = gauge.root;
       this.card = document.createElement('section'); this.card.className = 'workflow-card';
       this.card.innerHTML = `
-        <div class="workflow-heading"><div><span class="eyebrow">FIELD LOG · <b data-wf="attempt"></b></span><h3>What happened, and when?</h3></div></div>
+        <div class="workflow-heading"><div><span class="eyebrow">FIELD LOG</span><h3>What happened, and when?</h3></div></div>
         <p>Add checkpoints, holds or notes whenever you have a moment. Any order, any hold length. This log does not start or stop recording.</p>
         <div class="workflow-fields"><label class="workflow-check"><input type="checkbox" data-input="now" checked> Use current time</label><label>Actual event time<input type="datetime-local" step="1" data-input="at" disabled></label></div>
         <div class="workflow-fields"><label>What happened?<input type="text" maxlength="500" data-input="note" placeholder="Example: 50% hold, checked for leaks, held 5 min"></label><label>Pressure PSI (optional)<input type="number" step="any" data-input="event-pressure" placeholder="Use reading at that time"></label><label class="workflow-check workflow-share"><input type="checkbox" data-input="share"> Show to remote viewers</label><button type="button" class="primary" data-act="note">Save entry</button></div>
@@ -39,14 +39,13 @@
         <div class="workflow-readouts"><div><span>Ambient</span><strong data-live-temp="ambient">—</strong></div><div><span>Pipe</span><strong data-live-temp="pipe">—</strong></div><div><span>Soil</span><strong data-live-temp="soil">—</strong></div><div><span>Temperature feed</span><strong data-wf="temp-health">—</strong></div></div>
         <div class="workflow-actions"><button type="button" data-act="temperatures">Temperature recording & history</button><button type="button" data-act="records">Test times & complete log</button></div>
         <details class="workflow-strokes"><summary>Optional pump stroke counts</summary><p>Use the event time above. Enter the starting pressure and counter first, then each checkpoint and its cumulative counter. Available at any time; no pressure stage is required.</p><div class="workflow-fields"><label>Pressure / checkpoint PSI<input type="number" step="any" min="0" data-input="stroke-pressure"></label><label>Cumulative counter reading<input data-input="counter" type="number" min="0" step="1" inputmode="numeric"></label><label>Gal / stroke<input data-input="capacity" type="number" min="0.000001" step="0.0001"></label><button type="button" data-act="stroke">Save counter reading</button></div><p data-wf="stroke-total"></p></details>
-        <details class="workflow-restart"><summary>Archive an unsuccessful attempt</summary><p>Preserves this attempt’s notes, stroke counts and Sheet link. Pressure and temperature recording continue; the new attempt has separate paperwork times.</p><button type="button" data-act="restart">Archive attempt</button></details>
         <p class="workflow-message" role="status"></p>`;
       this.root.querySelector('.gauge-toolbar').after(this.card);
       const fresh = document.createElement('button'); fresh.type = 'button'; fresh.dataset.act = 'new-job'; fresh.textContent = 'Start new test';
       this.card.querySelector('.workflow-heading').append(fresh);
       this.card.before(this.root.querySelector('.gauge-actions'));
       this.records = document.createElement('section'); this.records.className = 'workflow-records';
-      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="strokes">Download stroke CSV</button><button type="button" data-export="backup">Download full backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details><details><summary>Archived attempts</summary><div class="workflow-archives"></div></details>`;
+      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
       this.root.append(this.records);
       this.records.append(this.root.querySelector('.paperwork-sync-panel'));
       this.records.append(this.root.querySelector('.ramp-panel'));
@@ -184,15 +183,6 @@
           const pressure = entered !== '' ? W.number(entered) : this.pressure(at);
           W.manualStroke(s, at, pressure, counter, W.number(this.q('[data-input="capacity"]').value));
           this.q('[data-input="counter"]').value = ''; this.q('[data-input="stroke-pressure"]').value = '';
-        } else if (action === 'restart') {
-          const reason = prompt('Reason for archiving this attempt and restarting pressure setup:');
-          if (reason === null) return;
-          const at = Date.now();
-          const next = W.archive(s, this.g.testState, at, reason);
-          this.g.testState.workflow = next; this.g.testState.events = [];
-          this.g.testState.sheet = null; this.syncOfficialFields();
-          this.event({ at, type: 'workflow', label: `Attempt ${next.attempt} pressure setup started`, pressure: null });
-          this.hydrate(); this.g.renderSheetStatus();
         }
         this.persist(); this.g.draw(); this.render(true); this.message(note || (window.HydroDemo?.enabled ? 'Recorded in this practice tab only.' : 'Saved locally. Online upload is automatic.'));
       } catch (error) { this.message(error.message || String(error)); }
@@ -210,7 +200,6 @@
       const s = this.state(), now = Date.now();
       const text = (key, value) => { this.q(`[data-wf="${key}"]`).textContent = value; };
       if (this.q('[data-input="now"]').checked) this.q('[data-input="at"]').value = localInput(now);
-      text('attempt', `Attempt ${s.attempt}`);
       const latest = this.g.temperatureReadings.at(-1);
       for (const key of ['ambient', 'pipe', 'soil']) this.q(`[data-live-temp="${key}"]`).textContent = W.number(latest?.[key]) === null ? '—' : `${Number(latest[key]).toFixed(this.g.temperatureRecordingOptions().wholeDegrees ? 0 : 1)} °F`;
       const temperatureFreshMs = Math.max(30000, this.g.temperatureRecordingOptions().sampleIntervalSeconds * 2000 + 5000);
@@ -233,7 +222,6 @@
       }
       this.records.querySelector('.workflow-official-stats').innerHTML = stats.join('');
       this.records.querySelector('.workflow-stroke-body').innerHTML = s.strokes.map(r => `<tr><td>${esc(stamp(r.at))}</td><td>${r.target}</td><td>${r.counter}</td><td>${r.strokes}</td><td>${r.gallons.toFixed(4)}</td><td>${r.totalGallons.toFixed(4)}</td></tr>`).join('') || '<tr><td colspan="6">No checkpoint counts entered.</td></tr>';
-      this.records.querySelector('.workflow-archives').innerHTML = s.archives.map((a, i) => `<article><strong>Attempt ${a.attempt} · ${esc(a.reason)}</strong><p>Ended ${esc(stamp(a.endedAt))} · ${esc(W.stages[a.stage])} · ${(a.events || []).length} events · ${(a.strokes || []).length} stroke entries</p><button type="button" data-export="archive-${i}">Download attempt CSV</button></article>`).join('') || '<p>No archived attempts. Restarting preserves the preceding attempt here and in your full backup.</p>';
     }
     async renderJobs() {
       const box = this.records.querySelector('.previous-jobs');
@@ -246,19 +234,10 @@
       if (window.HydroDemo?.enabled) return this.message('Demo records are for practice only; exports are disabled.');
       const s = this.state(), name = (this.g.testState.jobNumber || `Test-${this.g.slot}`).replace(/[^a-z0-9_-]/gi, '_');
       if (kind === 'backup') return this.g.downloadTestBackup();
-      if (kind === 'strokes') {
-        const all = [...s.archives, s];
-        return download(`${name}_strokes.csv`, ['Attempt', 'Entry', 'Time', 'Pressure / checkpoint PSI', 'Counter', 'Interval strokes', 'Interval gallons', 'Total gallons'], all.flatMap(a => [
-          ...(a.baseline ? [[a.attempt, 'Baseline', stamp(a.baseline.at), a.baseline.pressure, a.baseline.counter, '', '', '']] : []),
-          ...a.strokes.map(r => [a.attempt, 'Checkpoint', stamp(r.at), r.target, r.counter, r.strokes, r.gallons, r.totalGallons]),
-          ...a.crossings.filter(c => !a.strokes.some(r => r.target === c.target)).map(c => [a.attempt, 'MISSING COUNTER', stamp(c.at), c.target, '', '', '', '']),
-        ]));
-      }
-      const archive = kind.startsWith('archive-') ? s.archives[Number(kind.split('-')[1])] : null;
-      const events = archive?.events || this.g.testState.events;
-      const times = W.officialTimes(archive || s, archive?.endedAt || Date.now());
+      const events = this.g.testState.events;
+      const times = W.officialTimes(s, Date.now());
       const entries = [...events.map(e => ({ ...this.g.sheetLogRow(e.at, e.pressure, e.label), kind: e.type })), ...times.map(at => ({ ...this.g.sheetLogRow(at, null, ''), kind: '15-minute reading' }))].sort((a, b) => a.at - b.at);
-      download(`${name}_attempt-${archive?.attempt || s.attempt}_complete-log.csv`, ['Date / time', 'Pressure PSI', 'Ambient F', 'Pipe F', 'Soil F', 'Entry', 'Remarks'], entries.map(r => [stamp(r.at), r.pressure, r.ambient, r.pipe, r.ground, r.kind, r.comments]));
+      download(`${name}_complete-log.csv`, ['Date / time', 'Pressure PSI', 'Ambient F', 'Pipe F', 'Soil F', 'Entry', 'Remarks'], entries.map(r => [stamp(r.at), r.pressure, r.ambient, r.pipe, r.ground, r.kind, r.comments]));
     }
   }
   window.HydroWorkflowUI = {

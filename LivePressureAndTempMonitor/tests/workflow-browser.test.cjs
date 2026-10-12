@@ -112,20 +112,17 @@ async function main() {
     await page.setViewportSize({width:650,height:1000});
     assert.equal(await page.locator('[data-gauge="B"]').isVisible(),false);
     await page.screenshot({path:path.join(out,'narrow.png'),fullPage:true});
-    await page.locator('[data-dashboard-tab="setup"]').click();
-    await a.locator('[data-act="restart"]').click();
-    assert.equal(await page.evaluate(()=>testGauges[0].testState.workflow.archives.length),1);
-    assert.equal(await page.evaluate(()=>testGauges[0].testState.workflow.officialStart),0);
-    assert.equal(await page.evaluate(()=>testGauges[0].temperatureReadings.length),1);
+    // Tests saved before Archive attempt was removed can still hold an archived attempt.
     const offsetCheck=await page.evaluate(()=>{
-      const g=testGauges[0],cut=g.testState.workflow.archives[0].endedAt;
+      const g=testGauges[0],cut=Date.now();
+      g.testState.workflow.archives=[{endedAt:cut}];
       g.readings=[{at:cut-1000,pressure:750},{at:cut+1000,pressure:760}];
       g.reapplyPressureOffset(0,4);
       return g.readings.map(r=>r.pressure);
     });
     assert.deepEqual(offsetCheck,[750,764],'new offset must not rewrite archived attempt pressure');
     assert.deepEqual(errors,[]);
-    console.log('Browser integration passed: persistent holds, strokes, independent tests, records, missing data, temperature views, restart and narrow layout.');
+    console.log('Browser integration passed: persistent holds, strokes, independent tests, records, missing data, temperature views, archived-attempt offset and narrow layout.');
     // Practice is a separate tab with the SAME origin/storage, not an isolated browser context.
     const realStorage = await page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()));
     const storedReadings = p => p.evaluate(() => new Promise((resolve, reject) => {

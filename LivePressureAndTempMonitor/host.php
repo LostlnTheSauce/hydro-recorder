@@ -209,7 +209,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
             <h3>Timestamped field entries</h3>
             <div class="ramp-actions">
               <button type="button" class="download-atmos-log">Download Atmos log rows</button>
-              <button type="button" class="download-test-backup">Download test backup</button>
               <label class="backup-import-button">Restore backup<input class="restore-test-backup" type="file" accept="application/json,.json"></label>
             </div>
             <div class="event-table-wrap">
@@ -295,21 +294,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
         <div class="error-box hidden gauge-error"></div>
         <div class="gauge-actions">
           <button class="primary connect-button" type="button">Connect gauge</button>
-          <button class="download-button" type="button" disabled>Download CSV</button>
-          <button class="clear-button ghost" type="button" disabled>Clear readings</button>
         </div>
-        <details class="settings-panel utility-panel">
-          <summary>Import, demo and chart appearance</summary>
-          <div class="button-row">
-          <button class="demo-button" type="button">Field demo</button>
-          <button class="paste-test-button" type="button">Paste old test</button>
-          </div>
-        </details>
-
         <details class="settings-panel">
           <summary>Chart scale and warning limits</summary>
           <div class="settings-grid">
-            <label>Chart maximum (psi)<input class="chart-max" inputmode="decimal" value="1000"></label>
+            <!-- Chart maximum is set on the chart header; this holds the saved value. -->
+            <input class="chart-max" type="hidden" value="1000">
             <label>Bottom of window (psi)<input class="window-bottom" inputmode="decimal" placeholder="Blank"></label>
             <label>Top of window (psi)<input class="window-top" inputmode="decimal" placeholder="Blank"></label>
             <label>Official test start<input class="test-start" type="datetime-local"></label>
@@ -328,16 +318,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
             <label>Probe 4<input class="temp-name" data-temp-name="aux" value="Auxiliary" maxlength="30"></label>
           </div>
           <p class="temperature-setup-note">Connect your logger on the Temperatures screen. These labels do not change the physical probe wiring.</p>
-        </details>
-        <details class="settings-panel paste-test-panel">
-          <summary>Paste an old test from Excel or Google Sheets</summary>
-          <div class="paste-test-body">
-            <div class="paste-test-heading"><label>Test date<input class="paste-test-date" type="date"></label><p>Copy the spreadsheet cells—including the header row—then paste them below. Expected columns are Time, Pressure, Ambient, Pipe, Ground/Soil, and Comments/Remarks.</p></div>
-            <textarea class="paste-test-input" rows="9" spellcheck="false" placeholder="Time&#9;Pressure&#9;Ambient&#9;Pipe&#9;Ground&#9;Comments / Remarks&#10;9:30 AM&#9;4160&#9;76&#9;72&#9;83&#9;Begin 8 hour test"></textarea>
-            <div class="paste-test-actions"><button class="primary import-paste-button" type="button">Import pasted test</button><button class="bleed-demo-button" type="button">Load bleed-off example</button><button class="ghost paste-clear-button" type="button">Clear pasted text</button></div>
-            <div class="paste-test-status hidden"></div>
-            <small>Repeated spreadsheet headers are ignored. Tests that pass midnight automatically continue onto the next date.</small>
-          </div>
         </details>
       </article>
       <?php endforeach; ?>
@@ -376,21 +356,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       <div class="tool-frame-section" data-tool-frame="calculator"><iframe src="calculator.html" title="Hydrotest calculator"></iframe></div>
       <div class="tool-frame-section hidden" data-tool-frame="reports"><iframe src="recorder-report.html" title="Pressure recorder report"></iframe></div>
     </section>
-    <details class="event-notes" open>
-      <summary><span>Test notes</span><small>Choose the event time and share it with remote viewers</small></summary>
-      <form class="note-entry-form" id="hostNoteForm">
-        <div class="note-entry-grid">
-          <label>Test<select id="hostNoteTest"><option value="A">Test 1</option><option value="B">Test 2</option></select></label>
-          <label>Event date<input id="hostNoteDate" type="date"></label>
-          <label>Event time<input id="hostNoteTime" type="time" step="60"></label>
-          <button id="hostNoteUseNow" type="button">Use current time</button>
-          <label class="note-text-field">Note<input id="hostNoteText" maxlength="500" placeholder="Example: Swapped pumps or bled pressure due to temperature" autocomplete="off"></label>
-          <button class="primary" type="submit">Add note</button>
-        </div>
-      </form>
-      <div class="event-note-list" id="hostNotesList"><p class="note-empty">No notes have been added.</p></div>
-      <div class="note-footer"><span>Notes remain on this laptop until cleared.</span><button class="ghost" id="clearHostNotes" type="button" disabled>Clear notes</button></div>
-    </details>
     <footer><span>XP2i / XP3i compatible • 9600 baud • one-second local and remote chart readings</span><span>The selected pressure offset is applied before display, logging and export.</span></footer>
     </section>
     </div>
