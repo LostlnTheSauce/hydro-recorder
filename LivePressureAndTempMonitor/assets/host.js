@@ -515,7 +515,6 @@
         this.saveTestState();
         this.renderManualTemperatures('Reading removed.');
         this.drawTemperature();
-        maybeRenderHostLog(true);
       });
     }
 
@@ -555,7 +554,6 @@
       if (time) time.value = dateTimeInputValue(new Date());
       this.renderManualTemperatures(replaced ? 'Reading at that time was updated.' : 'Temperature reading saved.');
       this.drawTemperature();
-      maybeRenderHostLog(true);
     }
 
     renderManualTemperatures(message = '', error = false) {
@@ -890,7 +888,6 @@
       this.testState.manualTemperatures = this.normalizeManualTemperatures(this.temperatureReadings.filter((entry) => entry.source === 'manual' || entry.source === 'sheet'));
       this.renderManualTemperatures();
       this.drawTemperature();
-      maybeRenderHostLog(true);
       return imported.length;
     }
 
@@ -1048,10 +1045,10 @@
         this.temperaturePanel._temperatureZoom = null;
         this.applyEquipmentOptions();
         this.updateUi(); this.draw(); this.drawTemperature();
-        renderHostNotes(); maybeRenderHostLog(true);
+        renderHostNotes();
         this.workflowController.hydrate(); this.workflowController.render(true);
         this.workflowController.renderJobs();
-        this.workflowController.message('New test ready. Previous job archived under Records → Previous tests. Press Start recording temps when ready.');
+        this.workflowController.message('New test ready. Previous job saved to Test history (backup copy under Records → Local backup copies). Press Start recording temps when ready.');
         // Each slot’s source allow-list excludes yesterday even when a delayed poll returns or after reload.
         if (remote) { remote.last_published_at = { ...(remote.last_published_at || {}), [this.slot]: 0 }; saveRemoteSession(); queueMicrotask(() => publish()); }
       } catch (error) {
@@ -1335,7 +1332,6 @@
         renderEquipmentLibrary();
         this.updateUi();
         this.draw();
-        maybeRenderHostLog(true);
         this.showActionError(anchor, '');
       } catch (error) {
         this.showActionError(anchor, error.message || String(error));
@@ -1349,7 +1345,7 @@
       const body = this.root.querySelector('.test-event-table tbody');
       if (!body) return;
       const events = this.testState.events || [];
-      if (!events.length) body.innerHTML = '<tr><td colspan="3" class="event-empty">No entries yet. Add checkpoints or notes from Live pressure whenever you have time.</td></tr>';
+      if (!events.length) body.innerHTML = '<tr><td colspan="3" class="event-empty">No entries yet. Add checkpoints or notes from Live test whenever you have time.</td></tr>';
       else body.innerHTML = [...events].sort((a,b) => a.at-b.at).map((event) => `<tr><td>${new Date(event.at).toLocaleString()}</td><td>${escapeHtml(event.label)}${event.shared ? ' <span class="shared-tag">Shown to viewers</span>' : ''}</td><td>${event.pressure !== null && Number.isFinite(Number(event.pressure)) ? `${Number(event.pressure).toFixed(1)} psi` : '—'}</td></tr>`).join('');
 
     }
@@ -1366,7 +1362,6 @@
       this.low = this.readings.reduce((minimum, reading) => Math.min(minimum, Number(reading.pressure)), Infinity);
       this.updateUi();
       this.draw();
-      maybeRenderHostLog(true);
     }
 
     checkStale() {
@@ -1583,13 +1578,13 @@
       this.low = this.low === null ? reading.pressure : Math.min(this.low, reading.pressure);
       this.updateUi();
       this.draw();
-      maybeRenderHostLog();
     }
 
     updateUi() {
       const latest = this.readings.at(-1);
       const displayedLow = this.low;
       this.root.querySelector('.current-pressure').textContent = latest ? latest.pressure.toFixed(1) : '---.-';
+      this.root.querySelector('.current-pressure').classList.toggle('waiting', !latest);
       this.root.querySelector('.current-unit').textContent = latest ? latest.unit : 'PSI';
       const trend = this.root.querySelector('.pressure-trend');
       if (trend) trend.textContent = this.trendText();
@@ -1733,7 +1728,6 @@
       this.updateUi();
       this.draw();
       if (readingStore) readingStore.clear(window.HydroJobs.pressureKey(this.testState));
-      maybeRenderHostLog(true);
     }
 
     loadDemo() {
@@ -1794,7 +1788,6 @@
       loadHistoricalNotes(data.notes, this.slot, options.noteKind || 'import');
       this.updateUi();
       this.draw();
-      maybeRenderHostLog(true);
     }
 
     showPasteStatus(message, error = false) {
@@ -1913,8 +1906,6 @@
 
   renderEquipmentLibrary();
   const hostGrid = document.getElementById('hostGaugeGrid');
-  const hostLog = document.getElementById('hostPressureLog');
-  const hostLogDescription = document.getElementById('hostLogDescription');
   const notesStorageKey = 'grantg-live-test-notes';
   const notesList = document.getElementById('hostNotesList');
   const noteForm = document.getElementById('hostNoteForm');
@@ -1929,8 +1920,6 @@
   const hideSecondTestButton = document.getElementById('hideSecondTest');
   const secondTestStorageKey = 'grantg-hydro-second-test-active';
   let secondTestActive = localStorage.getItem(secondTestStorageKey) === 'true';
-  let hostLogIntervalMs = 15000;
-  let lastHostLogBucket = -1;
 
   function gaugeFor(slot) { return gauges.find((gauge) => gauge.slot === slot); }
 
@@ -1957,8 +1946,6 @@
     secondNoteOption.disabled = !secondTestActive;
     const requestedMode = focusNewTest && secondTestActive ? 'B' : hostGrid.dataset.viewMode;
     setLayout(requestedMode);
-    lastHostLogBucket = -1;
-    maybeRenderHostLog(true);
     renderHostNotes();
   }
 
@@ -2118,28 +2105,6 @@
   setNoteTimestampNow();
   loadHostNotes();
 
-  function maybeRenderHostLog(force = false) {
-    const latestRecordingAt = Math.max(0, ...gauges.filter((gauge) => gauge.active).map((gauge) => Number(gauge.readings.at(-1)?.at) || 0));
-    const bucket = latestRecordingAt ? Math.floor(latestRecordingAt / hostLogIntervalMs) : -1;
-    if (!force && bucket === lastHostLogBucket) return;
-    lastHostLogBucket = bucket;
-    window.PressureChartRenderer.renderLog(hostLog, {
-      A: gauges.find((gauge) => gauge.slot === 'A').readings,
-      B: secondTestActive ? gauges.find((gauge) => gauge.slot === 'B').readings : [],
-    }, hostLogIntervalMs);
-  }
-
-  document.querySelectorAll('[data-host-log-interval]').forEach((button) => {
-    button.addEventListener('click', () => {
-      hostLogIntervalMs = Number(button.dataset.hostLogInterval) || 15000;
-      document.querySelectorAll('[data-host-log-interval]').forEach((item) => item.classList.toggle('active', item === button));
-      const label = hostLogIntervalMs === 15000 ? '15 seconds' : hostLogIntervalMs === 60000 ? '1 minute' : hostLogIntervalMs === 300000 ? '5 minutes' : '15 minutes';
-      hostLogDescription.textContent = `Every ${label} • newest recording first • chart continues recording every second`;
-      lastHostLogBucket = -1;
-      maybeRenderHostLog(true);
-    });
-  });
-
   document.querySelectorAll('[data-layout-mode]').forEach((button) => {
     button.addEventListener('click', () => {
       setLayout(button.dataset.layoutMode);
@@ -2185,8 +2150,6 @@
     });
   });
   applySecondTestUi();
-  maybeRenderHostLog(true);
-  setInterval(() => maybeRenderHostLog(), 1000);
   gaugeTicker.add(() => gauges.forEach((gauge) => gauge.checkStale()));
   localSaveHealth.onRecover = (since) => {
     if (!readingStore) return;
@@ -2534,7 +2497,6 @@
           gauge.temperatureReadings.sort((a, b) => Number(a.at) - Number(b.at));
           gauge.drawTemperature();
         });
-        if (changed.size) maybeRenderHostLog(true);
         more = result.has_more === true;
         pages++;
       } while (more && pages < 4);

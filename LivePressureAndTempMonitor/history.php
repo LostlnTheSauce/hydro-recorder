@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
 ?>
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Test history · Grant G Solutions</title>
-<link rel="stylesheet" href="assets/workspace.css?v=1"><link rel="stylesheet" href="assets/temperature-zoom.css?v=2"><link rel="stylesheet" href="assets/history.css?v=3"><link rel="stylesheet" href="assets/control-room.css?v=3"></head><body>
+<link rel="stylesheet" href="assets/workspace.css?v=1"><link rel="stylesheet" href="assets/temperature-zoom.css?v=2"><link rel="stylesheet" href="assets/history.css?v=3"><link rel="stylesheet" href="assets/control-room.css?v=4"></head><body>
 <?php if (!is_host_signed_in()): ?>
 <main class="login-shell"><form method="post" class="login-card"><h1>Test history</h1><p>Sign in with your host password to view tests from any device.</p><input name="host_password" type="password" placeholder="Host password" required autofocus><button class="primary">Sign in</button><p><?= htmlspecialchars($loginError) ?></p><small>This device stays signed in. Sign out when using a shared device.</small></form></main>
 <?php else: ?>

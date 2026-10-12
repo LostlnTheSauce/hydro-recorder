@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <link rel="stylesheet" href="assets/workspace.css?v=2">
   <link rel="stylesheet" href="assets/field-power.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=3">
+  <link rel="stylesheet" href="assets/control-room.css?v=4">
 </head>
 <body>
 <?php if (!is_host_signed_in()): ?>
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       <article class="gauge-card<?= $slot === 'B' ? ' inactive-test' : '' ?>" data-gauge="<?= $slot ?>" data-color="<?= $color ?>">
         <div class="gauge-toolbar">
           <div><div class="eyebrow">Test <?= $testNumber ?></div><input class="gauge-name" value="Test <?= $testNumber ?>" aria-label="Test <?= $testNumber ?> name"></div>
-          <div class="current-readout"><span>Current pressure</span><strong><b class="current-pressure">---.-</b> <small class="current-unit">PSI</small></strong><em class="pressure-trend"></em></div>
+          <div class="current-readout"><span>Current pressure</span><strong><b class="current-pressure waiting">---.-</b> <small class="current-unit">PSI</small></strong><em class="pressure-trend"></em></div>
           <label class="live-scale-control"><span>Chart maximum</span><strong><input class="live-chart-max" type="number" min="1" step="100" value="1000" inputmode="decimal" aria-label="Live chart maximum pressure"> <small>PSI</small></strong></label>
           <label class="pen-control live-pen-control"><span>Pen size</span><input class="pen-size" type="range" min="0.1" max="5" step="0.1" value="1" aria-label="Pressure trace pen size"><strong>1.0</strong></label>
           <span class="pill connection-status"><i></i> Not connected</span>
@@ -382,24 +382,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       <div class="event-note-list" id="hostNotesList"><p class="note-empty">No notes have been added.</p></div>
       <div class="note-footer"><span>Notes remain on this laptop until cleared.</span><button class="ghost" id="clearHostNotes" type="button" disabled>Clear notes</button></div>
     </details>
-    <details class="pressure-log">
-      <summary><span>Detailed pressure history</span><small id="hostLogDescription">Every 15 seconds • newest recording first • chart continues recording every second</small></summary>
-      <div class="log-interval-controls" aria-label="Host pressure log interval">
-        <span>Show recordings every</span>
-        <button class="active" type="button" data-host-log-interval="15000">15 sec</button>
-        <button type="button" data-host-log-interval="60000">1 min</button>
-        <button type="button" data-host-log-interval="300000">5 min</button>
-        <button type="button" data-host-log-interval="900000">15 min</button>
-      </div>
-      <div class="log-table-wrap">
-        <table><thead><tr><th>Date</th><th>Time</th><th>Test 1</th><th>Test 2</th></tr></thead><tbody id="hostPressureLog"><tr><td class="log-empty" colspan="4">Pressure readings will appear here as the tests record.</td></tr></tbody></table>
-      </div>
-    </details>
     <footer><span>XP2i / XP3i compatible • 9600 baud • one-second local and remote chart readings</span><span>The selected pressure offset is applied before display, logging and export.</span></footer>
     </section>
     </div>
   </main>
-  <script src="assets/chart.js?v=13"></script>
+  <script src="assets/chart.js?v=14"></script>
 <script src="assets/temperature.js?v=26"></script>
   <script src="assets/qrcode.js?v=7"></script>
   <script src="assets/test-design-parser.js?v=4"></script>
@@ -409,10 +396,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/jobs.js?v=2"></script>
   <script src="assets/cloud-history.js?v=2"></script>
   <script src="assets/workflow-ui.js?v=9"></script>
-  <script src="assets/workspace.js?v=5"></script>
+  <script src="assets/workspace.js?v=6"></script>
   <script src="assets/field-power.js?v=2"></script>
-  <script src="assets/logbook.js?v=1"></script>
-  <script src="assets/host.js?v=49"></script>
+  <script src="assets/logbook.js?v=2"></script>
+  <script src="assets/host.js?v=50"></script>
 <?php endif; ?>
 </body>
 </html>

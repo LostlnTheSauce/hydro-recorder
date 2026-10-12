@@ -13,7 +13,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/viewer-workspace.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=3">
+  <link rel="stylesheet" href="assets/control-room.css?v=4">
 </head>
 <body>
 <?php if (!$validId): ?>
@@ -50,7 +50,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
         <?php foreach (['A', 'B'] as $slot): ?>
         <?php $testNumber = $slot === 'A' ? 1 : 2; ?>
         <article class="gauge-card remote-gauge<?= $slot === 'B' ? ' inactive-test' : '' ?>" data-view-gauge="<?= $slot ?>">
-          <div class="gauge-toolbar"><div><div class="eyebrow">Test <?= $testNumber ?></div><h2 class="viewer-gauge-name">Test <?= $testNumber ?></h2></div><div class="current-readout"><span>Current pressure</span><strong><b class="current-pressure">---.-</b> <small class="current-unit">PSI</small></strong></div></div>
+          <div class="gauge-toolbar"><div><div class="eyebrow">Test <?= $testNumber ?></div><h2 class="viewer-gauge-name">Test <?= $testNumber ?></h2></div><div class="current-readout"><span>Current pressure</span><strong><b class="current-pressure waiting">---.-</b> <small class="current-unit">PSI</small></strong></div></div>
           <div class="chart-wrap"><canvas class="pressure-chart" width="700" height="700"></canvas></div>
           <div class="stat-row"><div><span>Last update</span><strong class="stat-last">No readings</strong></div><div><span>Peak</span><strong class="stat-peak">—</strong></div><div><span>Lowest</span><strong class="stat-low">—</strong></div><div><span>Pressure recordings</span><strong class="stat-count">0</strong></div></div>
           <section class="temperature-panel" data-temperature-panel>
@@ -105,11 +105,11 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
       <footer><span>Remote chart updates approximately every second.</span><span>Displayed pressure includes the offset selected on the host laptop.</span></footer>
     </div>
   </main>
-  <script src="assets/chart.js?v=13"></script>
+  <script src="assets/chart.js?v=14"></script>
 <script src="assets/temperature.js?v=26"></script>
   <script src="assets/jobs.js?v=1"></script>
-  <script src="assets/logbook.js?v=1"></script>
-  <script src="assets/viewer.js?v=24"></script>
+  <script src="assets/logbook.js?v=2"></script>
+  <script src="assets/viewer.js?v=25"></script>
 <?php endif; ?>
 </body>
 </html>

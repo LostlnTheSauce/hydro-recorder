@@ -92,6 +92,7 @@
     const latest = readings.at(-1);
     root.querySelector('.viewer-gauge-name').textContent = config.name;
     root.querySelector('.current-pressure').textContent = latest ? latest.pressure.toFixed(1) : '---.-';
+    root.querySelector('.current-pressure').classList.toggle('waiting', !latest);
     root.querySelector('.current-unit').textContent = latest ? latest.unit : 'PSI';
     root.querySelector('.stat-last').textContent = latest ? new Date(latest.at).toLocaleTimeString() : 'No readings';
     let peak = null;
