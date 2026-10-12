@@ -409,6 +409,45 @@
     updateInspector(panel, canvas, channelConfig || meta?.channelConfig || DEFAULT_CHANNELS, state);
   }
 
+  // Optional round recorder chart (0–150 °F, last 24 hours) for the pipe, soil
+  // and ambient probes, drawn only while its section is open. Unplugged probes
+  // read about -300 °F; those readings leave a gap here and stay in the log.
+  const ROUND_KEYS = ['ambient', 'pipe', 'soil'];
+  const ROUND_MAX = 150;
+  function drawRoundChart(panel, readings, channelConfig) {
+    const section = panel.querySelector('.temperature-round-panel');
+    const canvas = section?.querySelector('.temperature-round-chart');
+    if (!canvas || !section.open || !window.PressureChartRenderer) return;
+    const keys = ROUND_KEYS.filter((key) => !panel.querySelector(`.temp-toggle input[value="${key}"]`)?.disabled);
+    const sorted = [...readings].sort((a, b) => Number(a.at) - Number(b.at));
+    const end = sorted.length ? Number(sorted.at(-1).at) : Date.now();
+    const recent = [];
+    let lastKept = -Infinity;
+    sorted.forEach((reading) => {
+      const at = Number(reading.at);
+      if (at < end - 86400000 || at - lastKept < 30000) return;
+      recent.push(reading);
+      lastKept = at;
+    });
+    const shown = channelConfig.filter((channel) => keys.includes(channel.key));
+    window.PressureChartRenderer.draw(canvas, [], {
+      chartMax: ROUND_MAX,
+      gridStep: 10,
+      title: 'TEMPERATURE RECORDER',
+      scaleLabel: `0–${ROUND_MAX} °F`,
+      zoomName: 'temperature chart',
+      traceThickness: 1.6,
+      legend: shown,
+      traces: shown.map((channel) => ({
+        color: channel.color,
+        readings: recent.map((reading) => {
+          const value = validNumber(reading[channel.key]);
+          return { at: reading.at, value: value === null || value < -50 ? null : value };
+        }),
+      })),
+    });
+  }
+
   function renderPanel(panel, options) {
     if (!panel) return;
     const channelConfig = channels(options.channels);
@@ -444,6 +483,7 @@
       replay: options.replay === true, gapLimits: options.gapLimits,
     };
     drawTimeline(canvas, chartOptions);
+    drawRoundChart(panel, temperatureReadings, channelConfig);
     updateZoomControls(panel, canvas._temperatureMeta);
     refreshSelection(panel, selectionState, channelConfig);
   }
@@ -452,6 +492,7 @@
     if (!panel || panel.dataset.temperatureBound === 'true') return;
     panel.dataset.temperatureBound = 'true';
     bindZoom(panel, onChange);
+    panel.querySelector('.temperature-round-panel')?.addEventListener('toggle', () => onChange());
     panel.querySelectorAll('.temp-toggle input,.temp-official-only,.temp-show-notes,.temp-history-range').forEach((input) => input.addEventListener('change', () => {
       if (input.matches('.temp-history-range,.temp-official-only')) {
         panel._temperatureZoom = null;

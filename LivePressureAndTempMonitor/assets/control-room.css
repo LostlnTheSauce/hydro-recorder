@@ -366,3 +366,8 @@ table td { background:#ffffff55; }
 .chart-zoom-canvas { flex:1; min-height:0; width:100%; display:block; touch-action:none; cursor:grab; }
 .chart-zoom-canvas:active { cursor:grabbing; }
 @media(max-width:600px) { .chart-zoom-header small { display:none; } .chart-zoom-actions [data-chart-zoom="in"],.chart-zoom-actions [data-chart-zoom="out"] { display:none; } }
+.temperature-round-panel { border-top:1px solid var(--line); margin-top:20px; padding-top:14px; }
+.temperature-round-panel .chart-wrap { margin-top:12px; }
+.temperature-round-chart { display:block; width:100%; height:auto; cursor:zoom-in; }
+#viewerDashboard .temperature-panel>.temperature-round-panel { order:7; }
+#viewerDashboard[data-dashboard-view="temperature"] .temperature-round-panel .chart-wrap { display:block; }
