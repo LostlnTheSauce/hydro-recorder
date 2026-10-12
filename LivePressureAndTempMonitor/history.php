@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
 ?>
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Test history · Grant G Solutions</title>
-<link rel="stylesheet" href="assets/workspace.css?v=1"><link rel="stylesheet" href="assets/temperature-zoom.css?v=2"><link rel="stylesheet" href="assets/history.css?v=3"><link rel="stylesheet" href="assets/control-room.css?v=1"></head><body>
+<link rel="stylesheet" href="assets/workspace.css?v=1"><link rel="stylesheet" href="assets/temperature-zoom.css?v=2"><link rel="stylesheet" href="assets/history.css?v=3"><link rel="stylesheet" href="assets/control-room.css?v=2"></head><body>
 <?php if (!is_host_signed_in()): ?>
 <main class="login-shell"><form method="post" class="login-card"><h1>Test history</h1><p>Sign in with your host password to view tests from any device.</p><input name="host_password" type="password" placeholder="Host password" required autofocus><button class="primary">Sign in</button><p><?= htmlspecialchars($loginError) ?></p><small>This device stays signed in. Sign out when using a shared device.</small></form></main>
 <?php else: ?>
@@ -47,5 +47,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
 <section class="replay-event-log" data-history-section="events" hidden><h3>Complete event log</h3><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Event / note</th><th>Pressure PSI</th><th>Entry details</th></tr></thead><tbody id="replayEvents"></tbody></table></div></section>
 </section>
 <dialog id="historyEdit" aria-labelledby="historyEditTitle" aria-describedby="historyEditHelp"><form id="historyEditForm"><span class="eyebrow">MANAGE RECORDING</span><h2 id="historyEditTitle"></h2><p id="historyEditHelp"></p><label id="historyEditField"><span id="historyEditLabel"></span><input id="historyEditValue" maxlength="200" autocomplete="off"><datalist id="historyFolderNames"></datalist></label><p id="historyEditError" role="alert"></p><div class="dialog-actions"><button type="button" id="historyEditCancel">Cancel</button><button type="submit" id="historyEditSave" class="primary">Save</button></div></form></dialog>
-</main><script src="assets/temperature.js?v=25"></script><script src="assets/history-log.js?v=1"></script><script src="assets/history.js?v=4"></script>
+</main><script src="assets/temperature.js?v=26"></script><script src="assets/history-log.js?v=1"></script><script src="assets/history.js?v=4"></script>
 <?php endif; ?></body></html>

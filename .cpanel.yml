@@ -1,11 +1,27 @@
 ---
-# Deploys the archived Python recorder's viewer to /watch. The current
-# website (LivePressureAndTempMonitor/) is uploaded separately.
+# cPanel Git Version Control runs these tasks on "Deploy HEAD Commit"
+# (the GitHub Action in .github/workflows/deploy.yml triggers that on every
+# push to main).
+#
+# 1. The current website, LivePressureAndTempMonitor/, goes to public_html/hydro.
+#    Only the site's runtime files are copied. config.php is never in git, so it
+#    is never overwritten; tests, SQL, docs and the Apps Script stay out of the
+#    web folder. Every deploy stamps a fresh ?v= on scripts and styles so
+#    Cloudflare and browsers fetch the new files.
+# 2. The archived Python recorder's viewer still goes to public_html/watch.
 deployment:
   tasks:
-    - export DEST=$HOME/public_html/watch
-    - /bin/mkdir -p $DEST
-    - /bin/cp archive/python-recorder/site/viewer.js archive/python-recorder/site/api.php $DEST/
-    - /bin/cp archive/python-recorder/recorder/web/chart.js archive/python-recorder/recorder/web/style.css $DEST/
-    # Cloudflare caches scripts for hours; a new version stamp makes viewers load the new files.
-    - /bin/sed "s/__V__/$(date +%s)/g" archive/python-recorder/site/index.html > $DEST/index.html
+    - export SITE=LivePressureAndTempMonitor
+    - export DEST=$HOME/public_html/hydro
+    - export STAMP=$(date +%s)
+    - /bin/mkdir -p $DEST/assets $DEST/inc
+    - /bin/cp $SITE/.htaccess $SITE/api.php $SITE/history-api.php $SITE/history.php $SITE/host.php $SITE/temperature.php $SITE/viewer.php $DEST/
+    - /bin/cp $SITE/calculator.html $SITE/recorder-report.html $DEST/
+    - /bin/cp $SITE/inc/*.php $DEST/inc/
+    - /bin/cp $SITE/assets/* $DEST/assets/
+    - /bin/sed -i -E "s/(\.(js|css))\?v=[0-9]+/\1?v=$STAMP/g" $DEST/host.php $DEST/viewer.php $DEST/history.php
+    - export WATCH=$HOME/public_html/watch
+    - /bin/mkdir -p $WATCH
+    - /bin/cp archive/python-recorder/site/viewer.js archive/python-recorder/site/api.php $WATCH/
+    - /bin/cp archive/python-recorder/recorder/web/chart.js archive/python-recorder/recorder/web/style.css $WATCH/
+    - /bin/sed "s/__V__/$STAMP/g" archive/python-recorder/site/index.html > $WATCH/index.html

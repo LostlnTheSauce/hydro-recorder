@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/field-power.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=1">
+  <link rel="stylesheet" href="assets/control-room.css?v=2">
 </head>
 <body>
 <?php if (!is_host_signed_in()): ?>
@@ -399,18 +399,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
     </div>
   </main>
   <script src="assets/chart.js?v=13"></script>
-<script src="assets/temperature.js?v=25"></script>
+<script src="assets/temperature.js?v=26"></script>
   <script src="assets/qrcode.js?v=7"></script>
   <script src="assets/test-design-parser.js?v=4"></script>
   <script src="assets/test-design.js?v=2"></script>
   <script src="assets/workflow.js?v=3"></script>
-  <script src="assets/demo.js?v=2"></script>
+  <script src="assets/demo.js?v=3"></script>
   <script src="assets/jobs.js?v=2"></script>
   <script src="assets/cloud-history.js?v=2"></script>
-  <script src="assets/workflow-ui.js?v=7"></script>
-  <script src="assets/workspace.js?v=2"></script>
+  <script src="assets/workflow-ui.js?v=8"></script>
+  <script src="assets/workspace.js?v=3"></script>
   <script src="assets/field-power.js?v=1"></script>
-  <script src="assets/host.js?v=45"></script>
+  <script src="assets/host.js?v=46"></script>
 <?php endif; ?>
 </body>
 </html>

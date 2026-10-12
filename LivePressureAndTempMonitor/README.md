@@ -91,7 +91,7 @@ Requirements: PHP 8.0+ with PDO MySQL and cURL, MySQL or MariaDB, HTTPS, and des
 
 `.htaccess` blocks `config.php`, the SQL files, this README and `templates/`. Do not upload `tests/` or the field app.
 
-**Updating an existing site:** keep `config.php` and the database. Upload the changed files, then refresh the host page between recordings, not during one. Older databases that predate the temperature interval settings need `temperature-upgrade-2026-09-21.sql` run once.
+**Updating an existing site:** merging into `main` on GitHub deploys automatically (see the root README). To update by hand instead, keep `config.php` and the database, upload the changed files, and bump the `?v=` number on any changed script or stylesheet in `host.php`, `viewer.php` and `history.php`. Refresh the host page between recordings, not during one. Older databases that predate the temperature interval settings need `temperature-upgrade-2026-09-21.sql` run once.
 
 ## Security
 
