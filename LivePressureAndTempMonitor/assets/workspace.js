@@ -88,8 +88,6 @@
       panels.setup.append(finish);
       move('.workflow-records', 'logs');
       move('.utility-panel,.paste-test-panel', 'logs');
-      const feedback = document.createElement('p'); feedback.className = 'setup-message'; feedback.setAttribute('role', 'status'); feedback.hidden = true;
-      panels.setup.prepend(feedback);
       root.querySelector('.paste-test-button').addEventListener('click', () => navigate('logs'));
       const records = root.querySelector('.workflow-records');
       records.querySelector('a[href="history.php"]')?.closest('p')?.remove();

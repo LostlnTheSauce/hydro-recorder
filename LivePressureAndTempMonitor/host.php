@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>Field recorder · Grant G Solutions</title>
-  <link rel="stylesheet" href="assets/workspace.css?v=1">
+  <link rel="stylesheet" href="assets/workspace.css?v=2">
   <link rel="stylesheet" href="assets/field-power.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
   <link rel="stylesheet" href="assets/control-room.css?v=3">
@@ -408,11 +408,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/demo.js?v=3"></script>
   <script src="assets/jobs.js?v=2"></script>
   <script src="assets/cloud-history.js?v=2"></script>
-  <script src="assets/workflow-ui.js?v=8"></script>
-  <script src="assets/workspace.js?v=4"></script>
+  <script src="assets/workflow-ui.js?v=9"></script>
+  <script src="assets/workspace.js?v=5"></script>
   <script src="assets/field-power.js?v=2"></script>
   <script src="assets/logbook.js?v=1"></script>
-  <script src="assets/host.js?v=47"></script>
+  <script src="assets/host.js?v=48"></script>
 <?php endif; ?>
 </body>
 </html>
