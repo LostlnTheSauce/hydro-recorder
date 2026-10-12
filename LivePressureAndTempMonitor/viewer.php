@@ -13,7 +13,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <link rel="stylesheet" href="assets/workspace.css?v=1">
   <link rel="stylesheet" href="assets/viewer-workspace.css?v=1">
   <link rel="stylesheet" href="assets/temperature-zoom.css?v=2">
-  <link rel="stylesheet" href="assets/control-room.css?v=4">
+  <link rel="stylesheet" href="assets/control-room.css?v=5">
 </head>
 <body>
 <?php if (!$validId): ?>
@@ -105,7 +105,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
       <footer><span>Remote chart updates approximately every second.</span><span>Displayed pressure includes the offset selected on the host laptop.</span></footer>
     </div>
   </main>
-  <script src="assets/chart.js?v=14"></script>
+  <script src="assets/chart.js?v=15"></script>
 <script src="assets/temperature.js?v=26"></script>
   <script src="assets/jobs.js?v=1"></script>
   <script src="assets/logbook.js?v=2"></script>
