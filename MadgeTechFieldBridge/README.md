@@ -24,6 +24,12 @@ MadgeTech program libraries are detected under both Program Files locations and 
 
 The four channel positions are 1 = pipe, 2 = soil, 3 = ambient, 4 = extra. Keep the field laptop's clock accurate. The website rejects readings more than 30 seconds in the future. Temperature readings do not auto-write the Google Sheet; **Sync to Sheet** remains a separate manual action.
 
+## Field laptop temperature
+
+The field app also reports the field laptop's own temperature from Windows' built-in thermal sensor (no admin rights or extra programs). The host shows it on the battery line, for example `92% · Plugged in · Charging · 142 °F`, and raises an alert at 185 °F or hotter. Some laptops have no usable sensor; then no temperature appears and nothing else changes.
+
+To update a field laptop: stop the field app with Ctrl+C, copy `Bridge.cs`, `Build-Bridge.ps1` and `Build-Field-App.cmd` into the field app folder (keep `field-device.settings` and `Data`), double-click `Build-Field-App.cmd`, then start `Start-Field-Mode.cmd` (or `Run-Bridge.cmd`) as usual. The build uses MadgeTech 4 and the .NET compiler already on the laptop.
+
 ## One-time administrator setup
 
 The website requires the `temperature_devices` table in `temperature-install.sql`. An authenticated host administrator enrolls the known serial once through `temperature.php?action=enroll_device`, then includes the returned device ID and token in `field-device.settings` inside a private field package. The token is stored only as a hash on the website. Never publish a package containing the token or place it in the website's public folder. This enrollment is not a per-test step.

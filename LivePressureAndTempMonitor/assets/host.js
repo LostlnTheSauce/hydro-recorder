@@ -2519,7 +2519,9 @@
       if (latest && now - Number(latest.at) > limit) alerts.push({ id: `temps-stopped-${gauge.slot}`, text: `${name}: temperature feed stopped. Last reading ${minutesAgo(now - Number(latest.at))} ago. Check the field laptop, MadgeTech and the bridge.` });
       const power = device.power;
       const fresh = power && device.bridge_online === true && Number.isFinite(power.reported_at) && now - power.reported_at <= 60000;
-      if (!fresh || power.has_battery === false) continue;
+      if (!fresh) continue;
+      if (window.HydroFieldPower?.isHot(power)) alerts.push({ id: 'field-hot', text: `Field laptop is hot (${power.laptop_temp_f} °F). Move it out of the sun and clear the vents.` });
+      if (power.has_battery === false) continue;
       const percent = Number.isInteger(power.battery_percent) ? power.battery_percent : null;
       const level = percent === null ? '' : ` (${percent}%)`;
       if (power.on_ac === false) alerts.push({ id: 'field-unplugged', text: `Field laptop is unplugged and running on battery${level}.` });

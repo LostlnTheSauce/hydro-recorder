@@ -137,11 +137,42 @@ public static class FieldLaptopPower
 
     public static Dictionary<string, object> Read()
     {
+        Dictionary<string, object> power = null;
         try {
             SystemPowerStatus status;
-            if (GetSystemPowerStatus(out status)) return Decode(status.ACLineStatus, status.BatteryFlag, status.BatteryLifePercent);
+            if (GetSystemPowerStatus(out status)) power = Decode(status.ACLineStatus, status.BatteryFlag, status.BatteryLifePercent);
         } catch (Exception) { /* Power reporting must never interrupt temperature capture. */ }
-        return Decode(255, 255, 255);
+        if (power == null) power = Decode(255, 255, 255);
+        power["laptop_temp_f"] = ReadTemperatureF();
+        return power;
+    }
+
+    // Windows thermal zones, in kelvin. No admin rights or extra drivers are needed.
+    // Some laptops expose none; the host then shows no laptop temperature.
+    private static List<System.Diagnostics.PerformanceCounter> ThermalZones;
+
+    public static object ReadTemperatureF()
+    {
+        try {
+            if (ThermalZones == null) {
+                ThermalZones = new List<System.Diagnostics.PerformanceCounter>(); // Looked up once; missing zones are not retried.
+                var category = new System.Diagnostics.PerformanceCounterCategory("Thermal Zone Information");
+                foreach (string zone in category.GetInstanceNames())
+                    ThermalZones.Add(new System.Diagnostics.PerformanceCounter("Thermal Zone Information", "Temperature", zone, true));
+            }
+            double hottest = 0;
+            foreach (var zone in ThermalZones) {
+                try { hottest = Math.Max(hottest, KelvinToF(zone.NextValue()) ?? 0); } catch (Exception) { }
+            }
+            return hottest > 0 ? (object)(int)hottest : null;
+        } catch (Exception) { return null; }
+    }
+
+    // Readings outside 33-260 F are sensor placeholders, not real temperatures.
+    public static double? KelvinToF(double kelvin)
+    {
+        double f = Math.Round((kelvin - 273.15) * 9 / 5 + 32);
+        return f >= 33 && f <= 260 ? (double?)f : null;
     }
 }
 

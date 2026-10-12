@@ -19,6 +19,8 @@ public static class ClosedRunTests
         Assert(power["battery_percent"] == null && !(bool)power["has_battery"], "Desktop has no battery");
         power = FieldLaptopPower.Decode(255, 255, 255);
         Assert(power["battery_percent"] == null && power["on_ac"] == null && power["charging"] == null, "Unknown values are not zero");
+        Assert(FieldLaptopPower.KelvinToF(333.15) == 140 && FieldLaptopPower.KelvinToF(0) == null && FieldLaptopPower.KelvinToF(273.15) == null, "Laptop temperature in F; placeholders ignored");
+        Assert(FieldLaptopPower.Read().ContainsKey("laptop_temp_f"), "Heartbeat carries laptop temperature (null when unavailable)");
         Assert(!BridgeRunner.InRecordingWindow(99,100,0), "No pre-start backlog");
         Assert(BridgeRunner.InRecordingWindow(100,100,200), "Start boundary");
         Assert(BridgeRunner.InRecordingWindow(200,100,200), "Stop boundary");

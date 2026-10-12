@@ -84,7 +84,11 @@ async function main() {
     await waitFor(async () => /unplugged/.test(await alerts()) && /battery is at 60%/.test(await alerts()), 'field laptop alerts');
     power = { battery_percent: 80, on_ac: true, charging: false, has_battery: true };
     await waitFor(async () => /not charging/.test(await alerts()) && !/unplugged/.test(await alerts()), 'not charging alert');
-    power = { battery_percent: 92, on_ac: true, charging: true, has_battery: true };
+    // Field laptop too hot, plugged in and charging; shown beside the battery line too.
+    power = { battery_percent: 92, on_ac: true, charging: true, has_battery: true, laptop_temp_f: 190 };
+    await waitFor(async () => /Field laptop is hot \(190 °F\)/.test(await alerts()) && !/not charging/.test(await alerts()), 'hot laptop alert');
+    await waitFor(async () => /190 °F · Too hot/.test(await page.locator('.temperature-laptop-power').first().textContent()), 'hot laptop status line');
+    power = { battery_percent: 92, on_ac: true, charging: true, has_battery: true, laptop_temp_f: 150 };
     await waitFor(async () => await page.locator('#hostAlerts').isHidden(), 'power alerts cleared');
 
     // Temperature feed silent for over a minute.
