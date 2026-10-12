@@ -12,13 +12,6 @@
   };
   const steps = profile => profile === 'staged' ? [0, 25, 50, 75, 100] : profile === 'half' ? [0, 50, 75, 100] : [0, 75, 100];
   const number = value => value === '' || value === null || value === undefined || !Number.isFinite(Number(value)) ? null : Number(value);
-  // A probe that is unplugged or faulty reports values like -300 °F. Anything outside
-  // what a pipeline, the soil or the air can reach is treated as no reading.
-  const TEMPERATURE_RANGE = [-60, 200];
-  const plausibleTemperature = value => {
-    const reading = number(value);
-    return reading !== null && reading >= TEMPERATURE_RANGE[0] && reading <= TEMPERATURE_RANGE[1] ? reading : null;
-  };
   const SHEET_COLUMNS = ['pressure', 'ambient', 'pipe', 'ground', 'comments'];
   function create(test = {}) {
     const events = test.events || [];
@@ -200,5 +193,5 @@
       officialLastRow: official ? sheetLogRows[startIndex + official - 1] : 0,
     };
   }
-  return { stages, steps, number, plausibleTemperature, TEMPERATURE_RANGE, SHEET_COLUMNS, create, nextQuarter, nextStart, deadline, advance, recordEvent, setBaseline, observe, saveStroke, officialTimes, archive, sheetCapacity, validatePeriod, manualStroke };
+  return { stages, steps, number, SHEET_COLUMNS, create, nextQuarter, nextStart, deadline, advance, recordEvent, setBaseline, observe, saveStroke, officialTimes, archive, sheetCapacity, validatePeriod, manualStroke };
 });

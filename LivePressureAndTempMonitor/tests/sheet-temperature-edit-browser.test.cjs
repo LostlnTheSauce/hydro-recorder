@@ -119,17 +119,18 @@ async function main() {
     assert.equal(await page.evaluate(() => window.testGauges[0].sheetRows().officialRows.length), 9, 'a start entered two hours late builds every 15-minute row back to it');
     assert.equal(await page.locator('.test-end').first().inputValue(), '', 'planned end is not saved');
 
-    // A faulty ambient probe (-321 °F) is left blank; real temperatures go in as whole degrees.
+    // An unplugged ambient probe (-321 °F) with the Ambient switch off: the Sheet's
+    // ambient cell is left alone; other temperatures go in as whole degrees.
     await page.evaluate((at) => {
       const g = window.testGauges[0];
       g.temperatureReadings.push({ at, source: 'manual', ambient: -321.754, pipe: 68.9936, soil: 69.7874 });
       g.temperatureReadings.sort((x, y) => x.at - y.at);
-      window.HydroWorkspace?.navigate?.('logs');
     }, lateStart);
-    const statusRow = await page.evaluate(() => window.testGauges[0].sheetRows({ skipSheetTemperatures: true }).officialRows[0]);
-    assert.deepEqual(statusRow.faultyTemperatures, ['ambient'], 'Records flags the unplugged probe');
+    log.getRange('C30').setValue(77);
+    await page.locator('[data-sheet-column="ambient"]').first().uncheck();
     await sync();
-    assert.deepEqual([log.cell('C30'), log.cell('D30'), log.cell('E30')], ['', 69, 70], 'faulty probe blank, others whole degrees');
+    assert.deepEqual([log.cell('C30'), log.cell('D30'), log.cell('E30')], [77, 69, 70], 'ambient untouched, others whole degrees');
+    await page.locator('[data-sheet-column="ambient"]').first().check();
 
     // Pipe column switched off: the Sheet's pipe value is left as typed.
     log.getRange('D30').setValue(55);

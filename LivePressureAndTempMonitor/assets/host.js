@@ -839,14 +839,11 @@
       (this.testState.events || [])
         .filter((event) => ['configuration', 'note'].includes(event.type) && Math.abs(Number(event.at) - timestamp) < 7.5 * 60 * 1000)
         .forEach((event) => remarks.push(event.label));
-      // Temperatures go to the Sheet as whole degrees; out-of-range probe values are left blank.
+      // Temperatures go to the Sheet as whole degrees.
       const degrees = (value) => {
-        const reading = window.HydroWorkflow.plausibleTemperature(value);
+        const reading = window.HydroWorkflow.number(value);
         return reading === null ? '' : Math.round(reading);
       };
-      const faultyTemperatures = [['ambient', 'ambient'], ['pipe', 'pipe'], ['ground', 'soil']]
-        .filter(([, key]) => window.HydroWorkflow.number(temperature[key]) !== null && window.HydroWorkflow.plausibleTemperature(temperature[key]) === null)
-        .map(([column]) => column);
       return {
         at: timestamp,
         pressure: Number.isFinite(pressure) ? Math.round(pressure) : '',
@@ -854,7 +851,6 @@
         pipe: degrees(temperature.pipe),
         ground: degrees(temperature.soil),
         comments: [...new Set(remarks.filter(Boolean))].join(' / '),
-        ...(faultyTemperatures.length ? { faultyTemperatures } : {}),
       };
     }
 
