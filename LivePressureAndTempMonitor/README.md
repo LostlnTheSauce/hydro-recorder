@@ -45,7 +45,7 @@ On the Live test page (one per test) and on the viewer's Logbook tab. Each row i
 
 ## Pressure offset
 
-Each test has one pressure series. The offset is applied before the reading is shown, logged, published or exported. Example: gauge 110 psi with deadweight 108 psi uses an offset of −2 and records 108 psi. A gauge at zero stays zero. Live readings show tenths; the 15-minute record and the Sheet use whole psi. Changing the offset during an official test asks for confirmation.
+Each test has one pressure series. The offset is applied before the reading is shown, logged, published or exported. Example: gauge 110 psi with deadweight 108 psi uses an offset of −2 and records 108 psi. Near zero (within 0.5 psi) the offset is not applied and the reading is shown exactly as the gauge reports it, so a gauge at 0.0 stays 0.0 and a gauge at 0.1 shows 0.1. Live readings show tenths; the 15-minute record and the Sheet use whole psi. Changing the offset during an official test asks for confirmation.
 
 ## Temperatures (MadgeTech)
 

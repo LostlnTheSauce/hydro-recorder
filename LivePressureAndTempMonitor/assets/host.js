@@ -391,7 +391,8 @@
     recordedPressure(rawPressure, offset = this.pressureOffset()) {
       const raw = Number(rawPressure);
       if (!Number.isFinite(raw)) return null;
-      return Math.abs(raw) <= .5 ? 0 : raw + Number(offset || 0);
+      // Near zero the gauge reading is shown as is: the offset is not applied, but nothing is rounded away.
+      return Math.abs(raw) <= .5 ? raw : raw + Number(offset || 0);
     }
 
     settings() {
@@ -1143,7 +1144,7 @@
         const previousRecorded = Number(reading.pressure);
         const rawPressure = previousRecorded - previous;
         const isZeroBaseline = Math.abs(previousRecorded) <= .5 || Math.abs(rawPressure) <= .5;
-        return { ...reading, pressure: isZeroBaseline ? 0 : previousRecorded + delta };
+        return { ...reading, pressure: isZeroBaseline ? previousRecorded : previousRecorded + delta };
       });
       this.testState.events = this.testState.events.map((event) => {
         const fixedZero = event.type === 'ramp' && /^Begin pressurizing/i.test(event.label);
@@ -1587,8 +1588,7 @@
 
     updateUi() {
       const latest = this.readings.at(-1);
-      const adjustedZero = this.pressureOffset();
-      const displayedLow = this.low !== null && Math.abs(this.low - adjustedZero) <= .5 ? 0 : this.low;
+      const displayedLow = this.low;
       this.root.querySelector('.current-pressure').textContent = latest ? latest.pressure.toFixed(1) : '---.-';
       this.root.querySelector('.current-unit').textContent = latest ? latest.unit : 'PSI';
       const trend = this.root.querySelector('.pressure-trend');
