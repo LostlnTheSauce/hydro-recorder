@@ -12,6 +12,9 @@ h1,h2,h3 { font-weight:650; }
 .header-actions a[aria-current="page"] { border-bottom:2px solid var(--accent); }
 .brand-mark img { width:42px; height:42px; }
 #cloudSaveStatus { padding:7px 28px; border-bottom:1px solid var(--line); color:var(--muted); background:#f0f5f8; font-size:.75rem; }
+.save-alert { margin:0; padding:12px 28px; font-weight:650; color:#7a1f12; background:#fde8e3; border-bottom:2px solid #d9543a; }
+.save-alert.warn { color:#6b4a0c; background:#fff4d6; border-bottom-color:#d9a43a; font-weight:500; }
+.save-alert[hidden] { display:none; }
 .console-layout { display:block; max-width:1600px; }
 .console-sidebar { padding:0 28px; border-right:0; border-bottom:1px solid var(--line); background:#f8fafc; }
 .sidebar-heading { display:none; }

@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       <div class="header-actions"><a class="small-link" href="history.php" target="_blank" rel="noopener">Test history &amp; replay ↗</a><a class="small-link demo-launch" href="host.php?demo=1" target="_blank" rel="noopener">Practice demo ↗</a><span class="pill amber" id="remoteHeaderStatus">Remote viewing off</span><a class="small-link" href="?logout=1">Sign out</a></div>
     </header>
     <p id="cloudSaveStatus" role="status">Preparing automatic online history…</p>
+    <p id="localSaveAlert" class="save-alert" role="alert" hidden></p>
 
     <div class="console-layout">
     <aside class="console-sidebar">
