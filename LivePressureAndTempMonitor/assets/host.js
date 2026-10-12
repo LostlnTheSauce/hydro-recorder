@@ -788,7 +788,7 @@
       return selected;
     }
 
-    sheetLogRow(at, preferredPressure, comment = '') {
+    sheetLogRow(at, preferredPressure, comment = '', options = {}) {
       const timestamp = Number(at);
       const nearest = this.nearestPressureReading(timestamp);
       const hasPreferredPressure = preferredPressure !== null && preferredPressure !== undefined && preferredPressure !== '' && Number.isFinite(Number(preferredPressure));
@@ -801,7 +801,10 @@
           remarks.push('Gauge reading unavailable for this time');
         }
       }
-      const temperature = this.nearestTemperatureReading(timestamp) || {};
+      // On a sync, temperatures that came from the Sheet are not sent back: the
+      // Sheet already holds them, and resending would undo an operator's edit.
+      const temperatureSource = options.skipSheetTemperatures ? this.temperatureReadings.filter((entry) => entry.source !== 'sheet') : undefined;
+      const temperature = this.nearestTemperatureReading(timestamp, undefined, temperatureSource) || {};
       hostNotes
         .filter((note) => note.slot === this.slot && Math.abs(Number(note.at) - timestamp) <= 7.5 * 60 * 1000)
         .forEach((note) => remarks.push(note.text));
@@ -818,14 +821,14 @@
       };
     }
 
-    sheetRows() {
+    sheetRows(options = {}) {
       const events = this.testState.events || [];
       const startEvent = [...events].reverse().find((event) => event.type === 'official-start');
       const start = startEvent ? Number(startEvent.at) : this.testState.officialStart ? new Date(this.testState.officialStart).getTime() : 0;
       const endEvent = [...events].reverse().find((event) => event.type === 'official-end');
       let pre = events.filter((event) => ['ramp','note'].includes(event.type) && (!start || Number(event.at) < start)).sort((a,b) => a.at-b.at).map((event) => {
         const label = /^Begin pressurizing/i.test(event.label) ? 'Pressure is at 0 psi / Begin pressurizing' : event.label;
-        return this.sheetLogRow(event.at, event.pressure, label);
+        return this.sheetLogRow(event.at, event.pressure, label, options);
       });
 
       const official = [];
@@ -835,22 +838,22 @@
           const comments = [];
           if (index === 0) comments.push('Begin test');
           if (endEvent && index === all.length - 1) comments.push('End test');
-          official.push(this.sheetLogRow(at, null, comments.join(' / ')));
+          official.push(this.sheetLogRow(at, null, comments.join(' / '), options));
         });
       }
 
       const post = endEvent ? hostNotes
         .filter((note) => note.slot === this.slot && Number(note.at) > Number(endEvent.at) + 7.5 * 60 * 1000)
         .sort((a, b) => Number(a.at) - Number(b.at))
-        .map((note) => this.sheetLogRow(note.at, null, note.text)) : [];
+        .map((note) => this.sheetLogRow(note.at, null, note.text, options)) : [];
       if (endEvent) events.filter(event => event.at > endEvent.at && ['workflow', 'note'].includes(event.type))
-        .forEach(event => post.push(this.sheetLogRow(event.at, event.pressure, event.label)));
+        .forEach(event => post.push(this.sheetLogRow(event.at, event.pressure, event.label, options)));
       post.sort((a, b) => a.at - b.at);
       return { preTestRows: pre, officialRows: official, postTestRows: post };
     }
 
-    sheetSnapshot() {
-      const rows = this.sheetRows();
+    sheetSnapshot(options = {}) {
+      const rows = this.sheetRows(options);
       window.HydroWorkflow.sheetCapacity(rows);
       const testDateMs = this.testState.officialStart
         ? new Date(this.testState.officialStart).getTime()
@@ -927,7 +930,7 @@
       this.sheetSyncInFlight = true;
       this.renderSheetStatus('Writing the current test values to Google Sheet…', 'working');
       try {
-        const snapshot = this.sheetSnapshot();
+        const snapshot = this.sheetSnapshot({ skipSheetTemperatures: true });
         const result = await api('sheet_sync', {
           spreadsheet_id: this.testState.sheet.spreadsheetId,
           finalized: false,
@@ -1228,8 +1231,8 @@
       return Math.abs(Number(before.at) - at) <= Math.abs(Number(after.at) - at) ? before : after;
     }
 
-    nearestTemperatureReading(at, maximumGap = 7.5 * 60 * 1000) {
-      const reading = window.TemperatureChartRenderer.nearest(this.temperatureReadings, Number(at));
+    nearestTemperatureReading(at, maximumGap = 7.5 * 60 * 1000, readings = this.temperatureReadings) {
+      const reading = window.TemperatureChartRenderer.nearest(readings, Number(at));
       const allowedGap = reading?.source === 'live' ? Math.max(30000, (this.temperatureRecordingOptions().sampleIntervalSeconds + 5) * 1000) : maximumGap;
       return reading && Math.abs(Number(reading.at) - Number(at)) <= allowedGap ? reading : null;
     }
