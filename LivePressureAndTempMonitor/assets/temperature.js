@@ -209,7 +209,9 @@
   }
 
   function chartFrame(context, width, height, leftLabel, rightLabel) {
-    const box = { left: 58, right: width - 56, top: 28, bottom: height - 42 };
+    // Phones get slimmer side margins; with no pressure axis the left side only needs a small gap.
+    const narrow = width < 500;
+    const box = { left: leftLabel ? (narrow ? 44 : 58) : (narrow ? 10 : 58), right: width - (narrow ? 44 : 56), top: 28, bottom: height - 42 };
     context.font = '700 11px system-ui';
     context.fillStyle = '#607686';
     context.textBaseline = 'middle';
