@@ -194,11 +194,18 @@ if ($action === 'publish') {
         throw $error;
     }
 
+    // A test that is still publishing keeps all of its live readings, however
+    // long it runs. Readings are removed once a test has been idle for
+    // retention_hours, and anything older than 14 days is removed regardless.
     $retention = max(24, min(720, (int) app_config('retention_hours', 72)));
     if (random_int(1, 60) === 1) {
-        $cutoff = (int) round((microtime(true) - $retention * 3600) * 1000);
+        $nowSeconds = microtime(true);
+        $idleCutoff = (int) round(($nowSeconds - $retention * 3600) * 1000);
+        $cleanup = db()->prepare('DELETE r FROM live_readings r JOIN live_sessions s ON s.id = r.session_id WHERE s.updated_at < :cutoff');
+        $cleanup->execute(['cutoff' => $idleCutoff]);
+        $hardCutoff = (int) round(($nowSeconds - max($retention, 14 * 24) * 3600) * 1000);
         $cleanup = db()->prepare('DELETE FROM live_readings WHERE captured_at < :cutoff');
-        $cleanup->execute(['cutoff' => $cutoff]);
+        $cleanup->execute(['cutoff' => $hardCutoff]);
     }
     json_response(['ok' => true, 'accepted' => $accepted, 'updated_at' => $now]);
 }
