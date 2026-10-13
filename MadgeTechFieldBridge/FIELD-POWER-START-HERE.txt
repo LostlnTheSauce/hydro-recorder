@@ -20,9 +20,12 @@ FIELD MODE
   inherited unchanged. This is not a guaranteed battery-runtime improvement.
 - USB selective suspend is disabled; Wi-Fi is set to maximum performance to favor
   reliable logger/hotspot connections over additional power savings.
+- Turbo boost is turned off on battery (if the laptop has the setting).
+- Closing the lid does nothing while field mode runs, so the lid can be shut in the
+  case. Your usual lid setting comes back when you press Ctrl+C.
 - The bridge requests that Windows stay awake while it runs, even before a test.
-- Keep the lid open and keep both MadgeTech and the bridge running. Do not choose
-  Sleep, Hibernate, Restart or Shut down. Screen-off is fine; sleep is not.
+- Keep both MadgeTech and the bridge running. Do not choose Sleep, Hibernate,
+  Restart or Shut down. Screen-off and lid-closed are fine; sleep is not.
 - Press Ctrl+C to stop the bridge and let the launcher restore the original plan.
   Do not close the window with X. If the laptop crashes or the window is killed,
   reopening Start-Field-Mode.cmd recovers the saved plan before starting again.

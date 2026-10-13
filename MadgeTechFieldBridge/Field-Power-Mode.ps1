@@ -38,6 +38,15 @@ try {
         Invoke-PowerCfg @('/setacvalueindex', $temporaryPlan, 'SUB_VIDEO', 'VIDEOIDLE', '300') | Out-Null
         Invoke-PowerCfg @('/setdcvalueindex', $temporaryPlan, 'SUB_PROCESSOR', 'PROCTHROTTLEMIN', '5') | Out-Null
         Invoke-PowerCfg @('/setdcvalueindex', $temporaryPlan, 'SUB_PROCESSOR', 'PROCTHROTTLEMAX', '60') | Out-Null
+        # Closing the lid does nothing while field mode runs, so the laptop keeps recording
+        # with the lid shut (the screen is then fully off). The usual lid action comes back on exit.
+        $lidDone = $true
+        foreach ($mode in @('/setdcvalueindex', '/setacvalueindex')) {
+            try { Invoke-PowerCfg @($mode, $temporaryPlan, 'SUB_BUTTONS', 'LIDACTION', '0') | Out-Null } catch { $lidDone = $false }
+        }
+        # Turbo boost off on battery: short CPU bursts stay at base speed. Optional; some laptops lack it.
+        $turboOff = $true
+        try { Invoke-PowerCfg @('/setdcvalueindex', $temporaryPlan, 'SUB_PROCESSOR', 'PERFBOOSTMODE', '0') | Out-Null } catch { $turboOff = $false }
         # Keep the USB logger and Wi-Fi connection powered. These are explicit GUIDs
         # because USB/Wi-Fi aliases are not present on every Windows version.
         foreach ($mode in @('/setdcvalueindex', '/setacvalueindex')) {
@@ -46,7 +55,9 @@ try {
         }
         Invoke-PowerCfg @('/setactive', $temporaryPlan) | Out-Null
         Write-Host 'Battery-friendly field mode is on. Display off after 2 minutes on battery / 5 minutes plugged in.'
-        Write-Host 'CPU power is reduced on battery; USB and Wi-Fi remain powered. Keep the lid open.'
+        Write-Host ('CPU power is reduced on battery' + $(if ($turboOff) { ' (turbo boost off)' } else { '' }) + '; USB and Wi-Fi remain powered.')
+        if ($lidDone) { Write-Host 'Closing the lid will NOT sleep the laptop while this window runs.' }
+        else { Write-Warning 'Could not change the lid setting. Keep the lid open, or set "When I close the lid" to Do nothing in Windows.' }
     } catch {
         Write-Warning "Battery-friendly profile was not applied: $($_.Exception.Message)"
         Write-Host 'The bridge will still run with its own sleep protection.'
