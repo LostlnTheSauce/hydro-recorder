@@ -350,6 +350,10 @@
       this.bindTestSetup();
       this.root.querySelectorAll('.temp-name').forEach((input) => input.addEventListener('input', () => this.drawTemperature()));
       window.TemperatureChartRenderer.bindPanel(this.temperaturePanel, () => this.drawTemperature());
+      this.root.querySelector('.temp-smoothing')?.addEventListener('change', (event) => {
+        this.testState.temperatureSmoothing = Number(event.target.value) || 0;
+        this.saveTestState();
+      });
       this.bindManualTemperatures();
     }
 
@@ -394,6 +398,7 @@
           viewerVisible: shareTemperatures,
           wholeDegrees: temperatureOptions.wholeDegrees,
           sampleIntervalSeconds: temperatureOptions.sampleIntervalSeconds,
+          smoothingSeconds: this.smoothingSeconds(),
         },
       };
     }
@@ -414,7 +419,15 @@
       });
     }
 
+    // Temperature smoothing for this test: 2-minute average unless the host changes it.
+    smoothingSeconds() {
+      const value = this.testState.temperatureSmoothing;
+      return value === undefined || value === null ? 120 : [0, 20, 60, 120, 300].includes(Number(value)) ? Number(value) : 120;
+    }
+
     restoreTestSetup() {
+      const smoothing = this.root.querySelector('.temp-smoothing');
+      if (smoothing) smoothing.value = String(this.smoothingSeconds());
       if (!this.root.querySelector('.enabled-probes')) {
         const probes = document.createElement('fieldset'); probes.className = 'enabled-probes';
         probes.innerHTML = '<legend>Probes used for this test</legend><p>Unchecked probes are hidden from viewers. Original logger readings are still retained.</p>';
@@ -2492,10 +2505,12 @@
       gauge.logbookCache = { source: all, length: all.length, lastAt: all.at(-1)?.at, temperatures, present };
     }
     const enabled = gauge.testState.enabledProbes || ['ambient', 'pipe', 'soil', 'aux'];
+    const smoothing = gauge.smoothingSeconds();
     return {
       pressure: gauge.readings,
-      temperatures: gauge.logbookCache.temperatures,
-      channels: gauge.temperatureChannels().filter((channel) => enabled.includes(channel.key) && gauge.logbookCache.present.has(channel.key)),
+      temperatures: window.TemperatureChartRenderer.smoothReadings(gauge.logbookCache.temperatures, smoothing),
+      channels: gauge.temperatureChannels().filter((channel) => enabled.includes(channel.key) && gauge.logbookCache.present.has(channel.key))
+        .map((channel) => smoothing ? { ...channel, name: `${channel.name} (${smoothing < 60 ? `${smoothing} s` : `${smoothing / 60} min`} avg)` } : channel),
       wholeDegrees: gauge.temperatureRecordingOptions?.().wholeDegrees === true,
     };
   }

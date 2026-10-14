@@ -232,6 +232,8 @@
         testStart: start ? new Date(start).toISOString() : '', testEnd: end ? new Date(end).toISOString() : '',
         notes: [...(test.events || []).map(e => ({ at:e.at, text:e.label })), ...(record.notes || [])],
         replay: true, gapLimits: { pressure:gapLimit(record.readings,30000), temperature:gapLimit(record.temperatureReadings,30000) } };
+      const smoothing = panel.querySelector('.temp-smoothing');
+      if (smoothing) smoothing.value = String([0, 20, 60, 120, 300].includes(Number(test.temperatureSmoothing)) ? Number(test.temperatureSmoothing) : 0);
       logData=HydroHistoryLog.prepare(record); applyLogPreferences();
       syncActiveJob();
       $('#replaySummary').textContent = `${record.readings.length.toLocaleString()} pressure readings · ${record.temperatureReadings.length.toLocaleString()} temperature readings · Snapshot saved ${stamp(data.updatedAt)}`;

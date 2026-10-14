@@ -122,6 +122,7 @@
     const manualTemperatures = Array.isArray(temperature.readings) ? temperature.readings : [];
     const temperatures = [...state[slot].liveTemperatures, ...manualTemperatures].sort((a, b) => Number(a.at) - Number(b.at));
     window.TemperatureChartRenderer.renderPanel(root.querySelector('[data-temperature-panel]'), {
+      smoothingSeconds: Number(temperature.smoothingSeconds) || 0,
       pressureReadings: readings,
       temperatureReadings: temperatures,
       channels: temperature.channels,
@@ -199,10 +200,13 @@
       state[slot].logbookCache = { key, live, temperatures, present };
     }
     const names = Array.isArray(temperature.channels) ? temperature.channels : [];
+    const smoothing = Number(temperature.smoothingSeconds) || 0;
+    const suffix = smoothing ? ` (${smoothing < 60 ? `${smoothing} s` : `${smoothing / 60} min`} avg)` : '';
     const channels = TemperatureChartRenderer.DEFAULT_CHANNELS
       .filter(channel => enabled.includes(channel.key) && state[slot].logbookCache.present.has(channel.key))
-      .map(channel => ({ key: channel.key, name: names.find(item => item.key === channel.key)?.name || channel.name }));
-    return { pressure: state[slot].readings, temperatures: enabled.length ? state[slot].logbookCache.temperatures : [], channels, wholeDegrees: temperature.wholeDegrees === true };
+      .map(channel => ({ key: channel.key, name: (names.find(item => item.key === channel.key)?.name || channel.name) + suffix }));
+    const temperatures = enabled.length ? TemperatureChartRenderer.smoothReadings(state[slot].logbookCache.temperatures, smoothing) : [];
+    return { pressure: state[slot].readings, temperatures, channels, wholeDegrees: temperature.wholeDegrees === true };
   }
 
   function renderPressureLog(force = false) {

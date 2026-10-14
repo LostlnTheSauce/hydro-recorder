@@ -268,6 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
               <?php endforeach; ?>
             </div>
             <label>History<select class="temp-history-range"><option value="all">Entire job</option><option value="pretest">Pre-test</option><option value="official">Official test</option><option value="recent">Last 6 hours</option></select></label>
+            <label class="temp-smoothing-control" title="Averages out electrical noise on the chart, readouts and log book. Saved readings, exports and the Sheet stay as recorded.">Smoothing<select class="temp-smoothing"><option value="0">Off</option><option value="20">20 sec avg</option><option value="60">1 min avg</option><option value="120">2 min avg</option><option value="300">5 min avg</option></select></label>
             <label class="temperature-notes-toggle"><input class="temp-show-notes" type="checkbox"> Show notes</label>
           </div>
           <div class="temperature-canvas-wrap"><canvas class="temperature-chart" width="900" height="330"></canvas><canvas class="temperature-selection-overlay" width="900" height="330" aria-hidden="true"></canvas><div class="temperature-tooltip hidden"></div></div>
