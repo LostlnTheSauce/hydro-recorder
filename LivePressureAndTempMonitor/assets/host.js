@@ -2595,7 +2595,8 @@
     const all = gauge.temperatureReadings;
     const cache = gauge.logbookCache || {};
     if (cache.source !== all || cache.length !== all.length || cache.lastAt !== all.at(-1)?.at) {
-      const temperatures = [...all].sort((a, b) => Number(a.at) - Number(b.at));
+      // Probe readings, not typed or Sheet (chart thermometer) values, where the probes recorded.
+      const temperatures = window.TemperatureChartRenderer.probePreferred([...all].sort((a, b) => Number(a.at) - Number(b.at))).readings;
       const present = new Set(['ambient', 'pipe', 'soil', 'aux'].filter((key) => temperatures.some((row) => Number.isFinite(Number(row[key])) && row[key] !== null && row[key] !== '')));
       gauge.logbookCache = { source: all, length: all.length, lastAt: all.at(-1)?.at, temperatures, present };
     }

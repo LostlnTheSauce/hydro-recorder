@@ -195,7 +195,7 @@
     const live = state[slot].liveTemperatures;
     const key = `${live.length}:${live.at(-1)?.at}:${manual.length}:${manual.at(-1)?.at}`;
     if (state[slot].logbookCache?.key !== key || state[slot].logbookCache.live !== live) {
-      const temperatures = [...live, ...manual].sort((a, b) => Number(a.at) - Number(b.at));
+      const temperatures = TemperatureChartRenderer.probePreferred([...live, ...manual].sort((a, b) => Number(a.at) - Number(b.at))).readings;
       const present = new Set(['ambient','pipe','soil','aux'].filter(name => temperatures.some(row => row[name] !== null && row[name] !== '' && row[name] !== undefined && Number.isFinite(Number(row[name])))));
       state[slot].logbookCache = { key, live, temperatures, present };
     }
