@@ -294,7 +294,7 @@
     // At least 20 psi (or 1% of the pressure) top to bottom, so a holding test's normal
     // tenths-of-a-psi flicker reads as a steady line instead of filling the chart.
     const pressureValues = pressure.map((item) => item.pressure);
-    const pressureSpan = Math.max(20, Math.max(0, ...pressureValues.map(Number).filter(Number.isFinite)) * 0.01);
+    const pressureSpan = Math.max(20, pressureValues.reduce((top, value) => (Number.isFinite(Number(value)) ? Math.max(top, Number(value)) : top), 0) * 0.01);
     const pressureScale = niceScale(pressureValues, pressureSpan, { floorAtZero: true });
     const temperatureScale = niceScale(temperatureValues, 4, { wholeSteps: options.wholeDegrees });
     const { min: pressureMin, max: pressureMax } = pressureScale;
@@ -519,12 +519,31 @@
     return result;
   }
 
+  // Charts and log books show the electronic probes. Temperatures read back from the Sheet
+  // (chart thermometers) are never drawn; temperatures typed on the site are drawn only for
+  // a channel the probes did not record (e.g. a dead probe read by hand).
+  function probePreferred(readings, keys = DEFAULT_CHANNELS.map((channel) => channel.key)) {
+    if (!Array.isArray(readings)) return { readings: [] };
+    if (!readings.some((row) => row && (row.source === 'sheet' || row.source === 'manual'))) return { readings };
+    const probed = new Set(keys.filter((key) => readings.some((row) => row && row.source !== 'sheet' && row.source !== 'manual' && validNumber(row[key]) !== null)));
+    const kept = [];
+    readings.forEach((row) => {
+      if (!row || row.source === 'sheet') return;
+      if (row.source !== 'manual') { kept.push(row); return; }
+      const copy = { ...row };
+      probed.forEach((key) => { delete copy[key]; });
+      if (keys.some((key) => validNumber(copy[key]) !== null)) kept.push(copy);
+    });
+    return { readings: kept };
+  }
+
   function renderPanel(panel, options) {
     if (!panel) return;
     const channelConfig = channels(options.channels);
     const smoothingControl = panel.querySelector('.temp-smoothing');
     const smoothingSeconds = smoothingControl ? Number(smoothingControl.value) || 0 : Number(options.smoothingSeconds) || 0;
-    const temperatureReadings = smoothReadings(Array.isArray(options.temperatureReadings) ? options.temperatureReadings.filter((item) => item && Number.isFinite(Number(item.at))) : [], smoothingSeconds);
+    const split = probePreferred(Array.isArray(options.temperatureReadings) ? options.temperatureReadings.filter((item) => item && Number.isFinite(Number(item.at))) : []);
+    const temperatureReadings = smoothReadings(split.readings, smoothingSeconds);
     const pressureReadings = Array.isArray(options.pressureReadings) ? options.pressureReadings.filter((item) => item && Number.isFinite(Number(item.at)) && Number.isFinite(Number(item.pressure))) : [];
     const latest = temperatureReadings.at(-1) || {};
     channelConfig.forEach((channel) => {
@@ -792,5 +811,5 @@
     observer.observe(wrap);
   }
 
-  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, clampZoom, smoothReadings };
+  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, clampZoom, smoothReadings, probePreferred };
 })();
