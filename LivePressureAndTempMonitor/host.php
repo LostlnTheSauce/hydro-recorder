@@ -185,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
               <label><input type="checkbox" data-sheet-column="ground" checked> Soil</label>
               <label><input type="checkbox" data-sheet-column="comments"> Remarks</label>
             </div>
+            <label class="sheet-pretest" style="display:flex;align-items:center;gap:8px;font-size:.85rem;margin-top:8px"><input type="checkbox" class="sheet-pretest-toggle" checked> Sync pre-test entries (rows before the official start)</label>
             <div class="sheet-sync-message">Manual-only: the site will not update this Sheet until you press Sync to Sheet. Local gauge recording continues independently.</div>
           </section>
           <div class="operations-grid job-fields">

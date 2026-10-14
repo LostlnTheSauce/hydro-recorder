@@ -738,13 +738,23 @@
         const off = this.sheetColumnsOff();
         this.renderSheetStatus(off.length ? `Sync to Sheet will leave the ${off.join(', ')} column${off.length === 1 ? '' : 's'} as they are in the Sheet.` : 'Sync to Sheet will fill every column.');
       }));
+      // Pre-test entries typed into the Sheet by hand can be left alone: the official test then
+      // starts on the chosen LOG row and nothing above it is written.
+      this.root.querySelector('.sheet-pretest-toggle').addEventListener('change', (event) => {
+        this.testState.sheetPreTest = event.target.checked;
+        localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
+        try {
+          const layout = window.HydroWorkflow.sheetCapacity(this.sheetRowsToSync(), this.testState.sheetStartRow);
+          this.renderSheetStatus(event.target.checked ? this.sheetRowsMessage(layout, 'will go on') : `Pre-test entries will not be synced. ${this.sheetRowsMessage(layout, 'will go on')}`);
+        } catch (error) { this.renderSheetStatus(error.message, 'error'); }
+      });
       this.root.querySelector('.sheet-start-row-input').addEventListener('change', (event) => {
         const row = Math.round(Number(event.target.value));
         this.testState.sheetStartRow = event.target.value === '' || !Number.isFinite(row) ? '' : row;
         event.target.value = this.testState.sheetStartRow;
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
         try {
-          const layout = window.HydroWorkflow.sheetCapacity(this.sheetRows(), this.testState.sheetStartRow);
+          const layout = window.HydroWorkflow.sheetCapacity(this.sheetRowsToSync(), this.testState.sheetStartRow);
           this.renderSheetStatus(this.sheetRowsMessage(layout, 'will go on'));
         } catch (error) {
           this.renderSheetStatus(error.message, 'error');
@@ -769,6 +779,7 @@
       const copy = this.root.querySelector('.sheet-sync-message');
       const startRow = this.root.querySelector('.sheet-start-row-input');
       if (document.activeElement !== startRow) startRow.value = this.testState.sheetStartRow || '';
+      this.root.querySelector('.sheet-pretest-toggle').checked = this.testState.sheetPreTest !== false;
       this.root.querySelectorAll('[data-sheet-column]').forEach((box) => { box.checked = this.testState.sheetColumns?.[box.dataset.sheetColumn] !== false; });
       const exists = Boolean(sheet?.spreadsheetId && sheet?.url);
       open.disabled = !exists;
@@ -889,8 +900,19 @@
       return window.HydroWorkflow.SHEET_COLUMNS.filter((column) => columns[column] === false);
     }
 
-    sheetSnapshot(options = {}) {
+    // The rows Sync to Sheet writes: without pre-test entries when they are switched off. That
+    // needs a chosen start row, or the official test would start on row 23 over the typed entries.
+    sheetRowsToSync(options = {}) {
       const rows = this.sheetRows(options);
+      if (this.testState.sheetPreTest === false) {
+        if (!Number(this.testState.sheetStartRow)) throw new Error('Pre-test entries are switched off: enter the LOG row the official test starts on, so the rows you typed above it are left alone.');
+        rows.preTestRows = [];
+      }
+      return rows;
+    }
+
+    sheetSnapshot(options = {}) {
+      const rows = this.sheetRowsToSync(options);
       // Columns switched off are sent blank, and the Sheet script leaves those cells as they are.
       const off = this.sheetColumnsOff();
       if (off.length) Object.values(rows).forEach((list) => list.forEach((row) => off.forEach((column) => { row[column] = ''; })));
@@ -969,8 +991,9 @@
     async syncGoogleSheet() {
       if (demo?.enabled) return this.renderSheetStatus('Demo mode cannot create or sync Google Sheets.', 'error');
       if (!this.testState.sheet?.spreadsheetId || this.sheetSyncInFlight) return;
+      try { this.sheetRowsToSync(); } catch (error) { return this.renderSheetStatus(error.message, 'error'); }
       const startRow = Number(this.testState.sheetStartRow) || 0;
-      const where = startRow ? `from LOG row ${startRow} down (rows above it are only used for pre-test entries)` : 'from LOG row 23 down';
+      const where = startRow ? (this.testState.sheetPreTest === false ? `from LOG row ${startRow} down (rows above it are left as they are)` : `from LOG row ${startRow} down (rows above it are only used for pre-test entries)`) : 'from LOG row 23 down';
       const off = this.sheetColumnsOff();
       const kept = off.length ? ` Columns switched off (${off.join(', ')}) are left as they are.` : '';
       if (!window.confirm(`Sync to Google Sheet now? This will rewrite times, pressures and comments ${where}.${kept} Temperatures typed in columns C–E stay with their time unless the site has a reading. Continue?`)) return;
