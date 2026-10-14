@@ -291,8 +291,6 @@
       const value = validNumber(item[key]);
       if (value !== null) temperatureValues.push(value);
     }));
-    const typedPoints = (options.typedPoints || []).filter((point) => point.at >= start && point.at <= end && options.visibleKeys.includes(point.key));
-    typedPoints.forEach((point) => temperatureValues.push(point.value));
     // At least 20 psi (or 1% of the pressure) top to bottom, so a holding test's normal
     // tenths-of-a-psi flicker reads as a steady line instead of filling the chart.
     const pressureValues = pressure.map((item) => item.pressure);
@@ -362,18 +360,6 @@
         const value = validNumber(item[channel.key]);
         return value === null ? null : { x: x(Number(item.at)), y: temperatureY(value) };
       }, channel.color, 2, options.gapLimits?.temperature);
-    });
-    // Typed and Sheet temperatures (chart thermometers) as dots beside the probe lines.
-    typedPoints.forEach((point) => {
-      const channel = options.channelConfig.find((item) => item.key === point.key);
-      if (!channel) return;
-      context.beginPath();
-      context.arc(x(point.at), temperatureY(point.value), 3.5, 0, Math.PI * 2);
-      context.fillStyle = '#fffef9';
-      context.fill();
-      context.strokeStyle = channel.color;
-      context.lineWidth = 1.8;
-      context.stroke();
     });
 
     const hasSelectedAt = options.selectedAt !== null && options.selectedAt !== undefined && Number.isFinite(Number(options.selectedAt));
@@ -533,28 +519,22 @@
     return result;
   }
 
-  // Temperatures typed on the site or read back from the Sheet (chart thermometers) stay out
-  // of a channel's line wherever the probes recorded that channel, so a few degrees'
-  // difference does not notch the line at every log row; the chart shows them as dots.
-  // A channel with no probe readings keeps its typed values as its line.
-  const typedSource = (row) => row && (row.source === 'manual' || row.source === 'sheet');
+  // Charts and log books show the electronic probes. Temperatures read back from the Sheet
+  // (chart thermometers) are never drawn; temperatures typed on the site are drawn only for
+  // a channel the probes did not record (e.g. a dead probe read by hand).
   function probePreferred(readings, keys = DEFAULT_CHANNELS.map((channel) => channel.key)) {
-    if (!Array.isArray(readings)) return { readings: [], typed: [] };
-    const probed = new Set(keys.filter((key) => readings.some((row) => !typedSource(row) && validNumber(row?.[key]) !== null)));
-    if (!probed.size || !readings.some(typedSource)) return { readings, typed: [] };
-    const kept = [], typed = [];
+    if (!Array.isArray(readings)) return { readings: [] };
+    if (!readings.some((row) => row && (row.source === 'sheet' || row.source === 'manual'))) return { readings };
+    const probed = new Set(keys.filter((key) => readings.some((row) => row && row.source !== 'sheet' && row.source !== 'manual' && validNumber(row[key]) !== null)));
+    const kept = [];
     readings.forEach((row) => {
-      if (!typedSource(row)) { kept.push(row); return; }
+      if (!row || row.source === 'sheet') return;
+      if (row.source !== 'manual') { kept.push(row); return; }
       const copy = { ...row };
-      let left = false;
-      keys.forEach((key) => {
-        const value = validNumber(row[key]);
-        if (value === null) return;
-        if (probed.has(key)) { typed.push({ at: Number(row.at), key, value }); delete copy[key]; } else left = true;
-      });
-      if (left) kept.push(copy);
+      probed.forEach((key) => { delete copy[key]; });
+      if (keys.some((key) => validNumber(copy[key]) !== null)) kept.push(copy);
     });
-    return { readings: kept, typed };
+    return { readings: kept };
   }
 
   function renderPanel(panel, options) {
@@ -583,7 +563,6 @@
       pressureReadings,
       showPressure: panel.querySelector('.temp-pressure-toggle')?.checked !== false,
       temperatureReadings,
-      typedPoints: split.typed,
       channelConfig,
       visibleKeys,
       testPeriod,

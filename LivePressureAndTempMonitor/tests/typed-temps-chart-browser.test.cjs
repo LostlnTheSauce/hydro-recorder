@@ -1,6 +1,6 @@
 // Temperatures typed into the Sheet (chart thermometers, a few degrees off the probes)
-// must not notch the probe lines every 15 minutes: they are drawn as dots, and the log
-// book shows the probes. A channel with no probe keeps its typed values as its line.
+// are never drawn on the chart or shown in the log book: the probes stand alone. Values
+// typed on the site appear only for a channel the probes did not record.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -23,13 +23,12 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/host.php`);
-    // Unit: soil probed, so the typed soil value moves to a dot; aux only typed, so it stays.
+    // Unit: Sheet values never drawn; a site-typed soil value is dropped (probed), its aux kept (no probe).
     const split = await page.evaluate(() => TemperatureChartRenderer.probePreferred([
-      { at: 1, source: 'live', soil: 75.6 }, { at: 2, source: 'sheet', soil: 72, aux: 60 }, { at: 3, source: 'manual', soil: 71 },
-    ]));
-    assert.deepEqual(split.readings, [{ at: 1, source: 'live', soil: 75.6 }, { at: 2, source: 'sheet', aux: 60 }]);
-    assert.deepEqual(split.typed, [{ at: 2, key: 'soil', value: 72 }, { at: 3, key: 'soil', value: 71 }]);
-    assert.deepEqual(await page.evaluate(() => TemperatureChartRenderer.probePreferred([{ at: 1, source: 'manual', pipe: 70 }]).typed), [], 'no probes: typed values stay the line');
+      { at: 1, source: 'live', soil: 75.6 }, { at: 2, source: 'sheet', soil: 72, aux: 60 }, { at: 3, source: 'manual', soil: 71, aux: 61 },
+    ]).readings);
+    assert.deepEqual(split, [{ at: 1, source: 'live', soil: 75.6 }, { at: 3, source: 'manual', aux: 61 }]);
+    assert.deepEqual(await page.evaluate(() => TemperatureChartRenderer.probePreferred([{ at: 1, source: 'manual', pipe: 70 }]).readings), [{ at: 1, source: 'manual', pipe: 70 }], 'no probes: typed values are the line');
     // Two hours of probe readings with Sheet values 4 °F lower every 15 minutes.
     await page.evaluate(() => {
       const g = window.testGauges[0], M = 60000, start = Math.floor(Date.now() / (15 * M)) * 15 * M - 120 * M;
@@ -50,7 +49,7 @@ async function main() {
     await page.evaluate(() => window.testGauges[0].drawTemperature());
     await page.locator('[data-gauge="A"] .temperature-chart').screenshot({ path: path.join(root, '..', 'tmp', 'typed-temps-chart.png') });
     assert.deepEqual(errors, []);
-    console.log('Typed temperatures: kept out of probe lines and shown as dots, log book shows probes, typed-only channels unchanged passed.');
+    console.log('Chart-thermometer temperatures: never drawn or in the log book, probes stand alone, site-typed values only where no probe passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
