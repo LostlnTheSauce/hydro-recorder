@@ -388,6 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/logbook.js?v=2"></script>
   <script src="assets/stroke-count.js?v=1"></script>
   <script src="assets/temp-report.js?v=1"></script>
+  <script src="assets/feed-check.js?v=1"></script>
   <script src="assets/calibration-papers.js?v=1"></script>
   <script src="assets/host.js?v=56"></script>
 <?php endif; ?>
