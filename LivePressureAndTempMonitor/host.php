@@ -118,6 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
           <label class="rate-target-control" title="Maximum pressure-up rate. The readout says Slow down when you are above it and Speed up when you are well under it. Leave blank to turn it off.">Max rate<input class="rate-target" type="number" min="0" step="0.5" inputmode="decimal" placeholder="Off" aria-label="Maximum pressure-up rate in psi per minute"><span>psi/min</span></label>
           <label class="live-scale-control"><span>Chart maximum</span><strong><input class="live-chart-max" type="number" min="1" step="100" value="1000" inputmode="decimal" aria-label="Live chart maximum pressure"> <small>PSI</small></strong></label>
           <label class="pen-control live-pen-control"><span>Pen size</span><input class="pen-size" type="range" min="0.1" max="5" step="0.1" value="1" aria-label="Pressure trace pen size"><strong>1.0</strong></label>
+          <label class="live-window-control" title="Show or hide the top and bottom pressure test window lines on the chart"><input class="live-show-window" type="checkbox" checked><span>Window lines</span></label>
           <span class="pill connection-status"><i></i> Not connected</span>
         </div>
 
