@@ -57,6 +57,19 @@
     return [...grouped.values()].slice(0, 6).map((row) => ({ ...row, length: row.length ? String(row.length) : '' }));
   }
 
+  // Project location and county/state from the design, once: the same place (or one inside
+  // the other, e.g. "Baton Rouge" and "East Baton Rouge, LA") is not written twice.
+  function jobLocation(...parts) {
+    const kept = [];
+    parts.map((part) => String(part ?? '').trim()).filter(Boolean).forEach((part) => {
+      const lower = part.toLowerCase();
+      const inside = kept.findIndex((other) => other.toLowerCase().includes(lower) || lower.includes(other.toLowerCase()));
+      if (inside < 0) kept.push(part);
+      else if (part.length > kept[inside].length) kept[inside] = part;
+    });
+    return kept.join(' • ');
+  }
+
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   }
@@ -734,7 +747,7 @@
       this.testState.design = clone(design);
       const assignments = [
         ['.po-afe', 'poAfe', design.projectNumber],
-        ['.job-location', 'location', [design.projectLocation, design.countyState].filter(Boolean).join(' • ')],
+        ['.job-location', 'location', jobLocation(design.projectLocation, design.countyState)],
         ['.window-bottom', 'windowBottom', design.windowBottom],
         ['.window-top', 'windowTop', design.windowTop],
       ];
