@@ -62,8 +62,15 @@ async function main() {
     // Undo after completion removes the last entry for correction.
     await card.locator('[data-stroke="undo"]').click();
     assert.match(await card.locator('.stroke-entry label').innerText(), /Counter at\s+1340 psi/);
+    // Finish here ends the count short of the target; Reopen brings the next point back.
+    await card.locator('[data-stroke="finish"]').click();
+    assert.match(await card.locator('.stroke-done').innerText(), /complete · 308 strokes/, 'finished at the last entry');
+    assert.equal(await card.locator('[data-stroke-input="counter"]').count(), 0);
+    await card.locator('[data-stroke="undo"]').click();
+    assert.match(await card.locator('.stroke-entry label').innerText(), /Counter at\s+1340 psi/, 'reopen asks for the next point again');
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.workflow.strokes.length), 3, 'reopening keeps the entries');
     assert.deepEqual(errors, []);
-    console.log('Stroke count: prefilled start, type + Enter to the next checkpoint with focus kept, gauge reached status, skip, undo, stop at target and saved record passed.');
+    console.log('Stroke count: prefilled start, type + Enter to the next checkpoint with focus kept, gauge reached status, skip, undo, finish here, stop at target and saved record passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });

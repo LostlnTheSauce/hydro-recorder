@@ -46,7 +46,7 @@
     // The checkpoint waiting for a counter reading, or null when the plan is done.
     next() {
       const s = this.state(), plan = this.plan();
-      if (!s.baseline) return null;
+      if (!s.baseline || plan.finished) return null;
       const last = Math.max(s.baseline.pressure, ...s.strokes.map((row) => row.target), ...plan.skipped);
       const next = Math.round((last + plan.step) * 100) / 100;
       return plan.target && next > plan.target + 1e-9 ? null : next;
@@ -98,7 +98,17 @@
           if (next === null) return;
           plan.skipped.push(next);
           this.persist(`${next} psi skipped; it stays blank.`);
+        } else if (action === 'finish') {
+          // Ends the count at the last entry when the test stops short of the target.
+          if (!s.strokes.length) return;
+          plan.finished = true;
+          this.persist(`Stroke count finished at ${s.strokes.at(-1).target} psi.`);
         } else if (action === 'undo') {
+          if (plan.finished) {
+            plan.finished = false;
+            this.persist(`Stroke count reopened. Type the counter at ${this.next()} psi.`);
+            return;
+          }
           // Undo whichever came last: the highest checkpoint is the most recent.
           const lastSkip = plan.skipped.length ? Math.max(...plan.skipped) : -Infinity;
           const lastEntry = s.strokes.length ? s.strokes.at(-1).target : -Infinity;
@@ -123,7 +133,7 @@
       const s = this.state(), plan = this.plan(), next = this.next();
       const latest = this.g.readings.at(-1);
       const reached = next !== null && latest && latest.pressure >= next;
-      const signature = JSON.stringify([s.baseline?.at, s.strokes.length, plan.skipped.length, plan.target, next, reached]);
+      const signature = JSON.stringify([s.baseline?.at, s.strokes.length, plan.skipped.length, plan.target, plan.finished, next, reached]);
       if (next !== null && reached && this.dingedFor !== next) {
         this.dingedFor = next;
         if (this.signature) this.helpers?.ding?.();
@@ -158,7 +168,7 @@
         this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>Started at ${esc(s.baseline.pressure)} psi, counter ${esc(s.baseline.counter)}${plan.target ? ` · target ${esc(plan.target)} psi` : ''} · every ${esc(plan.step)} psi</p></header>
           ${next === null ? `<div class="stroke-done">Stroke count complete${total ? ` · ${total.counter - s.baseline.counter} strokes · ${total.totalGallons.toFixed(2)} gal` : ''}.</div>`
             : `<div class="stroke-entry${reached ? ' reached' : ''}"><label>Counter at <b>${next} psi</b><input data-stroke-input="counter" type="number" min="0" step="1" inputmode="numeric" placeholder="Type, then Enter" autocomplete="off"></label><button type="button" class="primary" data-stroke="save">Save ⏎</button><span class="stroke-status"></span></div>`}
-          <div class="stroke-actions"><button type="button" data-stroke="undo">${s.strokes.length || plan.skipped.length ? 'Undo last' : 'Cancel stroke count'}</button>${next === null ? '' : '<button type="button" data-stroke="skip">Skip this point</button>'}</div>
+          <div class="stroke-actions"><button type="button" data-stroke="undo">${plan.finished ? 'Reopen' : s.strokes.length || plan.skipped.length ? 'Undo last' : 'Cancel stroke count'}</button>${next === null ? '' : `<button type="button" data-stroke="skip">Skip this point</button>${s.strokes.length ? '<button type="button" data-stroke="finish">Finish here</button>' : ''}`}</div>
           <p class="stroke-message" role="status" hidden></p>
           <div class="stroke-table-wrap"><table class="stroke-table"><thead><tr><th>Pressure</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Entered</th></tr></thead><tbody>
             ${rows.map((row) => `<tr><td>${esc(row.target)} psi</td><td>${esc(row.counter)}</td><td>${esc(row.strokes)}</td><td>${row.gallons.toFixed(2)}</td><td>${esc(clock(row.at))}</td></tr>`).join('')}
