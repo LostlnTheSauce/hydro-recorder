@@ -163,6 +163,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
                 <div class="design-pipe-heading"><strong>Limiting pipe determination</strong><small>Matching OD, wall and grade are combined and their footage is totaled. Grade is derived from SMYS.</small></div>
                 <div class="event-table-wrap"><table class="design-pipe-table"><thead><tr><th>Start</th><th>End</th><th>Length</th><th>OD</th><th>SMYS / Grade</th><th>Wall</th><th>Class</th><th>Yield</th><th>Reassess.</th></tr></thead><tbody></tbody></table></div>
               </div>
+              <div class="design-pipeline-wrap">
+                <div class="design-pipe-heading"><strong>Pipeline data</strong><small>Fills the Summary page's Pipeline Data table; the Test Stroke Count page shows the same rows. Filled from the PDF when it could be read.</small></div>
+                <div class="event-table-wrap"><table class="design-pipeline-table"><thead><tr><th>O.D. (in)</th><th>W.T. (in)</th><th>Grade</th><th>Length (ft)</th><th>Buried pipe (ft)</th><th>Exposed pipe (ft)</th><th>Remarks</th></tr></thead><tbody></tbody></table></div>
+              </div>
               <div class="test-design-review-actions"><button class="primary apply-test-design" type="button">Apply reviewed values</button><button class="ghost close-test-design-review" type="button">Hide review</button></div>
             </div>
           </section>

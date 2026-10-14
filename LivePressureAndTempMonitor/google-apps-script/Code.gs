@@ -1,7 +1,7 @@
 const HYDRO_TEMPLATE_ID = 'REDACTED';
 const HYDRO_SECRET_PROPERTY = 'HYDRO_SYNC_SECRET';
 const HYDRO_ALLOWED_PREFIX = 'HYDRO_SHEET_';
-const HYDRO_LAYOUT_VERSION = 5;
+const HYDRO_LAYOUT_VERSION = 6;
 // Log columns the site can switch off; those cells are left as the operator typed them.
 const HYDRO_LOG_COLUMNS = { pressure: 1, ambient: 2, pipe: 3, ground: 4, comments: 5 };
 // Test Stroke Count field data: five groups of Pressure / Stroke / Difference columns
@@ -119,9 +119,14 @@ function hydroApply_(spreadsheet, snapshot, finalized) {
   hydroSetKnown_(log, 'I20', [pump.name || '', pump.capacity ? '- ' + pump.capacity : ''].filter(Boolean).join(' '));
 
   setDesign(summary, 'B8', hydroNumberOrBlank_(design.sectionLengthFt));
-  setDesign(summary, 'B9', hydroInsideDiameter_(design.pipeSegments));
+  // Pipeline Data typed on the site wins over rows read from the PDF.
+  const pipelineRows = (Array.isArray(design.pipelineRows) ? design.pipelineRows : [])
+    .filter((row) => row && Object.values(row).some((value) => String(value ?? '').trim() !== ''));
+  setDesign(summary, 'B9', pipelineRows.length ? hydroInsideDiameterOf_(pipelineRows[0].od, pipelineRows[0].wt) : hydroInsideDiameter_(design.pipeSegments));
   setDesign(summary, 'B10', hydroNumberOrBlank_(design.estimatedFillGallons));
-  if (syncDesign && Array.isArray(design.pipeSegments) && design.pipeSegments.length) hydroPipeline_(summary, design.pipeSegments);
+  if (syncDesign && pipelineRows.length) hydroPipelineRows_(summary, pipelineRows);
+  else if (syncDesign && Array.isArray(design.pipeSegments) && design.pipeSegments.length) hydroPipeline_(summary, design.pipeSegments);
+  if (syncDesign && (pipelineRows.length || (Array.isArray(design.pipeSegments) && design.pipeSegments.length))) hydroLinkStrokePipeline_(strokes);
   setDesign(summary, 'C22', design.testDurationHours ? `${design.testDurationHours} Hour Hydro Test` : '');
   setDesign(summary, 'C23', design.testMedium || '');
   setDesign(summary, 'C24', design.recorderGps || '');
@@ -305,6 +310,38 @@ function hydroPipeline_(summary, segments) {
     hydroSafeCellValue_(`${hydroTrimNumber_(segment.lengthFt)}'`)
   ]);
   if (rows.length) summary.getRange(14, 1, rows.length, 4).setValues(rows);
+}
+
+// Summary Pipeline Data rows 14-19: O.D., W.T., Grade, Length, Buried Pipe, Exposed Pipe, Remarks.
+function hydroPipelineRows_(summary, rows) {
+  summary.getRange('A14:G19').clearContent();
+  const inches = (value) => hydroUnit_(value, '"');
+  const feet = (value) => hydroUnit_(value, "'");
+  const values = rows.slice(0, 6).map((row) => [inches(row.od), inches(row.wt), hydroSafeCellValue_(String(row.grade || '').trim()),
+    feet(row.length), feet(row.buried), feet(row.exposed), hydroSafeCellValue_(String(row.remarks || '').trim())]);
+  summary.getRange(14, 1, values.length, 7).setValues(values);
+}
+
+// The Test Stroke Count pipe rows (10-13) show the Summary's first four Pipeline Data rows.
+function hydroLinkStrokePipeline_(strokes) {
+  for (let index = 0; index < 4; index++) {
+    hydroFormula_(strokes, `A${10 + index}`, `=Summary!D${14 + index}`);
+    hydroFormula_(strokes, `D${10 + index}`, `=Summary!A${14 + index}`);
+    hydroFormula_(strokes, `F${10 + index}`, `=Summary!B${14 + index}`);
+    hydroFormula_(strokes, `H${10 + index}`, `=Summary!C${14 + index}`);
+  }
+}
+
+// A number gets its unit mark (8.625 -> 8.625"); anything else is written as typed.
+function hydroUnit_(value, mark) {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+  return hydroSafeCellValue_(/^\d+(\.\d+)?$/.test(text) ? `${hydroTrimNumber_(text)}${mark}` : text);
+}
+
+function hydroInsideDiameterOf_(od, wt) {
+  const inside = Number(String(od ?? '').replace(/["\s]/g, '')) - 2 * Number(String(wt ?? '').replace(/["\s]/g, ''));
+  return Number.isFinite(inside) && inside > 0 ? Number(inside.toFixed(1)) : '';
 }
 
 function hydroInsideDiameter_(segments) {

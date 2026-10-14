@@ -73,7 +73,17 @@ async function main() {
     assert.match(await page.locator('[data-gauge="A"] .test-design-status').innerText(), /Type the values from the test design/);
     await page.locator('[data-gauge="A"] [data-design-field="lineName"]').fill('WL-248');
     await page.locator('[data-gauge="A"] [data-design-field="sectionLengthFt"]').fill('5280');
+    assert.equal(await page.locator('[data-gauge="A"] .design-pipeline-table tbody tr').count(), 6, 'six Pipeline Data rows');
+    const cell = (row, col) => page.locator(`[data-gauge="A"] [data-pipeline-row="${row}"][data-pipeline-col="${col}"]`);
+    await cell(0, 'od').fill('8.625'); await cell(0, 'wt').fill('0.322'); await cell(0, 'grade').fill('X52');
+    await cell(0, 'length').fill('5280'); await cell(0, 'buried').fill('5230'); await cell(0, 'exposed').fill('50'); await cell(0, 'remarks').fill('Road bore');
     await page.locator('[data-gauge="A"] .apply-test-design').click();
+    assert.deepEqual(await page.evaluate(() => window.testGauges[0].sheetSnapshot().design.pipelineRows),
+      [{ od: '8.625', wt: '0.322', grade: 'X52', length: '5280', buried: '5230', exposed: '50', remarks: 'Road bore' }], 'typed rows go to the Sheet');
+    await page.reload();
+    await page.locator('[data-dashboard-tab="setup"]').click();
+    await page.locator('[data-gauge="A"] .review-saved-design').click();
+    assert.equal(await cell(0, 'remarks').inputValue(), 'Road bore', 'rows saved with the test');
     assert.deepEqual(await page.evaluate(() => [window.testGauges[0].testState.design.lineName, window.testGauges[0].testState.design.sectionLengthFt]), ['WL-248', '5280']);
     assert.equal(await page.locator('[data-gauge="A"] .sheet-strokes-toggle').isChecked(), false, 'stroke choice saved too');
     assert.deepEqual(errors, []);

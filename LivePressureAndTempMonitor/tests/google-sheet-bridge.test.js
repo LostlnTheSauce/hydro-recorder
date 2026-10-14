@@ -20,7 +20,7 @@ function sync(snapshot, typedByOperator = () => {}) {
 {
   const pre = [entry(0, 'Pressure is at 0 psi / Begin pressurizing', 0), entry(20, 'Reached 75%'), entry(50, 'Reached test pressure')];
   const { log, summary, result } = sync({ preTestRows: pre, officialRows: officialRows(33), postTestRows: [entry(600, 'Begin depressurizing')] });
-  assert.equal(result.layoutVersion, 5);
+  assert.equal(result.layoutVersion, 6);
   assert.equal(log.cell('F23'), 'Pressure is at 0 psi / Begin pressurizing');
   assert.equal(log.cell('F26'), 'Begin test', 'official test starts right after three pre-test rows');
   assert.equal(log.cell('B26'), 4150, 'pressure is written');
@@ -55,6 +55,20 @@ function sync(snapshot, typedByOperator = () => {}) {
   run({ design: { sectionLengthFt: 6000, testMedium: 'Air' } });
   assert.equal(workbook.tabs.LOG.cell('G19'), 6000, 'design switch on: site value written');
   assert.equal(workbook.tabs.Summary.cell('A14'), '8.625"', 'no pipe rows from the site: typed pipe table kept');
+}
+
+// Pipeline Data typed on the site: Summary rows 14+ (units added to numbers), inside diameter,
+// and the Test Stroke Count pipe rows linked to the Summary so it is entered once.
+{
+  const { workbook } = sync({ officialRows: officialRows(1), design: { pipelineRows: [
+    { od: '8.625', wt: '0.322', grade: 'X52', length: '4200', buried: '4150', exposed: '50', remarks: 'Road bore' },
+    { od: '6.625', wt: '0.280', grade: 'Grade B', length: '1080', buried: '1080', exposed: '', remarks: '' },
+  ] } });
+  const summary = workbook.tabs.Summary, tab = workbook.tabs['Test Stroke Count'];
+  assert.deepEqual(['A14', 'B14', 'C14', 'D14', 'E14', 'F14', 'G14'].map((a1) => summary.cell(a1)), ['8.625"', '0.322"', 'X52', "4200'", "4150'", "50'", 'Road bore']);
+  assert.deepEqual(['A15', 'C15', 'D15', 'F15', 'A16'].map((a1) => summary.cell(a1)), ['6.625"', 'Grade B', "1080'", '', '']);
+  assert.equal(summary.cell('B9'), 8, 'inside diameter from the first row');
+  assert.deepEqual([tab.cell('A10'), tab.cell('D10'), tab.cell('F10'), tab.cell('H10'), tab.cell('D13')], ['=Summary!D14', '=Summary!A14', '=Summary!B14', '=Summary!C14', '=Summary!A17']);
 }
 
 // Stroke count: start + each checkpoint down the five column groups, totals in the footer;
