@@ -64,6 +64,7 @@ if (in_array($scenario,['complete-old','closed-ingest','pre-start','post-stop','
 }
 $code=file_get_contents(__DIR__.'/../temperature.php');
 $code=str_replace("__DIR__ . '/inc/field-power.php'", var_export(realpath(__DIR__.'/../inc/field-power.php'),true),$code);
+$code=str_replace("__DIR__ . '/inc/feed-check.php'", var_export(realpath(__DIR__.'/../inc/feed-check.php'),true),$code);
 if ($scenario==='heartbeat-power') {
     $_GET['action']='device_heartbeat';
     $input=['device_id'=>$device,'device_token'=>$token,'serial'=>'TEST','ready'=>true,
