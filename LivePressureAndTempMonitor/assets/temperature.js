@@ -473,10 +473,46 @@
     });
   }
 
+  // Display-only smoothing for electrical noise (a laptop charger on a generator
+  // makes the logger jitter). Each logger reading is shown as the trimmed mean
+  // of that probe's readings over the preceding window: the highest and lowest
+  // fifth are dropped so a single spike cannot pull the line. Manual and Sheet
+  // entries stay as entered. Stored readings, exports and the Sheet are untouched.
+  const smoothCache = new WeakMap();
+  function smoothReadings(readings, seconds) {
+    const windowMs = Math.max(0, Number(seconds) || 0) * 1000;
+    if (!windowMs || !Array.isArray(readings) || readings.length < 2) return readings;
+    const key = `${windowMs}:${readings.length}:${readings[0]?.at}:${readings.at(-1)?.at}`;
+    const cached = smoothCache.get(readings);
+    if (cached?.key === key) return cached.result;
+    const result = readings.map((row) => ({ ...row }));
+    const smoothable = (row) => row && row.source !== 'manual' && row.source !== 'sheet';
+    for (const channel of DEFAULT_CHANNELS) {
+      const points = [];
+      readings.forEach((row, index) => {
+        const value = smoothable(row) ? validNumber(row[channel.key]) : null;
+        if (value !== null) points.push({ index, at: Number(row.at), value });
+      });
+      points.sort((a, b) => a.at - b.at);
+      let first = 0;
+      points.forEach((point, i) => {
+        while (points[first].at < point.at - windowMs) first++;
+        const values = points.slice(first, i + 1).map((item) => item.value).sort((a, b) => a - b);
+        const trim = values.length >= 5 ? Math.floor(values.length / 5) : 0;
+        const kept = values.slice(trim, values.length - trim);
+        result[point.index][channel.key] = Math.round(kept.reduce((sum, value) => sum + value, 0) / kept.length * 100) / 100;
+      });
+    }
+    smoothCache.set(readings, { key, result });
+    return result;
+  }
+
   function renderPanel(panel, options) {
     if (!panel) return;
     const channelConfig = channels(options.channels);
-    const temperatureReadings = Array.isArray(options.temperatureReadings) ? options.temperatureReadings.filter((item) => item && Number.isFinite(Number(item.at))) : [];
+    const smoothingControl = panel.querySelector('.temp-smoothing');
+    const smoothingSeconds = smoothingControl ? Number(smoothingControl.value) || 0 : Number(options.smoothingSeconds) || 0;
+    const temperatureReadings = smoothReadings(Array.isArray(options.temperatureReadings) ? options.temperatureReadings.filter((item) => item && Number.isFinite(Number(item.at))) : [], smoothingSeconds);
     const pressureReadings = Array.isArray(options.pressureReadings) ? options.pressureReadings.filter((item) => item && Number.isFinite(Number(item.at)) && Number.isFinite(Number(item.pressure))) : [];
     const latest = temperatureReadings.at(-1) || {};
     channelConfig.forEach((channel) => {
@@ -526,7 +562,7 @@
         onChange();
       });
     }
-    panel.querySelectorAll('.temp-toggle input,.temp-official-only,.temp-show-notes,.temp-history-range').forEach((input) => input.addEventListener('change', () => {
+    panel.querySelectorAll('.temp-toggle input,.temp-official-only,.temp-show-notes,.temp-history-range,.temp-smoothing').forEach((input) => input.addEventListener('change', () => {
       if (input.matches('.temp-history-range,.temp-official-only')) {
         panel._temperatureZoom = null;
         panel._temperatureSelection = { followLive: true, at: null };
@@ -744,5 +780,5 @@
     observer.observe(wrap);
   }
 
-  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, clampZoom };
+  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, clampZoom, smoothReadings };
 })();

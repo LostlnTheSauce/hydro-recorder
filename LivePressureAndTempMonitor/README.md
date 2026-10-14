@@ -43,6 +43,10 @@ A red bar under the tabs, with a double ding every 20 seconds, appears when:
 
 On the Live test page (one per test) and on the viewer's Logbook tab. Each row is the actual reading nearest that time, never an average; hover a value to see exactly when it was recorded. A gap shows "—". The top row is the latest reading. Older rows load with **Show older rows**. Viewers see only the probes ticked under **Probes used for this test** on the Temperatures page, and only once **Show temperatures to viewers** is on.
 
+## Temperature smoothing
+
+A laptop charger running off a generator can make the logger readings jitter. **Smoothing** on the Temperatures page (per test) shows each probe as the average of its last 20 seconds of readings, with the highest and lowest fifth dropped so one spike can't pull the line; 1 and 2 minutes are also available, or Off. It changes what the charts, readouts and log book show, on the host and for viewers (log book columns say "avg"). The saved readings, CSV and backup downloads, history log table and Google Sheet all keep the real readings. History replay has the same switch.
+
 ## Pressure offset
 
 Each test has one pressure series. The offset is applied before the reading is shown, logged, published or exported. Example: gauge 110 psi with deadweight 108 psi uses an offset of −2 and records 108 psi. Near zero (within 0.5 psi) the offset is not applied and the reading is shown exactly as the gauge reports it, so a gauge at 0.0 stays 0.0 and a gauge at 0.1 shows 0.1. Live readings show tenths; the 15-minute record and the Sheet use whole psi. Changing the offset during an official test asks for confirmation.
