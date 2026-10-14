@@ -365,8 +365,10 @@
 
     connected() { return Boolean(this.port); }
 
+    // The saved offset, not the box: while a new offset is still being typed, readings keep the old
+    // one and are shifted with the rest of the series when it is entered (no double offset, no blip).
     pressureOffset() {
-      return Number(this.root.querySelector('.pressure-offset')?.value) || 0;
+      return Number(this.testState.offset) || 0;
     }
 
     recordedPressure(rawPressure, offset = this.pressureOffset()) {
