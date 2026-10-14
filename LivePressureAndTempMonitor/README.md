@@ -43,6 +43,10 @@ The **Stroke count** panel on Live test (**Show** / **Hide**; it stays a one-lin
 
 The chart header on Live test holds **Chart maximum**, **Pen size** and **Window lines**. Unticking **Window lines** hides the top and bottom pressure test window lines (the same switch as Setup → Chart scale and warning limits → Show pressure test window); the choice is saved with the test and viewers see the same.
 
+## Feed check
+
+**Feed check** on a test's Temperatures page answers whether the logger was taking readings and whether they reached the site. Each whole minute of the current job's recording is compared with the website reading interval (30 readings a minute at 2 seconds) and classified: **on time**; **internet dropped, caught up** (readings arrived more than 90 seconds late: the laptop kept recording); **MadgeTech not sending** (the field laptop was checking in, but MadgeTech gave it no readings); **laptop silent** (no check-ins and no readings: frozen, asleep, off, or the field app was closed); **fewer readings** (MadgeTech delivered readings slower than expected, e.g. a hot or overloaded laptop); or **taken, not received**. Problem stretches are listed with the laptop's hottest temperature. The field app's 5-second check-ins are logged per minute (kept 30 days); before that log existed, a gap shows as missing with no cause. Nothing is changed or filled in.
+
 ## Pressure-up pacing
 
 Type a **Max rate** (psi per minute) next to the Connect button on Live test, for example 10. While pumping, the readout and the log book's blue latest row show **▼ Slow down** in blue above that rate, **▲ Speed up** in green below 80% of it, and **On pace** in between, based on the last 30 seconds. Holding or bleeding off shows plain text, never "Speed up". Older log book rows are not marked. Leave the box empty to turn it off; it is saved with the test.
