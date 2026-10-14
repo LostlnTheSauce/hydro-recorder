@@ -2577,6 +2577,10 @@
   }) : [];
   gaugeTicker.add(() => gauges.forEach((gauge, index) => { if (gauge.active) logbooks[index]?.refresh(); }));
 
+  // Stroke count panel on the Live test page (type the counter, Enter, next checkpoint).
+  window.HydroStrokeCount?.attach(gauges, { ding: staleDing });
+  gaugeTicker.add(() => gauges.forEach((gauge) => gauge.strokeCount?.render()));
+
   // Trailer alerts: a banner that stays up while the problem lasts, with a ding
   // every 20 seconds until it is silenced. A cleared problem re-alerts next time.
   const BATTERY_ALERT_PERCENT = 75;

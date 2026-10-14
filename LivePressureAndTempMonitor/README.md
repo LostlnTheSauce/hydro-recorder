@@ -29,6 +29,10 @@ Use **Add second test** to run a second, fully independent test on its own gauge
 - The screen is kept awake while a gauge is connected. Keep the laptop plugged in, and set Windows not to sleep during a test.
 - Missing data stays missing. Nothing is filled in, carried forward or averaged across a gap.
 
+## Stroke count
+
+The **Stroke count** panel on Live test. After the hold, enter the start pressure (filled in from the gauge; type over it, e.g. 1300), the start counter (0), the target pressure (e.g. 1740), the spacing (10 psi) and the pump's gal/stroke, then **Start stroke count**. The box asks for the counter at the next checkpoint (1310, 1320, …): type it and press **Enter**, and it moves straight to the next one with the cursor still in the box. While a count is running the panel sits at the top of the page, says how far the gauge is from the next checkpoint, and dings once when the gauge reaches it. You can type a checkpoint before the gauge gets there. **Skip this point** leaves it blank; **Undo last** removes the latest entry or skip. It finishes at the target. The readings land in the same stroke record as before (Records, downloads, backups). For readings written down and entered later, use **Stroke reading at an earlier time** in the field log.
+
 ## Pressure-up pacing
 
 Type a **Max rate** (psi per minute) next to the Connect button on Live test, for example 10. While pumping, the readout and the log book's blue latest row show **▼ Slow down** in blue above that rate, **▲ Speed up** in green below 80% of it, and **On pace** in between, based on the last 30 seconds. Holding or bleeding off shows plain text, never "Speed up". Older log book rows are not marked. Leave the box empty to turn it off; it is saved with the test.
