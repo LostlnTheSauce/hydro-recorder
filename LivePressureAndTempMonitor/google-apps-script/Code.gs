@@ -1,9 +1,14 @@
 const HYDRO_TEMPLATE_ID = 'REDACTED';
 const HYDRO_SECRET_PROPERTY = 'HYDRO_SYNC_SECRET';
 const HYDRO_ALLOWED_PREFIX = 'HYDRO_SHEET_';
-const HYDRO_LAYOUT_VERSION = 3;
+const HYDRO_LAYOUT_VERSION = 4;
 // Log columns the site can switch off; those cells are left as the operator typed them.
 const HYDRO_LOG_COLUMNS = { pressure: 1, ambient: 2, pipe: 3, ground: 4, comments: 5 };
+// Test Stroke Count field data: five groups of Pressure / Stroke / Difference columns
+// (A-C, D-F, G-I, J-L, M-O), rows 21-49. Difference cells keep the Sheet's formulas.
+const HYDRO_STROKE_COLUMNS = [1, 4, 7, 10, 13];
+const HYDRO_STROKE_FIRST_ROW = 21;
+const HYDRO_STROKE_ROWS = 29;
 // LOG data rows: 23-48 on the first page, 51-87 on the second (49 is blank, 50 repeats the header).
 const HYDRO_LOG_ROWS = [
   ...Array.from({ length: 26 }, (_, index) => 23 + index),
@@ -126,6 +131,7 @@ function hydroApply_(spreadsheet, snapshot, finalized) {
   hydroSet_(strokes, 'M16', hydroNumberOrBlank_(pump.capacity));
 
   const layout = hydroLayout_(snapshot);
+  const strokeRows = hydroWriteStrokes_(strokes, snapshot.strokes);
   hydroWriteLog_(log, layout);
   hydroSummaryFormulas_(summary, layout.officialFirstRow, layout.officialLastRow);
 
@@ -136,10 +142,41 @@ function hydroApply_(spreadsheet, snapshot, finalized) {
     layoutVersion: HYDRO_LAYOUT_VERSION,
     adjustedOffset: Number(snapshot.pressureOffset) || 0,
     officialRowsWritten: layout.officialCount,
+    strokeRowsWritten: strokeRows,
     officialFirstRow: layout.officialFirstRow,
     officialLastRow: layout.officialLastRow,
     temperatureReadings: hydroTemperatureReadings_(log)
   };
+}
+
+// The site's stroke count: the starting pressure and counter, then the counter at each
+// checkpoint, down each column group in turn, with the totals the tab's footer uses.
+// Without a stroke count on the site the tab is left as the operator typed it.
+function hydroWriteStrokes_(sheet, strokes) {
+  if (!strokes || !strokes.start || !Array.isArray(strokes.entries)) return 0;
+  const rows = [strokes.start, ...strokes.entries];
+  const capacity = HYDRO_STROKE_COLUMNS.length * HYDRO_STROKE_ROWS;
+  if (rows.length > capacity) throw new Error(`The stroke count has ${rows.length} readings, but the Test Stroke Count tab holds ${capacity}. Nothing was written.`);
+  HYDRO_STROKE_COLUMNS.forEach((column, group) => {
+    const values = Array.from({ length: HYDRO_STROKE_ROWS }, (_, index) => {
+      const row = rows[group * HYDRO_STROKE_ROWS + index];
+      return row ? [hydroNumberOrBlank_(row.pressure), hydroNumberOrBlank_(row.counter)] : ['', ''];
+    });
+    sheet.getRange(HYDRO_STROKE_FIRST_ROW, column, HYDRO_STROKE_ROWS, 2).setValues(values);
+  });
+  const first = rows[0], last = rows[rows.length - 1];
+  const step = Number(strokes.step) || 10;
+  const pumpCapacity = Number(strokes.capacity) || 0;
+  const pressureIncrease = Number(last.pressure) - Number(first.pressure);
+  const volume = pumpCapacity ? Math.round((Number(last.counter) - Number(first.counter)) * pumpCapacity * 10000) / 10000 : '';
+  hydroSet_(sheet, 'M12', hydroNumberOrBlank_(first.pressure));
+  hydroSet_(sheet, 'M14', step);
+  hydroSet_(sheet, 'M15', strokes.entries.length);
+  if (pumpCapacity) hydroSet_(sheet, 'M16', pumpCapacity);
+  hydroSet_(sheet, 'M18', volume !== '' && pressureIncrease > 0 ? Math.round(volume / pressureIncrease * step * 100000) / 100000 : '');
+  hydroSet_(sheet, 'D51', volume);
+  hydroSet_(sheet, 'J51', strokes.entries.length ? pressureIncrease : '');
+  return rows.length;
 }
 
 // Decides which LOG row each entry goes on. Auto: pre-test entries from row 23,

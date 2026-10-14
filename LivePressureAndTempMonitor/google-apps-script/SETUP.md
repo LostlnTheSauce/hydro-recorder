@@ -16,6 +16,6 @@ The field console never edits the clean `Test Template` master. The Apps Script 
 
 7. Upload the updated website files. Sign in to the field console, open **Test Setup**, and press **Create Google Sheet** for the desired test.
 
-When updating an existing installation, paste the new `Code.gs`, save it, then choose **Deploy → Manage deployments → Edit**, select **New version**, and deploy. Keep the existing web-app URL and secret; you do not need to run `setupHydroAutomation` again.
+When updating an existing installation, first copy your own `HYDRO_TEMPLATE_ID` line (the repository copy says `REDACTED`), paste the new `Code.gs`, put your template ID line back, save it, then choose **Deploy → Manage deployments → Edit**, select **New version**, and deploy. Keep the existing web-app URL and secret; you do not need to run `setupHydroAutomation` again.
 
 Keep the web-app URL and secret private. If either is exposed, run `setupHydroAutomation` again and update `config.php` with the replacement secret.

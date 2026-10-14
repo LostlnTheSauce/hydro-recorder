@@ -44,8 +44,23 @@ async function main() {
     await page.locator('[data-gauge="A"] .sheet-start-row-input').dispatchEvent('change');
     assert.deepEqual(await snap(), { pre: 0, official: 3, start: 27 }, 'off: no pre-test rows sent, official from row 27');
     assert.match(await page.locator('[data-gauge="A"] .sheet-sync-message').innerText(), /LOG rows 27–29/);
+    // Stroke count goes with the snapshot (start + checkpoints, pump size, step) unless switched off.
+    const strokes = () => page.evaluate(() => window.testGauges[0].sheetSnapshot().strokes);
+    assert.equal(await strokes(), null, 'no stroke count yet');
+    await page.evaluate(() => {
+      const g = window.testGauges[0], w = g.workflowController.state(), now = Date.now();
+      HydroWorkflow.manualStroke(w, now - 3000, 1300, 0, 0.0043);
+      HydroWorkflow.manualStroke(w, now - 2000, 1310, 103, 0.0043);
+      HydroWorkflow.manualStroke(w, now - 1000, 1320, 204, 0.0043);
+      w.strokePlan = { step: 10, target: 1740, skipped: [] };
+      g.saveTestState();
+    });
+    assert.deepEqual(await strokes(), { start: { pressure: 1300, counter: 0 }, entries: [{ pressure: 1310, counter: 103 }, { pressure: 1320, counter: 204 }], capacity: 0.0043, step: 10 });
+    await page.locator('[data-gauge="A"] .sheet-strokes-toggle').uncheck();
+    assert.equal(await strokes(), null, 'switched off: the stroke tab is left alone');
     await page.reload();
     assert.equal(await page.locator('[data-gauge="A"] .sheet-pretest-toggle').isChecked(), false, 'stays off after reload');
+    assert.equal(await page.locator('[data-gauge="A"] .sheet-strokes-toggle').isChecked(), false, 'stroke choice saved too');
     assert.deepEqual(errors, []);
     console.log('Sheet pre-test toggle: on by default, off sends no pre-test rows, requires a start row, saved across reload passed.');
   } finally { await browser.close(); server.close(); }
