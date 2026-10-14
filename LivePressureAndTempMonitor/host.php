@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
           <section class="test-design-importer" aria-label="Atmos test design PDF import">
             <div class="test-design-import-heading">
               <div><strong>Import Atmos test design</strong><small>Reads the PDF on this laptop, then lets you review every value before applying it.</small></div>
-              <div class="test-design-heading-actions"><button class="review-saved-design hidden" type="button">Review saved values</button><label class="test-design-file-button">Choose PDF<input class="test-design-file" type="file" accept="application/pdf,.pdf"></label></div>
+              <div class="test-design-heading-actions"><button class="review-saved-design" type="button">Enter or review values</button><label class="test-design-file-button">Choose PDF<input class="test-design-file" type="file" accept="application/pdf,.pdf"></label></div>
             </div>
             <div class="test-design-status" role="status">No test design has been selected.</div>
             <div class="test-design-review hidden">
@@ -187,6 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
             </div>
             <label class="sheet-pretest" style="display:flex;align-items:center;gap:8px;font-size:.85rem;margin-top:8px"><input type="checkbox" class="sheet-pretest-toggle" checked> Sync pre-test entries (rows before the official start)</label>
             <label class="sheet-strokes" style="display:flex;align-items:center;gap:8px;font-size:.85rem;margin-top:4px"><input type="checkbox" class="sheet-strokes-toggle" checked> Sync stroke count (Test Stroke Count tab)</label>
+            <label class="sheet-design" style="display:flex;align-items:center;gap:8px;font-size:.85rem;margin-top:4px"><input type="checkbox" class="sheet-design-toggle" checked> Sync test design values (project, footage, GPS, pipe, recorder window, fill)</label>
             <div class="sheet-sync-message">Manual-only: the site will not update this Sheet until you press Sync to Sheet. Local gauge recording continues independently.</div>
           </section>
           <div class="operations-grid job-fields">

@@ -1,7 +1,7 @@
 const HYDRO_TEMPLATE_ID = 'REDACTED';
 const HYDRO_SECRET_PROPERTY = 'HYDRO_SYNC_SECRET';
 const HYDRO_ALLOWED_PREFIX = 'HYDRO_SHEET_';
-const HYDRO_LAYOUT_VERSION = 4;
+const HYDRO_LAYOUT_VERSION = 5;
 // Log columns the site can switch off; those cells are left as the operator typed them.
 const HYDRO_LOG_COLUMNS = { pressure: 1, ambient: 2, pipe: 3, ground: 4, comments: 5 };
 // Test Stroke Count field data: five groups of Pressure / Stroke / Difference columns
@@ -92,10 +92,10 @@ function hydroApply_(spreadsheet, snapshot, finalized) {
   const equipment = snapshot.equipment || {};
 
   hydroSet_(log, 'C7', job.owner || 'Atmos Energy');
-  hydroSet_(log, 'G7', hydroNumberOrText_(job.poAfe));
+  hydroSetKnown_(log, 'G7', hydroNumberOrText_(job.poAfe));
   hydroSet_(log, 'C8', job.contractor || 'Bobcat Contracting');
-  hydroSet_(log, 'G8', job.location || '');
-  hydroSet_(log, 'C9', job.jobNumber || '');
+  hydroSetKnown_(log, 'G8', job.location || '');
+  hydroSetKnown_(log, 'C9', job.jobNumber || '');
   hydroSet_(log, 'G9', hydroDate_(snapshot.testDateMs));
 
   hydroEquipment_(log, 11, equipment.deadweight);
@@ -105,30 +105,35 @@ function hydroApply_(spreadsheet, snapshot, finalized) {
   hydroEquipment_(log, 15, equipment.ground_chart);
   hydroEquipment_(log, 16, equipment.digital_gauge);
 
-  hydroSet_(log, 'D18', hydroNumberOrBlank_(design.windowBottom));
-  hydroSet_(log, 'H18', hydroNumberOrBlank_(design.windowTop));
-  hydroSet_(log, 'B19', design.beginGps || '');
-  hydroSet_(log, 'G19', hydroNumberOrBlank_(design.sectionLengthFt));
-  hydroSet_(log, 'B20', design.endGps || '');
+  // Test design values (normally from the Atmos PDF). A value the site does not have never
+  // erases the Sheet, and with "Sync test design values" off none of these cells are written,
+  // so values typed into the Sheet by hand (e.g. from a scanned design) are kept.
+  const syncDesign = snapshot.syncDesign !== false;
+  const setDesign = (sheet, a1, value) => { if (syncDesign) hydroSetKnown_(sheet, a1, value); };
+  setDesign(log, 'D18', hydroNumberOrBlank_(design.windowBottom));
+  setDesign(log, 'H18', hydroNumberOrBlank_(design.windowTop));
+  setDesign(log, 'B19', design.beginGps || '');
+  setDesign(log, 'G19', hydroNumberOrBlank_(design.sectionLengthFt));
+  setDesign(log, 'B20', design.endGps || '');
   const pump = equipment.pump || {};
-  hydroSet_(log, 'I20', [pump.name || '', pump.capacity ? '- ' + pump.capacity : ''].filter(Boolean).join(' '));
+  hydroSetKnown_(log, 'I20', [pump.name || '', pump.capacity ? '- ' + pump.capacity : ''].filter(Boolean).join(' '));
 
-  hydroSet_(summary, 'B8', hydroNumberOrBlank_(design.sectionLengthFt));
-  hydroSet_(summary, 'B9', hydroInsideDiameter_(design.pipeSegments));
-  hydroSet_(summary, 'B10', hydroNumberOrBlank_(design.estimatedFillGallons));
-  hydroPipeline_(summary, design.pipeSegments);
-  hydroSet_(summary, 'C22', design.testDurationHours ? `${design.testDurationHours} Hour Hydro Test` : '');
-  hydroSet_(summary, 'C23', design.testMedium || '');
-  hydroSet_(summary, 'C24', design.recorderGps || '');
+  setDesign(summary, 'B8', hydroNumberOrBlank_(design.sectionLengthFt));
+  setDesign(summary, 'B9', hydroInsideDiameter_(design.pipeSegments));
+  setDesign(summary, 'B10', hydroNumberOrBlank_(design.estimatedFillGallons));
+  if (syncDesign && Array.isArray(design.pipeSegments) && design.pipeSegments.length) hydroPipeline_(summary, design.pipeSegments);
+  setDesign(summary, 'C22', design.testDurationHours ? `${design.testDurationHours} Hour Hydro Test` : '');
+  setDesign(summary, 'C23', design.testMedium || '');
+  setDesign(summary, 'C24', design.recorderGps || '');
 
   hydroSet_(strokes, 'C6', job.owner || 'Atmos Energy');
   hydroSet_(strokes, 'C7', job.contractor || 'Bobcat Contracting');
-  hydroSet_(strokes, 'C8', job.ownerRep || '');
+  hydroSetKnown_(strokes, 'C8', job.ownerRep || '');
   hydroSet_(strokes, 'C9', job.service || 'Gas');
-  hydroSet_(strokes, 'K7', design.lineName || design.projectName || '');
-  hydroSet_(strokes, 'M13', hydroNumberOrBlank_(design.targetPressure));
+  setDesign(strokes, 'K7', design.lineName || design.projectName || '');
+  setDesign(strokes, 'M13', hydroNumberOrBlank_(design.targetPressure));
   hydroSet_(strokes, 'M14', 10);
-  hydroSet_(strokes, 'M16', hydroNumberOrBlank_(pump.capacity));
+  hydroSetKnown_(strokes, 'M16', hydroNumberOrBlank_(pump.capacity));
 
   const layout = hydroLayout_(snapshot);
   const strokeRows = hydroWriteStrokes_(strokes, snapshot.strokes);
@@ -265,6 +270,12 @@ function hydroSheet_(spreadsheet, name) {
 
 function hydroSet_(sheet, a1, value) {
   sheet.getRange(a1).setValue(hydroSafeCellValue_(value));
+}
+
+// Writes only a value the site has: a blank never erases what the operator typed.
+function hydroSetKnown_(sheet, a1, value) {
+  if (value === '' || value === null || value === undefined) return;
+  hydroSet_(sheet, a1, value);
 }
 
 function hydroFormula_(sheet, a1, formula) {
