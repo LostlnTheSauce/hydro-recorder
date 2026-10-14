@@ -291,7 +291,11 @@
       const value = validNumber(item[key]);
       if (value !== null) temperatureValues.push(value);
     }));
-    const pressureScale = niceScale(pressure.map((item) => item.pressure), 2, { floorAtZero: true });
+    // At least 20 psi (or 1% of the pressure) top to bottom, so a holding test's normal
+    // tenths-of-a-psi flicker reads as a steady line instead of filling the chart.
+    const pressureValues = pressure.map((item) => item.pressure);
+    const pressureSpan = Math.max(20, Math.max(0, ...pressureValues.map(Number).filter(Number.isFinite)) * 0.01);
+    const pressureScale = niceScale(pressureValues, pressureSpan, { floorAtZero: true });
     const temperatureScale = niceScale(temperatureValues, 4, { wholeSteps: options.wholeDegrees });
     const { min: pressureMin, max: pressureMax } = pressureScale;
     const { min: temperatureMin, max: temperatureMax } = temperatureScale;

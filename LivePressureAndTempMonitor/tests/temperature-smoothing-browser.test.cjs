@@ -55,6 +55,17 @@ async function main() {
     assert.equal(await page.evaluate(() => window.testGauges[0].testState.temperatureSmoothing), 0, 'choice is saved with the test');
     assert.equal(await page.evaluate(() => window.testGauges[0].settings().temperature.smoothingSeconds), 0, 'viewers receive the host choice');
     assert.equal(await page.evaluate(() => window.testGauges[0].temperatureReadings.filter((r) => r.ambient === -330).length), 15, 'stored readings are never changed');
+    // Holding at 1736-1738 psi with gauge flicker: the pressure axis spans at least 20 psi,
+    // so the official-test zoom reads as a steady line, not a 5 psi scribble.
+    const scale = await page.evaluate(() => {
+      const gauge = window.testGauges[0], now = Date.now();
+      gauge.readings.splice(0);
+      for (let i = 900; i >= 0; i--) gauge.readings.push({ at: now - i * 2000, pressure: 1736 + i / 450 + (i % 2 ? 0.3 : -0.3), unit: 'PSI' });
+      gauge.drawTemperature();
+      const meta = document.querySelector('[data-gauge="A"] .temperature-chart')._temperatureMeta;
+      return [meta.pressureMin, meta.pressureMax];
+    });
+    assert.ok(scale[1] - scale[0] >= 20 && scale[1] - scale[0] <= 30 && scale[0] <= 1735 && scale[1] >= 1739, `pressure axis spans at least 20 psi around the data (got ${scale})`);
     assert.deepEqual(errors, []);
     console.log('Temperature smoothing: default 2 min, 20 s trimmed average on readout and log book, loose-connection burst ignored, off switch, saved choice, raw data untouched passed.');
   } finally { await browser.close(); server.close(); }
