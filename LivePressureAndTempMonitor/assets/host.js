@@ -43,6 +43,20 @@
 
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
+  // Summary page Pipeline Data columns, and the PDF's limiting-pipe rows combined the same way
+  // the Sheet script combines them (matching OD, wall and grade; footage totaled).
+  const PIPELINE_COLUMNS = ['od', 'wt', 'grade', 'length', 'buried', 'exposed', 'remarks'];
+  function pipelineFromSegments(segments) {
+    const grouped = new Map();
+    (Array.isArray(segments) ? segments : []).forEach((segment) => {
+      const key = [segment.outsideDiameterIn, segment.wallThicknessIn, segment.grade].join('|');
+      const row = grouped.get(key) || { od: String(segment.outsideDiameterIn ?? ''), wt: String(segment.wallThicknessIn ?? ''), grade: String(segment.grade ?? ''), length: 0 };
+      row.length += Number(segment.lengthFt) || 0;
+      grouped.set(key, row);
+    });
+    return [...grouped.values()].slice(0, 6).map((row) => ({ ...row, length: row.length ? String(row.length) : '' }));
+  }
+
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   }
@@ -677,12 +691,16 @@
       const body = review.querySelector('.design-pipe-table tbody');
       const rows = Array.isArray(design.pipeSegments) ? design.pipeSegments : [];
       body.innerHTML = rows.length ? rows.map((row) => `<tr><td>${escapeHtml(row.startStation)}</td><td>${escapeHtml(row.endStation)}</td><td>${escapeHtml(row.lengthFt)} ft</td><td>${escapeHtml(row.outsideDiameterIn)} in</td><td>${escapeHtml(Number(row.smysPsi).toLocaleString())} psi / <b>${escapeHtml(row.grade)}</b></td><td>${escapeHtml(row.wallThicknessIn)} in</td><td>${escapeHtml(row.dotClass)}</td><td>${escapeHtml(Number(row.yieldPressurePsig).toLocaleString())} psi</td><td>${escapeHtml(row.reassessmentYears)} yr</td></tr>`).join('') : '<tr><td colspan="9" class="event-empty">No limiting-pipe rows were found. Check the PDF before applying.</td></tr>';
+      // Pipeline Data (Summary page): typed rows, or the PDF's limiting pipe combined by OD, wall and grade.
+      const pipeline = Array.isArray(design.pipelineRows) ? design.pipelineRows : pipelineFromSegments(rows);
+      review.querySelector('.design-pipeline-table tbody').innerHTML = Array.from({ length: 6 }, (_, index) => `<tr>${PIPELINE_COLUMNS.map((column) =>
+        `<td><input data-pipeline-row="${index}" data-pipeline-col="${column}" value="${escapeHtml(pipeline[index]?.[column] ?? '')}" ${column === 'grade' || column === 'remarks' ? 'autocomplete="off"' : 'inputmode="decimal"'} aria-label="Pipeline row ${index + 1} ${column}"></td>`).join('')}</tr>`).join('');
       review.classList.remove('hidden');
       this.root.querySelector('.review-saved-design').classList.remove('hidden');
       const warnings = options.warnings || [];
       if (options.manual) {
         status.className = 'test-design-status ready';
-        status.textContent = 'Type the values from the test design, then press Apply reviewed values. Limiting-pipe rows can only come from a readable PDF; type those into the Sheet.';
+        status.textContent = 'Type the values from the test design, including the Pipeline data rows, then press Apply reviewed values.';
       } else if (options.applied) {
         status.className = 'test-design-status applied';
         status.textContent = `Applied ${design.sourceFileName || 'saved test design'} to this test. You can reopen the review here at any time.`;
@@ -701,6 +719,12 @@
         base[input.dataset.designField] = input.value.trim();
       });
       base.pipeSegments = Array.isArray(base.pipeSegments) ? base.pipeSegments : [];
+      const pipeline = [];
+      this.root.querySelectorAll('[data-pipeline-col]').forEach((input) => {
+        const row = pipeline[input.dataset.pipelineRow] || (pipeline[input.dataset.pipelineRow] = {});
+        row[input.dataset.pipelineCol] = input.value.trim();
+      });
+      base.pipelineRows = pipeline.filter((row) => row && Object.values(row).some(Boolean));
       return base;
     }
 
@@ -1056,8 +1080,8 @@
         const rows = result.officialFirstRow ? ` on ${result.officialFirstRow === result.officialLastRow ? `LOG row ${result.officialFirstRow}` : `LOG rows ${result.officialFirstRow}–${result.officialLastRow}`}` : '';
         const noStart = !result.officialRowsWritten && !this.sheetRows().officialRows.length
           ? ' No official start time is saved yet, so there are no 15-minute rows. Enter the start under Test times for paperwork, press Save test times, then sync again.' : '';
-        if (!(result.layoutVersion >= 5)) {
-          this.renderSheetStatus('Synced, but the Google Sheet script is out of date: it may have erased design values typed into the Sheet, and the stroke count or design switch may have been ignored. Paste the new Code.gs into Apps Script (keep your own HYDRO_TEMPLATE_ID line) and deploy a new version (see SETUP.md).', 'error');
+        if (!(result.layoutVersion >= 6)) {
+          this.renderSheetStatus('Synced, but the Google Sheet script is out of date: it may have erased design values typed into the Sheet, and the Pipeline Data, stroke count or design switch may have been ignored. Paste the new Code.gs into Apps Script (keep your own HYDRO_TEMPLATE_ID line) and deploy a new version (see SETUP.md).', 'error');
           return;
         }
         const strokeNote = result.strokeRowsWritten ? ` Wrote ${result.strokeRowsWritten - 1} stroke reading${result.strokeRowsWritten === 2 ? '' : 's'} to the Test Stroke Count tab.` : '';

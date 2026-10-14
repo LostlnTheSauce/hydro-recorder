@@ -417,3 +417,8 @@ table td { background:#ffffff55; }
 #viewerDashboard[data-dashboard-view="temperature"] .temperature-round-panel .chart-wrap:not([hidden]) { display:block; }
 /* Phone upright: let the temperature graph run edge to edge instead of sitting inside the panel padding. */
 @media(max-width:600px) { .temperature-canvas-wrap { margin-inline:calc(50% - 50vw); } .temp-chart-dialog .temperature-canvas-wrap { margin-inline:0; } }
+
+/* Pipeline Data entry in the test design form */
+.design-pipeline-wrap { margin-top:14px; }
+.design-pipeline-table td { padding:4px; }
+.design-pipeline-table input { width:100%; min-width:72px; min-height:34px!important; padding:4px 8px; }
