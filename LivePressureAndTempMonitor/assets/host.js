@@ -2566,7 +2566,6 @@
       channels: gauge.temperatureChannels().filter((channel) => enabled.includes(channel.key) && gauge.logbookCache.present.has(channel.key))
         .map((channel) => smoothing ? { ...channel, name: `${channel.name} (${smoothing < 60 ? `${smoothing} s` : `${smoothing / 60} min`} avg)` } : channel),
       wholeDegrees: gauge.temperatureRecordingOptions?.().wholeDegrees === true,
-      rateLimit: gauge.rateTarget(),
       pace: gauge.paceStatus(),
     };
   }
