@@ -2316,6 +2316,22 @@
     const showError = text => { if (errorBox) { errorBox.textContent = text; errorBox.hidden = !text; } };
     select.addEventListener('change', renderTemperatureDevices);
     root.querySelector('.temperature-device-refresh')?.addEventListener('click', refreshTemperatureDevices);
+    // Moving the logger to another field laptop: download a fresh private setup file for it.
+    root.querySelector('.temperature-device-reissue')?.addEventListener('click', async () => {
+      const chosen = temperatureDevices.find((device) => device.id === select.value) || (temperatureDevices.length === 1 ? temperatureDevices[0] : null);
+      if (!chosen) { showError('Choose the field logger first. Use Refresh loggers if the list is empty.'); return; }
+      if (!window.confirm(`Download a new setup file for logger ${chosen.serial}?\n\nThe field app on the current field laptop stops sending as soon as you do this. The recording on this page carries on once the new laptop's field app starts.`)) return;
+      showError('');
+      try {
+        const result = await temperatureApi('reissue_device', { device_id: chosen.id }, true);
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(result.settings, null, 2)], { type: 'application/octet-stream' }));
+        link.download = 'field-device.settings';
+        document.body.append(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+        status.textContent = `Downloaded field-device.settings for ${chosen.serial}. Put it next to MadgeTechFieldBridge.exe on the new field laptop, then start the field app there.`;
+      } catch (error) { showError(error.message || String(error)); }
+    });
     connect.addEventListener('click', async () => {
       if (!select.value) return;
       const gauge = gauges.find(g => g.slot === root.dataset.gauge);
