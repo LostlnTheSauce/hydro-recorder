@@ -54,6 +54,8 @@
     rows.forEach((row, index) => {
       const older = rows[index + 1]?.pressure;
       row.change = row.pressure && older ? row.pressure.value - older.value : null;
+      // Rate between the two readings actually used, in psi per minute.
+      row.rate = row.change !== null && row.pressure.at !== older.at ? row.change / ((row.pressure.at - older.at) / 60000) : null;
     });
     return { rows, more };
   }
@@ -96,8 +98,17 @@
       tr.append(cell(time, null, row.at, 'logbook-time', row.latest ? ' · latest' : ''));
       tr.append(cell(row.pressure ? row.pressure.value.toFixed(1) : '—', row.pressure?.at, row.at, 'logbook-pressure', row.pressure ? ' psi' : ''));
       const change = row.change;
-      tr.append(cell(change === null ? '' : Math.abs(change) < 0.05 ? '0.0' : `${change > 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}`, null, row.at,
-        change === null || Math.abs(change) < 0.05 ? 'logbook-change' : change > 0 ? 'logbook-change up' : 'logbook-change down'));
+      const over = data.rateLimit > 0 && row.rate !== null && row.rate > data.rateLimit;
+      const changeCell = cell(change === null ? '' : Math.abs(change) < 0.05 ? '0.0' : `${change > 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}`, null, row.at,
+        (change === null || Math.abs(change) < 0.05 ? 'logbook-change' : change > 0 ? 'logbook-change up' : 'logbook-change down') + (over ? ' over-limit' : ''));
+      if (over) changeCell.title = `${row.rate.toFixed(1)} psi/min, over the ${data.rateLimit} psi/min maximum`;
+      // The latest row also shows live pacing against the max rate.
+      if (row.latest && data.pace) {
+        const pace = document.createElement('span');
+        pace.className = `logbook-pace ${data.pace.tone}`;
+        pace.textContent = `${data.pace.word} · ${data.pace.shown}`;
+        changeCell.append(pace);
+      }      tr.append(changeCell);
       for (const channel of channels) {
         const value = row.temps[channel.key];
         tr.append(cell(value ? `${value.value.toFixed(decimals)}°` : '—', value?.at, row.at, 'logbook-temp'));
@@ -128,7 +139,7 @@
     function refresh(force = false) {
       const data = getData();
       const latest = Math.max(Number(data.pressure?.at(-1)?.at) || 0, Number(data.temperatures?.at(-1)?.at) || 0);
-      const next = JSON.stringify([intervalMs, maxRows, latest, data.temperatures?.length || 0, (data.channels || []).map((c) => c.key + c.name), data.wholeDegrees]);
+      const next = JSON.stringify([intervalMs, maxRows, latest, data.temperatures?.length || 0, (data.channels || []).map((c) => c.key + c.name), data.wholeDegrees, data.rateLimit, data.pace && data.pace.word + data.pace.shown]);
       if (!force && next === signature) return;
       signature = next;
       moreButton.hidden = !render(table, data, intervalMs, maxRows);

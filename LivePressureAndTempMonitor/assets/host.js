@@ -350,6 +350,12 @@
       this.bindTestSetup();
       this.root.querySelectorAll('.temp-name').forEach((input) => input.addEventListener('input', () => this.drawTemperature()));
       window.TemperatureChartRenderer.bindPanel(this.temperaturePanel, () => this.drawTemperature());
+      this.root.querySelector('.rate-target')?.addEventListener('input', (event) => {
+        const value = Number(event.target.value);
+        this.testState.rateTarget = event.target.value !== '' && Number.isFinite(value) && value > 0 ? value : null;
+        this.saveTestState();
+        this.updateRate();
+      });
       this.root.querySelector('.temp-smoothing')?.addEventListener('change', (event) => {
         this.testState.temperatureSmoothing = Number(event.target.value) || 0;
         this.saveTestState();
@@ -426,6 +432,8 @@
     }
 
     restoreTestSetup() {
+      const rateInput = this.root.querySelector('.rate-target');
+      if (rateInput && document.activeElement !== rateInput) rateInput.value = this.rateTarget() ?? '';
       const smoothing = this.root.querySelector('.temp-smoothing');
       if (smoothing) smoothing.value = String(this.smoothingSeconds());
       if (!this.root.querySelector('.enabled-probes')) {
@@ -1637,6 +1645,7 @@
       this.root.querySelector('.current-unit').textContent = latest ? latest.unit : 'PSI';
       const trend = this.root.querySelector('.pressure-trend');
       if (trend) trend.textContent = this.trendText();
+      this.updateRate();
       this.root.querySelector('.stat-last').textContent = latest ? new Date(latest.at).toLocaleTimeString() : 'No readings';
       this.root.querySelector('.stat-peak').textContent = this.peak === null ? '—' : `${this.peak.toFixed(1)} psi`;
       this.root.querySelector('.stat-low').textContent = displayedLow === null ? '—' : `${displayedLow.toFixed(1)} psi`;
@@ -1662,6 +1671,51 @@
       const delta = latest.pressure - first.pressure;
       if (Math.abs(delta) < 0.05) return `Steady over ${span}`;
       return `${delta > 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)} psi in ${span}`;
+    }
+
+    // Pressure-up pacing against the operator's maximum rate (psi per minute),
+    // measured over the last 30 seconds so a pump adjustment shows quickly.
+    rateTarget() {
+      const value = Number(this.testState.rateTarget);
+      return Number.isFinite(value) && value > 0 ? value : null;
+    }
+
+    currentRate() {
+      const latest = this.readings.at(-1);
+      if (!latest) return null;
+      const from = latest.at - 30000;
+      let low = 0, high = this.readings.length - 1;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (this.readings[middle].at < from) low = middle + 1;
+        else high = middle;
+      }
+      const first = this.readings[low];
+      const seconds = (latest.at - first.at) / 1000;
+      return seconds >= 10 ? (latest.pressure - first.pressure) / (seconds / 60) : null;
+    }
+
+    // Shared by the readout and the log book's latest row.
+    paceStatus() {
+      const target = this.rateTarget();
+      const rate = this.currentRate();
+      if (!target || rate === null) return null;
+      const shown = `${Math.abs(rate).toFixed(1)} psi/min`;
+      if (rate < -0.5) return { tone: 'neutral', word: 'Falling', shown, target };
+      if (rate < 0.5) return { tone: 'neutral', word: 'Holding', shown, target };
+      if (rate > target) return { tone: 'slow', word: '▼ Slow down', shown, target };
+      if (rate < target * 0.8) return { tone: 'speed', word: '▲ Speed up', shown, target };
+      return { tone: 'pace', word: 'On pace', shown, target };
+    }
+
+    updateRate() {
+      const element = this.root.querySelector('.pressure-rate');
+      if (!element) return;
+      const pace = this.paceStatus();
+      element.hidden = !pace;
+      if (!pace) return;
+      element.textContent = `${pace.word} · ${pace.shown}${pace.tone === 'neutral' ? '' : ` (max ${pace.target})`}`;
+      element.className = `pressure-rate ${pace.tone}`;
     }
 
     updateWarning() {
@@ -2512,6 +2566,8 @@
       channels: gauge.temperatureChannels().filter((channel) => enabled.includes(channel.key) && gauge.logbookCache.present.has(channel.key))
         .map((channel) => smoothing ? { ...channel, name: `${channel.name} (${smoothing < 60 ? `${smoothing} s` : `${smoothing / 60} min`} avg)` } : channel),
       wholeDegrees: gauge.temperatureRecordingOptions?.().wholeDegrees === true,
+      rateLimit: gauge.rateTarget(),
+      pace: gauge.paceStatus(),
     };
   }
   const logbooks = window.HydroLogbook ? gauges.map((gauge) => {
