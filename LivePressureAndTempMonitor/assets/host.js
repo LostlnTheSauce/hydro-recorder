@@ -641,7 +641,11 @@
       });
       applyButton.addEventListener('click', () => this.applyReviewedDesign());
       closeButton.addEventListener('click', () => this.root.querySelector('.test-design-review').classList.add('hidden'));
-      reopenButton.addEventListener('click', () => this.root.querySelector('.test-design-review').classList.remove('hidden'));
+      // Also for typing the design in by hand (e.g. a scanned PDF the site cannot read).
+      reopenButton.addEventListener('click', () => {
+        if (!this.pendingDesign && !this.testState.design) this.renderDesignReview({ pipeSegments: [] }, { manual: true });
+        this.root.querySelector('.test-design-review').classList.remove('hidden');
+      });
     }
 
     async importTestDesign(file) {
@@ -676,7 +680,10 @@
       review.classList.remove('hidden');
       this.root.querySelector('.review-saved-design').classList.remove('hidden');
       const warnings = options.warnings || [];
-      if (options.applied) {
+      if (options.manual) {
+        status.className = 'test-design-status ready';
+        status.textContent = 'Type the values from the test design, then press Apply reviewed values. Limiting-pipe rows can only come from a readable PDF; type those into the Sheet.';
+      } else if (options.applied) {
         status.className = 'test-design-status applied';
         status.textContent = `Applied ${design.sourceFileName || 'saved test design'} to this test. You can reopen the review here at any time.`;
       } else if (warnings.length) {
@@ -748,6 +755,11 @@
           this.renderSheetStatus(event.target.checked ? this.sheetRowsMessage(layout, 'will go on') : `Pre-test entries will not be synced. ${this.sheetRowsMessage(layout, 'will go on')}`);
         } catch (error) { this.renderSheetStatus(error.message, 'error'); }
       });
+      this.root.querySelector('.sheet-design-toggle').addEventListener('change', (event) => {
+        this.testState.sheetDesign = event.target.checked;
+        localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
+        this.renderSheetStatus(event.target.checked ? 'Sync to Sheet will fill the test design values the site has (blank ones never erase the Sheet).' : 'Sync to Sheet will leave the test design values in the Sheet as they are.');
+      });
       this.root.querySelector('.sheet-strokes-toggle').addEventListener('change', (event) => {
         this.testState.sheetStrokes = event.target.checked;
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
@@ -786,6 +798,7 @@
       if (document.activeElement !== startRow) startRow.value = this.testState.sheetStartRow || '';
       this.root.querySelector('.sheet-pretest-toggle').checked = this.testState.sheetPreTest !== false;
       this.root.querySelector('.sheet-strokes-toggle').checked = this.testState.sheetStrokes !== false;
+      this.root.querySelector('.sheet-design-toggle').checked = this.testState.sheetDesign !== false;
       this.root.querySelectorAll('[data-sheet-column]').forEach((box) => { box.checked = this.testState.sheetColumns?.[box.dataset.sheetColumn] !== false; });
       const exists = Boolean(sheet?.spreadsheetId && sheet?.url);
       open.disabled = !exists;
@@ -952,6 +965,7 @@
         sheetStartRow: Number(this.testState.sheetStartRow) || 0,
         sheetSkipColumns: this.sheetColumnsOff(),
         strokes: this.sheetStrokes(),
+        syncDesign: this.testState.sheetDesign !== false,
         testDateMs,
         ...rows,
       };
@@ -1042,8 +1056,8 @@
         const rows = result.officialFirstRow ? ` on ${result.officialFirstRow === result.officialLastRow ? `LOG row ${result.officialFirstRow}` : `LOG rows ${result.officialFirstRow}–${result.officialLastRow}`}` : '';
         const noStart = !result.officialRowsWritten && !this.sheetRows().officialRows.length
           ? ' No official start time is saved yet, so there are no 15-minute rows. Enter the start under Test times for paperwork, press Save test times, then sync again.' : '';
-        if (snapshot.strokes && !(result.layoutVersion >= 4)) {
-          this.renderSheetStatus('Synced the LOG, but the stroke count needs the updated Google Sheet script. Paste the new Code.gs into Apps Script (keep your own HYDRO_TEMPLATE_ID line) and deploy a new version (see SETUP.md), then sync again.', 'error');
+        if (!(result.layoutVersion >= 5)) {
+          this.renderSheetStatus('Synced, but the Google Sheet script is out of date: it may have erased design values typed into the Sheet, and the stroke count or design switch may have been ignored. Paste the new Code.gs into Apps Script (keep your own HYDRO_TEMPLATE_ID line) and deploy a new version (see SETUP.md).', 'error');
           return;
         }
         const strokeNote = result.strokeRowsWritten ? ` Wrote ${result.strokeRowsWritten - 1} stroke reading${result.strokeRowsWritten === 2 ? '' : 's'} to the Test Stroke Count tab.` : '';

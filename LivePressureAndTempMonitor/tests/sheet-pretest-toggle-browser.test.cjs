@@ -58,8 +58,23 @@ async function main() {
     assert.deepEqual(await strokes(), { start: { pressure: 1300, counter: 0 }, entries: [{ pressure: 1310, counter: 103 }, { pressure: 1320, counter: 204 }], capacity: 0.0043, step: 10 });
     await page.locator('[data-gauge="A"] .sheet-strokes-toggle').uncheck();
     assert.equal(await strokes(), null, 'switched off: the stroke tab is left alone');
+    // Test design values: sent with the snapshot unless switched off.
+    assert.equal(await page.evaluate(() => window.testGauges[0].sheetSnapshot().syncDesign), true);
+    await page.locator('[data-gauge="A"] .sheet-design-toggle').uncheck();
+    assert.equal(await page.evaluate(() => window.testGauges[0].sheetSnapshot().syncDesign), false, 'design switch off');
     await page.reload();
     assert.equal(await page.locator('[data-gauge="A"] .sheet-pretest-toggle').isChecked(), false, 'stays off after reload');
+    assert.equal(await page.locator('[data-gauge="A"] .sheet-design-toggle').isChecked(), false, 'design choice saved');
+    // No PDF: the design can be typed in by hand and applied.
+    await page.locator('[data-dashboard-tab="setup"]').click();
+    const reviewButton = page.locator('[data-gauge="A"] .review-saved-design');
+    assert.equal(await reviewButton.innerText(), 'Enter or review values');
+    await reviewButton.click();
+    assert.match(await page.locator('[data-gauge="A"] .test-design-status').innerText(), /Type the values from the test design/);
+    await page.locator('[data-gauge="A"] [data-design-field="lineName"]').fill('WL-248');
+    await page.locator('[data-gauge="A"] [data-design-field="sectionLengthFt"]').fill('5280');
+    await page.locator('[data-gauge="A"] .apply-test-design').click();
+    assert.deepEqual(await page.evaluate(() => [window.testGauges[0].testState.design.lineName, window.testGauges[0].testState.design.sectionLengthFt]), ['WL-248', '5280']);
     assert.equal(await page.locator('[data-gauge="A"] .sheet-strokes-toggle').isChecked(), false, 'stroke choice saved too');
     assert.deepEqual(errors, []);
     console.log('Sheet pre-test toggle: on by default, off sends no pre-test rows, requires a start row, saved across reload passed.');

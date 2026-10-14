@@ -20,7 +20,7 @@ function sync(snapshot, typedByOperator = () => {}) {
 {
   const pre = [entry(0, 'Pressure is at 0 psi / Begin pressurizing', 0), entry(20, 'Reached 75%'), entry(50, 'Reached test pressure')];
   const { log, summary, result } = sync({ preTestRows: pre, officialRows: officialRows(33), postTestRows: [entry(600, 'Begin depressurizing')] });
-  assert.equal(result.layoutVersion, 4);
+  assert.equal(result.layoutVersion, 5);
   assert.equal(log.cell('F23'), 'Pressure is at 0 psi / Begin pressurizing');
   assert.equal(log.cell('F26'), 'Begin test', 'official test starts right after three pre-test rows');
   assert.equal(log.cell('B26'), 4150, 'pressure is written');
@@ -31,6 +31,30 @@ function sync(snapshot, typedByOperator = () => {}) {
   assert.deepEqual([result.officialFirstRow, result.officialLastRow], [26, 60]);
   assert.equal(summary.cell('C26'), '=IF(COUNT(LOG!B26:B60)=0,"",MAX(LOG!B26:B60))', 'summary covers the official rows');
   assert.equal(summary.cell('C40'), '=LOG!A60');
+}
+
+// Test design values typed into the Sheet (scanned design the site could not read) survive a
+// sync: blank site values never erase them, and "Sync test design values" off skips them all.
+{
+  const typed = (workbook) => {
+    workbook.tabs.LOG.getRange('G19').setValue(5280); workbook.tabs.LOG.getRange('B19').setValue('30.45,-91.10');
+    workbook.tabs.LOG.getRange('G7').setValue('303.12191'); workbook.tabs.Summary.getRange('A14').setValue('8.625"');
+    workbook.tabs.Summary.getRange('C23').setValue('Water'); workbook.tabs['Test Stroke Count'].getRange('K7').setValue('WL-248');
+  };
+  const workbook = fakeWorkbook();
+  const { call } = appsScript(workbook, { exposeContext: true });
+  const created = call({ action: 'create', title: 'Design test', snapshot: {} });
+  typed(workbook);
+  const run = (snapshot) => call({ action: 'sync', spreadsheetId: created.spreadsheetId, snapshot: { officialRows: officialRows(1), ...snapshot } });
+  run({ design: {}, job: { jobNumber: 'ATM 4501' } });
+  const cells = () => [workbook.tabs.LOG.cell('G19'), workbook.tabs.LOG.cell('B19'), workbook.tabs.LOG.cell('G7'), workbook.tabs.Summary.cell('A14'), workbook.tabs.Summary.cell('C23'), workbook.tabs['Test Stroke Count'].cell('K7')];
+  assert.deepEqual(cells(), [5280, '30.45,-91.10', '303.12191', '8.625"', 'Water', 'WL-248'], 'blank site values leave typed cells');
+  assert.equal(workbook.tabs.LOG.cell('C9'), 'ATM 4501', 'values the site has are still written');
+  run({ syncDesign: false, design: { sectionLengthFt: 999, testMedium: 'Air', lineName: 'X', pipeSegments: [{ outsideDiameterIn: 4.5, wallThicknessIn: 0.237, grade: 'X42', lengthFt: 10 }] } });
+  assert.deepEqual(cells(), [5280, '30.45,-91.10', '303.12191', '8.625"', 'Water', 'WL-248'], 'design switch off: design cells untouched');
+  run({ design: { sectionLengthFt: 6000, testMedium: 'Air' } });
+  assert.equal(workbook.tabs.LOG.cell('G19'), 6000, 'design switch on: site value written');
+  assert.equal(workbook.tabs.Summary.cell('A14'), '8.625"', 'no pipe rows from the site: typed pipe table kept');
 }
 
 // Stroke count: start + each checkpoint down the five column groups, totals in the footer;
