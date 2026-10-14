@@ -2903,6 +2903,15 @@
   window.HydroPsiVoice?.attach(gauges);
   gaugeTicker.add(() => gauges.forEach((gauge) => gauge.strokeCount?.render()));
 
+  // Feed check on each Temperatures page: was the logger reading, and did the readings arrive?
+  if (window.HydroFeedCheck && !demo?.enabled) gauges.forEach((gauge) => {
+    if (!gauge.temperaturePanel) return;
+    window.HydroFeedCheck.mount(gauge.temperaturePanel, { load: () => {
+      if (!remote?.session_id || !remote?.publish_token) throw new Error('No temperatures have been recorded online for this test yet.');
+      return temperatureApi('feed_check', { session_id: remote.session_id, publish_token: remote.publish_token, slot: gauge.slot, since: Number(gauge.testState.jobStartedAt) || 0 }, true);
+    } });
+  });
+
   // Trailer alerts: a banner that stays up while the problem lasts, with a ding
   // every 20 seconds until it is silenced. A cleared problem re-alerts next time.
   const BATTERY_ALERT_PERCENT = 75;
