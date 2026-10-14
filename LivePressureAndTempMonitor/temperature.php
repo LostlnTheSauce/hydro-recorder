@@ -73,6 +73,8 @@ if ($action === 'device_heartbeat') {
     $update->execute(['now' => $now, 'ready' => $ready, 'id' => $device['id']]);
     require_once __DIR__ . '/inc/field-power.php';
     save_field_power((string) $device['id'], $payload['power'] ?? null, $now);
+    require_once __DIR__ . '/inc/feed-check.php';
+    save_field_checkin((string) $device['id'], $ready === 1, is_array($payload['power'] ?? null) ? ($payload['power']['laptop_temp_f'] ?? null) : null, $now);
     $source = null;
     if ($device['source_id'] !== null) {
         $query = db()->prepare('SELECT s.id, s.slot, s.created_at, s.sample_interval_seconds, s.whole_degrees, r.stopped_at
@@ -164,6 +166,19 @@ if ($action === 'reissue_device') {
     }
     json_response(['settings' => ['website' => rtrim($website, '/'), 'device_id' => $deviceId,
         'device_token' => $newToken, 'serial' => (string) $logger['serial']]]);
+}
+
+if ($action === 'feed_check') {
+    require_host();
+    require_csrf();
+    $sessionId = (string) ($payload['session_id'] ?? '');
+    $session = temperature_session($sessionId);
+    require_temperature_publisher($session, (string) ($payload['publish_token'] ?? ''));
+    $slot = (string) ($payload['slot'] ?? '');
+    if (!in_array($slot, ['A', 'B'], true)) json_response(['error' => 'Invalid test.'], 400);
+    require_once __DIR__ . '/inc/feed-check.php';
+    $since = is_numeric($payload['since'] ?? null) ? max(0, (int) $payload['since']) : 0;
+    json_response(feed_check($sessionId, $slot, (int) round(microtime(true) * 1000), $since));
 }
 
 if ($action === 'connect_device' || $action === 'disconnect_device') {
