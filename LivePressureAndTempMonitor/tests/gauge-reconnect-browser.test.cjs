@@ -101,6 +101,19 @@ async function main() {
     await waitFor(async () => (await shown()) === '108.0', 'offset applied away from zero');
     await page.evaluate(() => { const o = document.querySelector('[data-gauge="A"] .pressure-offset'); o.value = '0'; o.dispatchEvent(new Event('change')); window.__gauge.setReply('1234.5 PSI'); });
 
+    // Setting the offset mid-test (gauge 9 psi under the deadweights at 75%): readings that arrive
+    // while the number is still being typed must not get the offset twice (no blip in the chart).
+    await page.evaluate(() => window.__gauge.setReply('1300.0 PSI'));
+    await waitFor(async () => (await shown()) === '1300.0', 'gauge at 1300 psi');
+    await page.evaluate(() => { const o = document.querySelector('[data-gauge="A"] .pressure-offset'); o.value = '9'; o.dispatchEvent(new Event('input')); });
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => document.querySelector('[data-gauge="A"] .pressure-offset').dispatchEvent(new Event('change')));
+    await waitFor(async () => (await shown()) === '1309.0', 'offset applied once');
+    const offsetSeries = await page.evaluate(() => window.testGauges[0].readings.map((reading) => reading.pressure));
+    assert.equal(Math.max(...offsetSeries), 1309, 'no reading got the offset twice');
+    assert.ok(offsetSeries.filter((pressure) => pressure === 1309).length >= 2, 'readings typed during the change are on the line');
+    await page.evaluate(() => { const o = document.querySelector('[data-gauge="A"] .pressure-offset'); o.value = '0'; o.dispatchEvent(new Event('change')); window.__gauge.setReply('1234.5 PSI'); });
+
     await page.evaluate(() => { window.__realPut = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = () => { throw new DOMException('disk full', 'QuotaExceededError'); }; });
     await waitFor(async () => /Laptop backup is failing/.test(await page.locator('#localSaveAlert').innerText()), 'backup failure banner');
     await page.evaluate(() => { IDBObjectStore.prototype.put = window.__realPut; });
