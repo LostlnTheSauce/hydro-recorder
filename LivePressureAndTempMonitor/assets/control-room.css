@@ -284,6 +284,23 @@ table td { background:#ffffff55; }
 .logbook-table .logbook-change { color:var(--muted); }
 .logbook-table .logbook-change.up { color:#1f5b85; }
 .logbook-table .logbook-change.down { color:var(--bad); }
+.logbook-table .logbook-change.over-limit { color:var(--bad); font-weight:700; background:var(--bad-soft); }
+/* Pressure-up pacing against the maximum rate */
+.pressure-rate { display:none; font-style:normal; font-weight:700; border-radius:999px; padding:3px 12px; margin-top:6px; font-size:.9rem; }
+#hostApp[data-dashboard-view="pressure"] .pressure-rate:not([hidden]) { display:inline-block; }
+.pressure-rate.slow { color:#fff; background:var(--bad); }
+.pressure-rate.speed { color:#fff; background:var(--good); }
+.pressure-rate.pace { color:var(--good); background:var(--good-soft); border:1px solid #a9d4bb; }
+.pressure-rate.neutral { color:var(--muted); background:#f3f6f9; }
+.rate-target-control { display:none; align-items:center; gap:6px; font-size:.78rem; color:var(--muted); font-weight:600; }
+#hostApp .readout-side .rate-target-control { display:inline-flex; }
+.rate-target-control { white-space:nowrap; }
+.rate-target-control input { width:76px!important; flex:0 0 76px; min-height:34px!important; padding:4px 8px!important; }
+.logbook-pace { display:inline-block; margin-left:8px; padding:1px 9px; border-radius:999px; font:700 .75rem system-ui,sans-serif; }
+.logbook-pace.slow { color:#fff; background:var(--bad); }
+.logbook-pace.speed { color:#fff; background:var(--good); }
+.logbook-pace.pace { color:var(--good); background:var(--good-soft); border:1px solid #a9d4bb; }
+.logbook-pace.neutral { color:var(--muted); background:#eef2f5; }
 .logbook-table td[title] { text-decoration:underline dotted #a3b4c2; text-underline-offset:3px; }
 .logbook-table .logbook-latest td { background:var(--accent-soft); }
 .logbook-table .logbook-day td { background:#f3f6f9; font-size:.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:5px 12px; }

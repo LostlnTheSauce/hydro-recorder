@@ -29,6 +29,10 @@ Use **Add second test** to run a second, fully independent test on its own gauge
 - The screen is kept awake while a gauge is connected. Keep the laptop plugged in, and set Windows not to sleep during a test.
 - Missing data stays missing. Nothing is filled in, carried forward or averaged across a gap.
 
+## Pressure-up pacing
+
+Type a **Max rate** (psi per minute) next to the Connect button on Live test, for example 10. While pumping, the readout and the log book's latest row show **▼ Slow down** in red above that rate, **▲ Speed up** in green below 80% of it, and **On pace** in between, based on the last 30 seconds. Holding or bleeding off shows plain text, never "Speed up". Log book rows that went faster than the max are shaded red. Leave the box empty to turn it off; it is saved with the test.
+
 ## Alerts in the trailer
 
 A red bar under the tabs, with a double ding every 20 seconds, appears when:
