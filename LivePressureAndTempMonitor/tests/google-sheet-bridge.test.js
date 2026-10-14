@@ -20,7 +20,7 @@ function sync(snapshot, typedByOperator = () => {}) {
 {
   const pre = [entry(0, 'Pressure is at 0 psi / Begin pressurizing', 0), entry(20, 'Reached 75%'), entry(50, 'Reached test pressure')];
   const { log, summary, result } = sync({ preTestRows: pre, officialRows: officialRows(33), postTestRows: [entry(600, 'Begin depressurizing')] });
-  assert.equal(result.layoutVersion, 3);
+  assert.equal(result.layoutVersion, 4);
   assert.equal(log.cell('F23'), 'Pressure is at 0 psi / Begin pressurizing');
   assert.equal(log.cell('F26'), 'Begin test', 'official test starts right after three pre-test rows');
   assert.equal(log.cell('B26'), 4150, 'pressure is written');
@@ -31,6 +31,27 @@ function sync(snapshot, typedByOperator = () => {}) {
   assert.deepEqual([result.officialFirstRow, result.officialLastRow], [26, 60]);
   assert.equal(summary.cell('C26'), '=IF(COUNT(LOG!B26:B60)=0,"",MAX(LOG!B26:B60))', 'summary covers the official rows');
   assert.equal(summary.cell('C40'), '=LOG!A60');
+}
+
+// Stroke count: start + each checkpoint down the five column groups, totals in the footer;
+// without a stroke count from the site the tab is left as typed.
+{
+  const entries = Array.from({ length: 44 }, (_, i) => ({ pressure: 1310 + i * 10, counter: (i + 1) * 103 }));
+  const { workbook, result, again } = sync({ officialRows: officialRows(1), strokes: { start: { pressure: 1300, counter: 0 }, entries, capacity: 0.0043, step: 10 } });
+  const tab = workbook.tabs['Test Stroke Count'];
+  assert.equal(result.strokeRowsWritten, 45);
+  assert.deepEqual([tab.cell('A21'), tab.cell('B21'), tab.cell('A22'), tab.cell('B22')], [1300, 0, 1310, 103]);
+  assert.deepEqual([tab.cell('A49'), tab.cell('B49'), tab.cell('D21'), tab.cell('E21')], [1580, 2884, 1590, 2987], 'continues in the second group after row 49');
+  assert.deepEqual([tab.cell('D36'), tab.cell('E36'), tab.cell('D37'), tab.cell('E37')], [1740, 4532, '', ''], 'last reading, then blank');
+  assert.deepEqual([tab.cell('M12'), tab.cell('M14'), tab.cell('M15'), tab.cell('M16')], [1300, 10, 44, 0.0043]);
+  assert.deepEqual([tab.cell('D51'), tab.cell('J51'), tab.cell('M18')], [19.4876, 440, 0.44290]);
+  tab.getRange('B22').setValue(999);
+  again({ officialRows: officialRows(1) });
+  assert.equal(tab.cell('B22'), 999, 'no stroke count sent: the tab is not touched');
+  const tooMany = again({ strokes: { start: { pressure: 0, counter: 0 }, entries: Array.from({ length: 145 }, (_, i) => ({ pressure: i + 1, counter: i + 1 })) } });
+  assert.equal(tooMany.ok, false);
+  assert.match(tooMany.error, /holds 145\. Nothing was written/);
+  assert.equal(tab.cell('B22'), 999, 'too many readings: nothing written');
 }
 
 // Chosen start row: official test begins there; operator rows above it are untouched.

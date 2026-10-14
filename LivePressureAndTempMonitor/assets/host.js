@@ -748,6 +748,11 @@
           this.renderSheetStatus(event.target.checked ? this.sheetRowsMessage(layout, 'will go on') : `Pre-test entries will not be synced. ${this.sheetRowsMessage(layout, 'will go on')}`);
         } catch (error) { this.renderSheetStatus(error.message, 'error'); }
       });
+      this.root.querySelector('.sheet-strokes-toggle').addEventListener('change', (event) => {
+        this.testState.sheetStrokes = event.target.checked;
+        localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
+        this.renderSheetStatus(event.target.checked ? 'Sync to Sheet will fill the Test Stroke Count tab from the stroke count.' : 'Sync to Sheet will leave the Test Stroke Count tab as it is.');
+      });
       this.root.querySelector('.sheet-start-row-input').addEventListener('change', (event) => {
         const row = Math.round(Number(event.target.value));
         this.testState.sheetStartRow = event.target.value === '' || !Number.isFinite(row) ? '' : row;
@@ -780,6 +785,7 @@
       const startRow = this.root.querySelector('.sheet-start-row-input');
       if (document.activeElement !== startRow) startRow.value = this.testState.sheetStartRow || '';
       this.root.querySelector('.sheet-pretest-toggle').checked = this.testState.sheetPreTest !== false;
+      this.root.querySelector('.sheet-strokes-toggle').checked = this.testState.sheetStrokes !== false;
       this.root.querySelectorAll('[data-sheet-column]').forEach((box) => { box.checked = this.testState.sheetColumns?.[box.dataset.sheetColumn] !== false; });
       const exists = Boolean(sheet?.spreadsheetId && sheet?.url);
       open.disabled = !exists;
@@ -911,6 +917,19 @@
       return rows;
     }
 
+    // The stroke count for the Test Stroke Count tab: the starting pressure and counter, then the
+    // counter at each checkpoint. Null (tab left alone) when switched off or not started.
+    sheetStrokes() {
+      const workflow = this.testState.workflow;
+      if (this.testState.sheetStrokes === false || !workflow?.baseline) return null;
+      return {
+        start: { pressure: workflow.baseline.pressure, counter: workflow.baseline.counter },
+        entries: (workflow.strokes || []).map((row) => ({ pressure: row.target, counter: row.counter })),
+        capacity: Number(workflow.baseline.capacity) || 0,
+        step: Number(workflow.strokePlan?.step) || 10,
+      };
+    }
+
     sheetSnapshot(options = {}) {
       const rows = this.sheetRowsToSync(options);
       // Columns switched off are sent blank, and the Sheet script leaves those cells as they are.
@@ -932,6 +951,7 @@
         pressureOffset: this.pressureOffset(),
         sheetStartRow: Number(this.testState.sheetStartRow) || 0,
         sheetSkipColumns: this.sheetColumnsOff(),
+        strokes: this.sheetStrokes(),
         testDateMs,
         ...rows,
       };
@@ -1022,7 +1042,12 @@
         const rows = result.officialFirstRow ? ` on ${result.officialFirstRow === result.officialLastRow ? `LOG row ${result.officialFirstRow}` : `LOG rows ${result.officialFirstRow}–${result.officialLastRow}`}` : '';
         const noStart = !result.officialRowsWritten && !this.sheetRows().officialRows.length
           ? ' No official start time is saved yet, so there are no 15-minute rows. Enter the start under Test times for paperwork, press Save test times, then sync again.' : '';
-        const message = `Synced ${result.officialRowsWritten || 0} official row${result.officialRowsWritten === 1 ? '' : 's'}${rows} using the ${this.pressureOffset()} psi offset. Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'} from the Sheet.${noStart || ' Manual-only mode remains on.'}`;
+        if (snapshot.strokes && !(result.layoutVersion >= 4)) {
+          this.renderSheetStatus('Synced the LOG, but the stroke count needs the updated Google Sheet script. Paste the new Code.gs into Apps Script (keep your own HYDRO_TEMPLATE_ID line) and deploy a new version (see SETUP.md), then sync again.', 'error');
+          return;
+        }
+        const strokeNote = result.strokeRowsWritten ? ` Wrote ${result.strokeRowsWritten - 1} stroke reading${result.strokeRowsWritten === 2 ? '' : 's'} to the Test Stroke Count tab.` : '';
+        const message = `Synced ${result.officialRowsWritten || 0} official row${result.officialRowsWritten === 1 ? '' : 's'}${rows} using the ${this.pressureOffset()} psi offset.${strokeNote} Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'} from the Sheet.${noStart || ' Manual-only mode remains on.'}`;
         this.renderSheetStatus(message, 'complete');
       } catch (error) {
         this.renderSheetStatus(`${error?.message || 'Google Sheet synchronization failed.'} The local recording is still safe.`, 'error');
