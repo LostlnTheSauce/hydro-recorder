@@ -45,7 +45,7 @@ On the Live test page (one per test) and on the viewer's Logbook tab. Each row i
 
 ## Temperature smoothing
 
-A laptop charger running off a generator can make the logger readings jitter. **Smoothing** on the Temperatures page (per test) shows each probe as the average of its last 20 seconds of readings, with the highest and lowest fifth dropped so one spike can't pull the line; 1 and 2 minutes are also available, or Off. It changes what the charts, readouts and log book show, on the host and for viewers (log book columns say "avg"). The saved readings, CSV and backup downloads, history log table and Google Sheet all keep the real readings. History replay has the same switch.
+A laptop charger running off a generator can make the logger readings jitter. **Smoothing** on the Temperatures page (per test) shows each probe as the average of its last 2 minutes of readings (the default), with the highest and lowest fifth dropped so one spike can't pull the line; 20 seconds, 1 minute and 5 minutes are also available, or Off. Longer settings are smoother but show real changes later (2 min: about 0.3° of leftover wiggle from half-degree noise, a real change shows within about 1½ minutes). It changes what the charts, readouts and log book show, on the host and for viewers (log book columns say "avg"). The saved readings, CSV and backup downloads, history log table and Google Sheet all keep the real readings. History replay has the same switch.
 
 ## Pressure offset
 

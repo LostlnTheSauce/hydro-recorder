@@ -1,4 +1,4 @@
-// Temperature smoothing: on by default (20 s), changes the chart readout and
+// Temperature smoothing: on by default (2 min), changes the chart readout and
 // log book, can be turned off, and never alters the stored readings.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -22,7 +22,9 @@ async function main() {
     const page = await browser.newPage();
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/host.php`);
-    assert.equal(await page.locator('[data-gauge="A"] .temp-smoothing').inputValue(), '20', 'smoothing defaults to 20 seconds');
+    assert.equal(await page.locator('[data-gauge="A"] .temp-smoothing').inputValue(), '120', 'smoothing defaults to 2 minutes');
+    await page.locator('[data-dashboard-tab="temperature"]').click();
+    await page.locator('[data-gauge="A"] .temp-smoothing').selectOption('20');
     // Noisy logger readings around 78 °F, newest one a high spike.
     await page.evaluate(() => {
       const gauge = window.testGauges[0], now = Date.now();
@@ -44,7 +46,7 @@ async function main() {
     assert.equal(await page.evaluate(() => window.testGauges[0].settings().temperature.smoothingSeconds), 0, 'viewers receive the host choice');
     assert.equal(await page.evaluate(() => window.testGauges[0].temperatureReadings.at(-1).pipe), 81, 'stored readings are never changed');
     assert.deepEqual(errors, []);
-    console.log('Temperature smoothing: default 20 s trimmed average on readout and log book, off switch, saved choice, raw data untouched passed.');
+    console.log('Temperature smoothing: default 2 min, 20 s trimmed average on readout and log book, off switch, saved choice, raw data untouched passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });

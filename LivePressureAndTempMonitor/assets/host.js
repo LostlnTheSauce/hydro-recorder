@@ -419,10 +419,10 @@
       });
     }
 
-    // Temperature smoothing for this test: 20-second average unless the host turns it off.
+    // Temperature smoothing for this test: 2-minute average unless the host changes it.
     smoothingSeconds() {
       const value = this.testState.temperatureSmoothing;
-      return value === undefined || value === null ? 20 : [0, 20, 60, 120].includes(Number(value)) ? Number(value) : 20;
+      return value === undefined || value === null ? 120 : [0, 20, 60, 120, 300].includes(Number(value)) ? Number(value) : 120;
     }
 
     restoreTestSetup() {
