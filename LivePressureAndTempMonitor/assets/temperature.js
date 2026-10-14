@@ -474,10 +474,16 @@
   }
 
   // Display-only smoothing for electrical noise (a laptop charger on a generator
-  // makes the logger jitter). Each logger reading is shown as the trimmed mean
-  // of that probe's readings over the preceding window: the highest and lowest
-  // fifth are dropped so a single spike cannot pull the line. Manual and Sheet
-  // entries stay as entered. Stored readings, exports and the Sheet are untouched.
+  // makes the logger jitter). Each logger reading is shown as the average of that
+  // probe's readings over the preceding window, after two filters:
+  //  - readings more than SPIKE_LIMIT_F from the window's middle reading are
+  //    ignored, so a loose-connection burst (-330, +500) shorter than half the
+  //    window never reaches the line, the readouts or the chart scale;
+  //  - of the rest, the highest and lowest fifth are dropped.
+  // A fault lasting longer than half the window does show: it is what the logger
+  // is really reporting. Manual and Sheet entries stay as entered. Stored
+  // readings, exports and the Sheet are untouched.
+  const SPIKE_LIMIT_F = 5;
   const smoothCache = new WeakMap();
   function smoothReadings(readings, seconds) {
     const windowMs = Math.max(0, Number(seconds) || 0) * 1000;
@@ -497,7 +503,9 @@
       let first = 0;
       points.forEach((point, i) => {
         while (points[first].at < point.at - windowMs) first++;
-        const values = points.slice(first, i + 1).map((item) => item.value).sort((a, b) => a - b);
+        const window = points.slice(first, i + 1).map((item) => item.value).sort((a, b) => a - b);
+        const middle = window[Math.floor((window.length - 1) / 2)];
+        const values = window.filter((value) => Math.abs(value - middle) <= SPIKE_LIMIT_F);
         const trim = values.length >= 5 ? Math.floor(values.length / 5) : 0;
         const kept = values.slice(trim, values.length - trim);
         result[point.index][channel.key] = Math.round(kept.reduce((sum, value) => sum + value, 0) / kept.length * 100) / 100;

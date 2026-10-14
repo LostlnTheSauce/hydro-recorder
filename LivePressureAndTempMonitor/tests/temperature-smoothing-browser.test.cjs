@@ -40,13 +40,23 @@ async function main() {
     await page.waitForFunction(() => /avg/.test(document.querySelector('[data-gauge="A"] .logbook-card thead')?.textContent || ''));
     assert.match(await logbook.locator('thead').innerText(), /pipe \(20 s avg\)/i, 'log book labels averaged columns');
     await page.locator('[data-dashboard-tab="temperature"]').click();
+    // A loose-connection burst (30 s of -330 °F) inside a 2-minute window is ignored.
+    await page.locator('[data-gauge="A"] .temp-smoothing').selectOption('120');
+    await page.evaluate(() => {
+      const gauge = window.testGauges[0], now = Date.now();
+      gauge.temperatureReadings.splice(0);
+      for (let i = 60; i >= 0; i--) gauge.temperatureReadings.push({ at: now - i * 2000, source: 'live', sourceId: 's', ambient: i <= 20 && i > 5 ? -330 : 75 + (i % 2 ? 0.4 : -0.4) });
+      gauge.drawTemperature();
+    });
+    const ambient = Number(await page.locator('[data-gauge="A"] [data-temp-value="ambient"]').innerText());
+    assert.ok(ambient > 74 && ambient < 76, `a -330 °F burst does not reach the readout (got ${ambient})`);
     await page.locator('[data-gauge="A"] .temp-smoothing').selectOption('0');
-    assert.equal(await tile.innerText(), '81.0', 'Off shows the raw latest reading');
+    assert.equal(await page.locator('[data-gauge="A"] [data-temp-value="ambient"]').innerText(), '74.6', 'Off shows the raw latest reading');
     assert.equal(await page.evaluate(() => window.testGauges[0].testState.temperatureSmoothing), 0, 'choice is saved with the test');
     assert.equal(await page.evaluate(() => window.testGauges[0].settings().temperature.smoothingSeconds), 0, 'viewers receive the host choice');
-    assert.equal(await page.evaluate(() => window.testGauges[0].temperatureReadings.at(-1).pipe), 81, 'stored readings are never changed');
+    assert.equal(await page.evaluate(() => window.testGauges[0].temperatureReadings.filter((r) => r.ambient === -330).length), 15, 'stored readings are never changed');
     assert.deepEqual(errors, []);
-    console.log('Temperature smoothing: default 2 min, 20 s trimmed average on readout and log book, off switch, saved choice, raw data untouched passed.');
+    console.log('Temperature smoothing: default 2 min, 20 s trimmed average on readout and log book, loose-connection burst ignored, off switch, saved choice, raw data untouched passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
