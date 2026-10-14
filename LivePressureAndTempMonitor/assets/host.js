@@ -370,6 +370,14 @@
         windowThickness.nextElementSibling.textContent = windowThickness.value;
         this.draw();
       });
+      // Top and bottom test window lines: the chart header switch and the one in Setup stay in step.
+      const windowSwitches = this.root.querySelectorAll('.show-window, .live-show-window');
+      windowSwitches.forEach((box) => box.addEventListener('change', () => {
+        this.testState.showWindow = box.checked;
+        windowSwitches.forEach((other) => { other.checked = box.checked; });
+        this.saveTestState();
+        this.draw();
+      }));
       this.root.querySelectorAll('.settings-grid input,.gauge-name').forEach((input) => input.addEventListener('change', () => {
         this.draw();
         this.updateWarning();
@@ -488,6 +496,7 @@
       this.root.querySelectorAll('[data-enabled-probe]').forEach(input => {
         input.checked = (this.testState.enabledProbes || ['ambient','pipe','soil','aux']).includes(input.dataset.enabledProbe);
       });
+      this.root.querySelectorAll('.show-window, .live-show-window').forEach((box) => { box.checked = this.testState.showWindow !== false; });
       const fieldMap = {
         '.job-number': 'jobNumber', '.po-afe': 'poAfe', '.job-location': 'location', '.asset-owner': 'owner',
         '.contractor': 'contractor', '.owner-rep': 'ownerRep', '.pressure-offset': 'offset', '.ramp-profile': 'rampProfile',

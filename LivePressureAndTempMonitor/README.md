@@ -35,6 +35,10 @@ The **Stroke count** panel on Live test. After the hold, enter the start pressur
 
 **Sync to Sheet** also fills the Sheet's **Test Stroke Count** tab: the starting pressure and counter, then the counter at each checkpoint down the five Pressure / Stroke column groups (rows 21–49, 145 readings), with Stroke Count Starts at, Reading Increments, Number of Readings, pump capacity, Total Volume Pumped, Total Pressure Increase and Actual Incremental Volume. The Difference cells keep the Sheet's formulas; Calculated Incremental Volume and Double Deviation stay with the operator. Untick **Sync stroke count** to leave the tab as typed; with no stroke count on the site it is never touched. This needs Sheet script version 4 (Code.gs).
 
+## Recorder chart
+
+The chart header on Live test holds **Chart maximum**, **Pen size** and **Window lines**. Unticking **Window lines** hides the top and bottom pressure test window lines (the same switch as Setup → Chart scale and warning limits → Show pressure test window); the choice is saved with the test and viewers see the same.
+
 ## Pressure-up pacing
 
 Type a **Max rate** (psi per minute) next to the Connect button on Live test, for example 10. While pumping, the readout and the log book's blue latest row show **▼ Slow down** in blue above that rate, **▲ Speed up** in green below 80% of it, and **On pace** in between, based on the last 30 seconds. Holding or bleeding off shows plain text, never "Speed up". Older log book rows are not marked. Leave the box empty to turn it off; it is saved with the test.

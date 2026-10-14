@@ -54,7 +54,7 @@
       const heading = document.createElement('header'); heading.className = 'chart-heading';
       heading.innerHTML = '<h3>Recorder chart</h3>';
       const controls = document.createElement('div'); controls.className = 'chart-controls';
-      controls.append(root.querySelector('.live-scale-control'), root.querySelector('.live-pen-control'));
+      controls.append(root.querySelector('.live-scale-control'), root.querySelector('.live-pen-control'), root.querySelector('.live-window-control'));
       heading.append(controls);
       deck.append(heading, root.querySelector('.chart-wrap'), root.querySelector('.stat-row'));
       const notes = panels.pressure.querySelector('.workflow-card');

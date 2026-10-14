@@ -422,3 +422,5 @@ table td { background:#ffffff55; }
 .design-pipeline-wrap { margin-top:14px; }
 .design-pipeline-table td { padding:4px; }
 .design-pipeline-table input { width:100%; min-width:72px; min-height:34px!important; padding:4px 8px; }
+.live-window-control { display:inline-flex; align-items:center; gap:6px; font-size:.82rem; white-space:nowrap; cursor:pointer; }
+.live-window-control input { width:auto; min-height:0!important; margin:0; }
