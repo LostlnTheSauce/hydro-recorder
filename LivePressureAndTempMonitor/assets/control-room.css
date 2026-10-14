@@ -284,6 +284,31 @@ table td { background:#ffffff55; }
 .logbook-table .logbook-change { color:var(--muted); }
 .logbook-table .logbook-change.up { color:#1f5b85; }
 .logbook-table .logbook-change.down { color:var(--bad); }
+/* Stroke count panel (Live test) */
+.stroke-card { grid-column:1/-1; border:1px solid var(--line); border-radius:10px; padding:18px 20px; background:var(--paper); min-width:0; }
+.stroke-card.active { order:-1; border-color:#9ec3dc; box-shadow:0 0 0 3px var(--accent-soft); }
+.page-pressure .demo-pressure-panel { order:-2; }
+.stroke-header { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; }
+.stroke-header p { font-size:.82rem; }
+.stroke-setup { display:flex; flex-wrap:wrap; align-items:end; gap:10px 14px; margin-top:12px; }
+.stroke-setup label { flex:0 1 140px; }
+.stroke-setup label small { margin-left:2px; }
+.stroke-entry { display:flex; flex-wrap:wrap; align-items:end; gap:10px 14px; margin-top:12px; padding:14px 16px; border-radius:8px; background:#f3f6f9; border:1px solid var(--line); }
+.stroke-entry.reached { background:var(--good-soft); border-color:#a9d4bb; }
+.stroke-entry label { font-size:1rem; flex:0 1 260px; }
+.stroke-entry label b { font-family:var(--mono); font-size:1.25rem; }
+.stroke-entry input { font:650 1.4rem var(--mono); min-height:52px!important; }
+.stroke-status { align-self:center; font-size:.85rem; font-weight:600; }
+.stroke-status.stroke-reached { color:var(--good); }
+.stroke-status.stroke-waiting { color:var(--muted); font-family:var(--mono); }
+.stroke-done { margin-top:12px; padding:14px 16px; border-radius:8px; background:var(--good-soft); border:1px solid #a9d4bb; color:var(--good); font-weight:700; }
+.stroke-actions { display:flex; gap:8px; margin-top:10px; }
+.stroke-actions button { font-size:.8rem; min-height:34px; padding:5px 12px; }
+.stroke-message { margin-top:8px; font-size:.85rem; color:var(--ink); }
+.stroke-table-wrap { max-height:320px; overflow:auto; margin-top:12px; border:1px solid var(--line); border-radius:8px; }
+.stroke-table { font-variant-numeric:tabular-nums; }
+.stroke-table td { font-family:var(--mono); padding:7px 12px; }
+.stroke-table .stroke-start td { color:var(--muted); }
 /* Pressure-up pacing against the maximum rate */
 .pressure-rate { display:none; font-style:normal; font-weight:700; border-radius:999px; padding:3px 12px; margin-top:6px; font-size:.9rem; }
 #hostApp[data-dashboard-view="pressure"] .pressure-rate:not([hidden]) { display:inline-block; }
