@@ -236,6 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
               <button class="primary temperature-device-connect" type="button">Start recording temps</button>
               <button class="temperature-device-disconnect" type="button" disabled>Stop recording temps</button>
               <button class="temperature-device-refresh" type="button">Refresh loggers</button>
+              <button class="temperature-device-reissue" type="button">Set up another field laptop</button>
               <p class="temperature-bridge-status" role="status">Start the field app. Your logger will appear when it is online.</p>
               <p class="temperature-laptop-power" role="status">Field laptop: waiting for battery status.</p>
               <small>Keep MadgeTech and the field app open. Only readings between Start and Stop are recorded here.</small>

@@ -24,6 +24,7 @@ function require_host(): void { if ($GLOBALS['scenario'] === 'signed-out') json_
 function require_csrf(): void { if ($GLOBALS['scenario'] === 'csrf') json_response(['error'=>'CSRF'],403); }
 function json_response(array $body, int $status=200): never { throw new ResponseSent($body,$status); }
 function random_hex(int $bytes): string { return bin2hex(random_bytes($bytes)); }
+function base_url(): string { return 'https://grantgsolutions.com/hydro/'; }
 function check(bool $ok,string $message): void { if (!$ok) throw new RuntimeException($message); }
 $scenario = $argv[1] ?? 'fresh'; $fixture = new FixtureDb();
 $fixture->pdo->exec('CREATE TABLE live_sessions (id TEXT PRIMARY KEY,publisher_token_hash TEXT,viewer_password_hash TEXT);
@@ -68,6 +69,7 @@ if ($scenario==='heartbeat-power') {
     $input=['device_id'=>$device,'device_token'=>$token,'serial'=>'TEST','ready'=>true,
         'power'=>['battery_percent'=>84,'on_ac'=>true,'charging'=>true,'has_battery'=>true]];
 }
+if ($scenario==='reissue') { $_GET['action']='reissue_device'; $input=['device_id'=>$device]; }
 if ($scenario==='list-power') {
     $_GET['action']='list_devices';
     $fixture->prepare('INSERT INTO temperature_device_power VALUES (?,?,?,?,?,?,?)')->execute([$device,84,1,1,1,null,$now]);
@@ -83,6 +85,12 @@ catch (ResponseSent $response) {
     if($scenario==='heartbeat-power') check($fixture->query('SELECT battery_percent FROM temperature_device_power_log')->fetchColumn()===84,'Heartbeat logs battery history');
     if($scenario==='list-power') check($response->body['devices'][0]['power']['battery_percent']===84 && $response->body['devices'][0]['power']['charging']===true,'Host receives power');
     if($scenario==='list-power') { $history=$response->body['devices'][0]['power']['history']; check(count($history)===1 && $history[0]['percent']===85 && $history[0]['on_ac']===false,'Host receives battery history'); }
+    if($scenario==='reissue') {
+        $settings=$response->body['settings'];
+        check($settings['device_id']===$device && $settings['serial']==='TEST' && $settings['website']==='https://grantgsolutions.com/hydro' && preg_match('/^[a-f0-9]{64}$/',$settings['device_token'])===1,'Setup file has the same logger ID, a new token and the site address');
+        $hash=$fixture->query('SELECT token_hash FROM temperature_devices')->fetchColumn();
+        check($hash===hash('sha256',$settings['device_token']) && $hash!==hash('sha256',$token),'New token works; the old laptop key no longer does');
+    }
     if(in_array($scenario,['fresh','finishing','transfer'],true)) {
         check($assigned!==null&&$assigned!==$old,'New source assigned');
         $run=$fixture->query("SELECT * FROM temperature_sources WHERE id='$assigned'")->fetch();

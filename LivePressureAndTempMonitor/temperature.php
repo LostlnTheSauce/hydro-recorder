@@ -142,6 +142,30 @@ if ($action === 'list_devices') {
     json_response(['devices' => $devices, 'server_time' => $now]);
 }
 
+// A fresh private setup file for moving a logger to another field laptop. The
+// logger keeps its ID, so a running recording continues; the old laptop's file
+// stops working because its token is replaced.
+if ($action === 'reissue_device') {
+    require_host();
+    require_csrf();
+    $deviceId = (string) ($payload['device_id'] ?? '');
+    if (!preg_match('/^[a-f0-9]{16}$/', $deviceId)) json_response(['error' => 'Choose the field logger first.'], 400);
+    $query = db()->prepare('SELECT id, serial FROM temperature_devices WHERE id = :id AND active = 1 LIMIT 1');
+    $query->execute(['id' => $deviceId]);
+    $logger = $query->fetch();
+    if (!$logger) json_response(['error' => 'Field logger not found.'], 404);
+    $newToken = random_hex(32);
+    db()->prepare('UPDATE temperature_devices SET token_hash = :hash WHERE id = :id')
+        ->execute(['hash' => hash('sha256', $newToken), 'id' => $deviceId]);
+    $website = base_url();
+    if ($website === '' || !str_starts_with($website, 'https://')) {
+        $path = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/'))), '/');
+        $website = 'https://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')) . $path;
+    }
+    json_response(['settings' => ['website' => rtrim($website, '/'), 'device_id' => $deviceId,
+        'device_token' => $newToken, 'serial' => (string) $logger['serial']]]);
+}
+
 if ($action === 'connect_device' || $action === 'disconnect_device') {
     require_host();
     require_csrf();

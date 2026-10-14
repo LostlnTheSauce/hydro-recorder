@@ -30,6 +30,10 @@ The field app also reports the field laptop's own temperature from Windows' buil
 
 To update a field laptop: stop the field app with Ctrl+C, copy `Bridge.cs`, `Build-Bridge.ps1` and `Build-Field-App.cmd` into the field app folder (keep `field-device.settings` and `Data`), double-click `Build-Field-App.cmd`, then start `Start-Field-Mode.cmd` (or `Run-Bridge.cmd`) as usual. The build uses MadgeTech 4 and the .NET compiler already on the laptop.
 
+## Moving the logger to another field laptop
+
+On the host page, open **Temperatures**, choose the logger and click **Set up another field laptop**. After you confirm, the site downloads a fresh `field-device.settings` for that logger. The logger keeps its ID, so a running recording continues; the old laptop's field app stops being accepted at that moment. On the new laptop, install MadgeTech 4 (Interop data output and named pipes on), put the downloaded file next to `MadgeTechFieldBridge.exe` (exactly `field-device.settings`, no `(1)` or `.txt`), run `Build-Field-App.cmd` once, then `Start-Field-Mode.cmd` and enter the MadgeTech Interop username and password. Do not press Start or Stop on the host page.
+
 ## One-time administrator setup
 
 The website requires the `temperature_devices` table in `temperature-install.sql`. An authenticated host administrator enrolls the known serial once through `temperature.php?action=enroll_device`, then includes the returned device ID and token in `field-device.settings` inside a private field package. The token is stored only as a hash on the website. Never publish a package containing the token or place it in the website's public folder. This enrollment is not a per-test step.
