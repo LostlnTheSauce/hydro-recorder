@@ -45,7 +45,7 @@
       this.card.querySelector('.workflow-heading').append(fresh);
       this.card.before(this.root.querySelector('.gauge-actions'));
       this.records = document.createElement('section'); this.records.className = 'workflow-records';
-      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
+      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="probes">Download probe vs Sheet temps CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
       this.root.append(this.records);
       this.records.append(this.root.querySelector('.paperwork-sync-panel'));
       this.records.append(this.root.querySelector('.ramp-panel'));
@@ -234,6 +234,21 @@
       if (window.HydroDemo?.enabled) return this.message('Demo records are for practice only; exports are disabled.');
       const s = this.state(), name = (this.g.testState.jobNumber || `Test-${this.g.slot}`).replace(/[^a-z0-9_-]/gi, '_');
       if (kind === 'backup') return this.g.downloadTestBackup();
+      if (kind === 'probes') {
+        // Every Sheet log row with the electronic probes' own readings beside the temperatures
+        // in the Sheet (as of the last sync) or typed on the site, for comparing them.
+        const live = this.g.temperatureReadings.filter(r => r.source === 'live');
+        const typed = this.g.temperatureReadings.filter(r => r.source === 'sheet' || r.source === 'manual');
+        const rows = this.g.sheetRows();
+        const value = (reading, key, digits) => W.number(reading?.[key]) === null ? '' : Number(reading[key]).toFixed(digits);
+        return download(`${name}_probe-vs-sheet-temps.csv`,
+          ['Date / time', 'Pressure PSI', 'Ambient probe F', 'Ambient Sheet F', 'Pipe probe F', 'Pipe Sheet F', 'Soil probe F', 'Soil Sheet F', 'Remarks'],
+          [...rows.preTestRows, ...rows.officialRows, ...rows.postTestRows].map(r => {
+            const probe = this.g.nearestTemperatureReading(r.at, undefined, live);
+            const sheet = typed.find(t => Math.abs(Number(t.at) - r.at) <= 30000);
+            return [stamp(r.at), r.pressure, ...['ambient', 'pipe', 'soil'].flatMap(key => [value(probe, key, 1), value(sheet, key, 0)]), r.comments];
+          }));
+      }
       const events = this.g.testState.events;
       const times = W.officialTimes(s, Date.now());
       const entries = [...events.map(e => ({ ...this.g.sheetLogRow(e.at, e.pressure, e.label), kind: e.type })), ...times.map(at => ({ ...this.g.sheetLogRow(at, null, ''), kind: '15-minute reading' }))].sort((a, b) => a.at - b.at);
