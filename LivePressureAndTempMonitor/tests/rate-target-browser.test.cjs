@@ -1,6 +1,6 @@
-// Pressure-up pacing: Slow down (red) above the max rate, Speed up (green) well
-// under it, On pace close to it, nothing nagging while holding, and log book
-// rows over the limit flagged. Fake readings, no devices or APIs.
+// Pressure-up pacing: Slow down (blue) above the target rate, Speed up (green)
+// well under it, On pace close to it, nothing nagging while holding, shown on
+// the readout and the log book's latest row only (no row shading). Fake readings, no devices or APIs.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -52,10 +52,10 @@ async function main() {
     const logbook = page.locator('[data-gauge="A"] .logbook-card');
     await logbook.locator('[data-logbook-interval="60000"]').click();
     await logbook.scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => document.querySelectorAll('[data-gauge="A"] .logbook-change.over-limit').length > 0);
     await page.waitForFunction(() => /Slow down/.test(document.querySelector('[data-gauge="A"] .logbook-latest .logbook-pace')?.textContent || ''));
-    assert.match(await logbook.locator('.logbook-latest .logbook-pace').getAttribute('class'), /slow/, 'latest log book row shows live pacing in red');
-    assert.match(await logbook.locator('.over-limit').first().getAttribute('title'), /over the 10 psi\/min maximum/);
+    assert.match(await logbook.locator('.logbook-latest .logbook-pace').getAttribute('class'), /slow/, 'latest log book row shows live pacing');
+    assert.equal(await logbook.locator('.logbook-pace').count(), 1, 'only the latest row carries the pacing indicator');
+    assert.equal(await logbook.locator('.over-limit').count(), 0, 'no rows are shaded');
     await page.screenshot({ path: path.join(root, '..', 'tmp', 'rate-target-logbook.png') });
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: path.join(root, '..', 'tmp', 'rate-target.png'), clip: { x: 0, y: 0, width: 1440, height: 560 } });
@@ -63,7 +63,7 @@ async function main() {
     assert.equal(await rate.isHidden(), true, 'clearing the box turns it off');
     assert.equal(await page.evaluate(() => window.testGauges[0].testState.rateTarget), null);
     assert.deepEqual(errors, []);
-    console.log('Rate pacing: slow down / speed up / on pace / holding / falling, saved max rate, log book over-limit rows and off switch passed.');
+    console.log('Rate pacing: slow down / speed up / on pace / holding / falling, saved max rate, latest-row indicator only and off switch passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
