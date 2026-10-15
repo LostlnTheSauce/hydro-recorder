@@ -232,24 +232,26 @@
       ['Target pressure', design.targetPressure ? `${design.targetPressure} psi` : ''], ['Test window', data.window?.bottom && data.window?.top ? `${data.window.bottom}–${data.window.top} psi` : '']].filter(([, v]) => v);
     const insideWindow = num(data.window?.bottom) !== null && num(data.window?.top) !== null && p.min !== null
       ? (p.min >= Number(data.window.bottom) && p.max <= Number(data.window.top) ? 'Yes' : 'No') : '—';
+    // Digital (electronic probe) values only: the physical charts have their own comparison report.
+    const official = rows.filter((r) => !r.pre);
+    const fmt = (v) => (v === null || v === undefined ? '—' : `${Number(v).toFixed(1)}°`);
     const tempRow = (channel) => {
-      const first = rows.find((r) => !r.pre && num(r[channel.key]?.probe) !== null), last = [...rows].reverse().find((r) => !r.pre && num(r[channel.key]?.probe) !== null);
-      const pf = rows.find((r) => !r.pre && num(r[channel.key]?.chart) !== null), pl = [...rows].reverse().find((r) => !r.pre && num(r[channel.key]?.chart) !== null);
-      const fmt = (v, d = 1) => (v === null || v === undefined ? '—' : `${Number(v).toFixed(d)}°`);
-      return `<tr><th>${esc(channel.name)}</th><td class="digital">${fmt(first?.[channel.key].probe)} → ${fmt(last?.[channel.key].probe)}</td><td class="physical">${fmt(pf?.[channel.key].chart, 0)} → ${fmt(pl?.[channel.key].chart, 0)}</td></tr>`;
+      const values = official.map((r) => num(r[channel.key]?.probe)).filter((v) => v !== null);
+      const first = official.find((r) => num(r[channel.key]?.probe) !== null), last = [...official].reverse().find((r) => num(r[channel.key]?.probe) !== null);
+      return `<tr><th>${esc(channel.name)}</th><td>${fmt(first?.[channel.key].probe)}</td><td>${fmt(last?.[channel.key].probe)}</td><td>${values.length ? fmt(Math.min(...values)) : '—'}</td><td>${values.length ? fmt(Math.max(...values)) : '—'}</td></tr>`;
     };
-    const charts = channels.map((channel) => `<figure><figcaption>${esc(channel.name)} temperature</figcaption>${chartSvg(channel, (data.series?.[channel.key] || []).filter((s) => s.at >= data.chartFrom && s.at <= data.chartTo), rows.filter((r) => !r.pre), data.chartFrom, data.chartTo, time)}</figure>`).join('');
-    const head = channels.map((channel) => `<th colspan="2">${esc(channel.name)} °F</th>`).join('');
-    const sub = channels.map(() => '<th class="digital">Digital</th><th class="physical">Physical</th>').join('');
-    const body = rows.map((row) => `<tr><td>${esc(stamp(row.at))}</td><td>${row.pressure === '' || row.pressure === null || row.pressure === undefined ? '—' : esc(row.pressure)}</td>${channels.map((channel) => {
-      const d = num(row[channel.key]?.probe), c = num(row[channel.key]?.chart);
-      return `<td class="digital">${d === null ? '—' : d.toFixed(1)}</td><td class="physical">${c === null ? '—' : c.toFixed(c % 1 ? 1 : 0)}</td>`;
+    const charts = channels.map((channel) => `<figure><figcaption>${esc(channel.name)} temperature (°F)</figcaption>${chartSvg(channel, (data.series?.[channel.key] || []).filter((s) => s.at >= data.chartFrom && s.at <= data.chartTo), [], data.chartFrom, data.chartTo, time)}</figure>`).join('');
+    const head = channels.map((channel) => `<th>${esc(channel.name)} °F</th>`).join('');
+    const body = official.map((row) => `<tr><td>${esc(stamp(row.at))}</td><td>${row.pressure === '' || row.pressure === null || row.pressure === undefined ? '—' : esc(row.pressure)}</td>${channels.map((channel) => {
+      const d = num(row[channel.key]?.probe);
+      return `<td>${d === null ? '—' : d.toFixed(1)}</td>`;
     }).join('')}<td class="remarks">${esc(row.comments || '')}</td></tr>`).join('');
     const events = (data.events || []).map((e) => `<tr><td>${esc(stamp(e.at))}</td><td class="remarks">${esc(e.label || '')}</td><td>${num(e.pressure) === null ? '' : `${Number(e.pressure).toFixed(1)}`}</td></tr>`).join('');
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(`Hydrostatic test ${job.jobNumber || ''}`.trim())}</title><style>${STYLE}
       .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
       .tiles div { border: 1px solid #d0d7de; border-radius: 6px; padding: 8px 10px; } .tiles span { display: block; color: #57606a; font-size: 10.5px; } .tiles b { font-size: 15px; }
       .rows td:first-child { white-space: nowrap; } .page-break { break-before: page; }
+      h2 { break-after: avoid; } figure, .tiles, .facts { break-inside: avoid; }
     </style></head><body>
       <div class="actions"><button type="button" onclick="window.print()">Print / Save as PDF</button></div>
       <h1>Hydrostatic test report</h1>
@@ -258,15 +260,14 @@
       <h2>Pressure</h2>
       <div class="tiles"><div><span>Start of test</span><b>${psi(p.start)}</b></div><div><span>End of test</span><b>${psi(p.end)}</b></div><div><span>Change</span><b>${p.change === null || p.change === undefined ? '—' : `${signed(p.change)} psi`}</b></div><div><span>Duration</span><b>${p.hours ? `${p.hours.toFixed(1)} h` : '—'}</b></div>
         <div><span>Lowest in test</span><b>${psi(p.min)}</b></div><div><span>Highest in test</span><b>${psi(p.max)}</b></div><div><span>Stayed inside window</span><b>${insideWindow}</b></div><div><span>Gauge offset applied</span><b>${p.offset === null || p.offset === undefined ? '—' : `${signed(p.offset)} psi`}</b></div></div>
-      <figure style="margin-top:12px">${pressureSvg(data.pressureSeries || [], data.chartFrom, data.chartTo, data.window, [{ at: data.officialStart, label: 'Start' }, { at: data.officialEnd, label: 'End' }].filter((m) => m.at), time)}</figure>
-      <h2>Temperatures</h2>
-      <table class="summary"><thead><tr><th>Probe</th><th class="digital">Digital, start → end</th><th class="physical">Physical, start → end</th></tr></thead><tbody>${channels.map(tempRow).join('')}</tbody></table>
-      <div class="legend" style="margin-top:10px"><span><i class="line"></i>Digital probe (every reading)</span><span><i class="dot"></i>Physical chart (log entries)</span></div>
-      ${charts}
-      <h2 class="page-break">Test log</h2>
-      <table class="rows"><thead><tr><th rowspan="2">Time</th><th rowspan="2">PSI</th>${head}<th rowspan="2">Remarks</th></tr><tr>${sub}</tr></thead><tbody>${body}</tbody></table>
+      <figure style="margin-top:12px"><figcaption>Pressure (psi)</figcaption>${pressureSvg(data.pressureSeries || [], data.chartFrom, data.chartTo, data.window, [{ at: data.officialStart, label: 'Start' }, { at: data.officialEnd, label: 'End' }].filter((m) => m.at), time)}</figure>
+      <h2>Temperatures (digital probes)</h2>
+      <table class="summary"><thead><tr><th>Probe</th><th>Start of test</th><th>End of test</th><th>Low</th><th>High</th></tr></thead><tbody>${channels.map(tempRow).join('')}</tbody></table>
+      <div style="margin-top:10px">${charts}</div>
+      <h2 class="page-break">Test log (every 15 minutes)</h2>
+      <table class="rows"><thead><tr><th>Time</th><th>PSI</th>${head}<th>Remarks</th></tr></thead><tbody>${body}</tbody></table>
       ${events ? `<h2>Events and notes</h2><table class="rows"><thead><tr><th>Time</th><th>Entry</th><th>PSI</th></tr></thead><tbody>${events}</tbody></table>` : ''}
-      <p class="note">Pressure is the recorded gauge pressure with the gauge offset shown above applied. <b class="digital-ink">Digital</b> temperatures are the electronic probes' readings nearest each log time (${esc(data.loggerNote || 'field data logger')}); <b class="physical-ink">Physical</b> temperatures are the recorder-chart values entered in the test log. Missing readings are shown as dashes. No values have been adjusted.</p>
+      <p class="note">Pressure is the recorded gauge pressure with the gauge offset shown above applied. Temperatures are the electronic (digital) probes' readings nearest each log time (${esc(data.loggerNote || 'field data logger')}). Missing readings are shown as dashes. No values have been adjusted.</p>
     </body></html>`;
   }
 
