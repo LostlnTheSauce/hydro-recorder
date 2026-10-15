@@ -464,3 +464,4 @@ table td { background:#ffffff55; }
   .calibration-scan-card canvas { width:72px; height:72px; }
 }
 .equipment-restore { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin:0 0 12px; } .equipment-restore small { color:var(--muted); font-size:.8rem; }
+.split-datetime { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px; }

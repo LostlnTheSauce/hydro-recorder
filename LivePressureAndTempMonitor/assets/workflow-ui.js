@@ -1,5 +1,37 @@
 (function () {
   'use strict';
+  // Shows a date-and-time box as a date box (today when nothing is saved) and a time box
+  // (blank until typed). The original box stays the saved value: it is filled only when both
+  // parts are there, and the parts follow it whenever the program sets it.
+  function splitDateTime(input) {
+    if (input.dataset.split) return;
+    input.dataset.split = '1';
+    const native = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    const date = document.createElement('input'), time = document.createElement('input');
+    date.type = 'date'; date.className = 'split-date'; date.setAttribute('aria-label', 'Date');
+    time.type = 'time'; time.step = '1'; time.className = 'split-time'; time.setAttribute('aria-label', 'Time');
+    const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+    const show = (value) => {
+      const [d, t] = String(value || '').split('T');
+      date.value = value ? d : (date.value || today());
+      time.value = value ? (t || '') : '';
+    };
+    Object.defineProperty(input, 'value', { configurable: true, get() { return native.get.call(this); }, set(v) { native.set.call(this, v); show(v); } });
+    const update = () => {
+      const next = date.value && time.value ? `${date.value}T${time.value}` : '';
+      if (next === native.get.call(input)) return;
+      native.set.call(input, next);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    [date, time].forEach((box) => { box.addEventListener('input', update); box.addEventListener('change', update); });
+    const pair = document.createElement('span'); pair.className = 'split-datetime';
+    pair.append(date, time);
+    input.hidden = true;
+    input.after(pair);
+    show(native.get.call(input));
+  }
+
   const Date = window.HydroDemo?.enabled ? window.HydroDemo.ClockDate : window.Date;
   const W = window.HydroWorkflow;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -55,6 +87,7 @@
       this.root.querySelectorAll('.test-start,.test-end').forEach(input => { input.step = '1'; fields.prepend(input.closest('label')); });
       // Put start before end, and keep the Save button last.
       fields.prepend(fields.querySelector('.test-start').closest('label'));
+      period.querySelectorAll('.test-start,.test-end').forEach(splitDateTime);
       this.records.prepend(period);
       const previous = document.createElement('details');
       previous.innerHTML = '<summary>Local backup copies</summary><p>These upload automatically while this page is open. Keep this laptop’s browser data until online saving is confirmed.</p><div class="previous-jobs"></div>';
