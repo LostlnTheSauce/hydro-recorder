@@ -48,9 +48,9 @@ async function main() {
     await report.waitForLoadState();
     await report.waitForFunction(() => window.__printed === true, null, { timeout: 5000 });
     const text = await report.locator('body').innerText();
-    assert.match(text, /Temperature comparison: electronic probes and recorder charts/);
+    assert.match(text, /Temperature comparison: digital probes vs physical charts/);
     assert.match(text, /ATM 4501[\s\S]*303\.12191[\s\S]*East Baton Rouge, LA[\s\S]*Dylan Lee/);
-    assert.match(text, /electronic probe readings, /, 'states how many probe readings were used');
+    assert.match(text, /digital probe readings, /, 'states how many probe readings were used');
     const slow = await report.locator('table.rows tbody tr').nth(5).innerText();
     assert.doesNotMatch(slow, /—/, 'slow-logger stretch (a reading every 4 minutes) is still compared');
     const summary = await report.locator('table.summary tbody tr').allInnerTexts();

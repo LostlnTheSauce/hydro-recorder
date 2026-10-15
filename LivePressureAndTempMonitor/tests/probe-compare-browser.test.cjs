@@ -36,9 +36,9 @@ async function main() {
     });
     await page.locator('[data-dashboard-tab="logs"]').click();
     const [download] = await Promise.all([page.waitForEvent('download'), page.locator('[data-gauge="A"] [data-export="probes"]').click()]);
-    assert.match(download.suggestedFilename(), /probe-vs-sheet-temps\.csv$/);
+    assert.match(download.suggestedFilename(), /digital-vs-physical-temps\.csv$/);
     const lines = fs.readFileSync(await download.path(), 'utf8').split('\r\n').map((line) => JSON.parse(`[${line}]`));
-    assert.deepEqual(lines[0], ['Date / time', 'Pressure PSI', 'Ambient probe F', 'Ambient Sheet F', 'Pipe probe F', 'Pipe Sheet F', 'Soil probe F', 'Soil Sheet F', 'Remarks']);
+    assert.deepEqual(lines[0], ['Date / time', 'Pressure PSI', 'Ambient digital F', 'Ambient physical F', 'Pipe digital F', 'Pipe physical F', 'Soil digital F', 'Soil physical F', 'Remarks']);
     assert.equal(lines.length, 3, 'header + the 0 and 15 minute rows');
     assert.deepEqual(lines[1].slice(1, 8), ['1738', '92.3', '91', '78.6', '77', '75.6', '74']);
     assert.deepEqual(lines[2].slice(2, 8), ['92.3', '90', '78.6', '77', '75.6', '74']);

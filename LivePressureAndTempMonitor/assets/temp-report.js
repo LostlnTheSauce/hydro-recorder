@@ -40,7 +40,7 @@
     let path = '', last = null;
     series.forEach((p) => { path += `${last === null || p.at - last > 300000 ? 'M' : 'L'}${x(p.at).toFixed(1)},${y(p.value).toFixed(1)}`; last = p.at; });
     const dots = points.map((p) => `<circle cx="${x(p.at).toFixed(1)}" cy="${y(p.value).toFixed(1)}" r="4" fill="${CHART}" stroke="#fff" stroke-width="2"/>`).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(channel.name)}: electronic probe line and recorder chart readings">${grid.join('')}${ticks.join('')}<path d="${path}" fill="none" stroke="${PROBE}" stroke-width="2" stroke-linejoin="round"/>${dots}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(channel.name)}: digital probe line and physical chart readings">${grid.join('')}${ticks.join('')}<path d="${path}" fill="none" stroke="${PROBE}" stroke-width="2" stroke-linejoin="round"/>${dots}</svg>`;
   }
 
   function build(data) {
@@ -54,14 +54,14 @@
       ["Owner's rep / inspector", job.ownerRep], ['Official test', job.period]].filter(([, value]) => value);
     const summary = channels.map((channel) => {
       const s = stats(rows, channel.key);
-      return `<tr><th>${esc(channel.name)}${channel.chartSerial ? `<small>Chart S/N ${esc(channel.chartSerial)}</small>` : ''}</th><td>${s.count}</td><td><b>${s.count ? `${signed(s.mean)} °F` : '—'}</b></td><td>${s.count ? `${signed(s.min)} to ${signed(s.max)} °F` : '—'}</td><td>${s.count ? `${s.within1}%` : '—'}</td><td>${s.count ? `${s.within2}%` : '—'}</td></tr>`;
+      return `<tr><th>${esc(channel.name)}${channel.chartSerial ? `<small>Physical chart S/N ${esc(channel.chartSerial)}</small>` : ''}</th><td>${s.count}</td><td><b>${s.count ? `${signed(s.mean)} °F` : '—'}</b></td><td>${s.count ? `${signed(s.min)} to ${signed(s.max)} °F` : '—'}</td><td>${s.count ? `${s.within1}%` : '—'}</td><td>${s.count ? `${s.within2}%` : '—'}</td></tr>`;
     }).join('');
     const charts = channels.map((channel) => `<figure><figcaption>${esc(channel.name)}</figcaption>${chartSvg(channel, data.series?.[channel.key] || [], rows, from, to, time)}</figure>`).join('');
     const head = channels.map((channel) => `<th colspan="3">${esc(channel.name)}</th>`).join('');
-    const sub = channels.map(() => '<th>Probe</th><th>Chart</th><th>Diff.</th>').join('');
+    const sub = channels.map(() => '<th class="digital">Digital</th><th class="physical">Physical</th><th>Diff.</th>').join('');
     const body = rows.map((row) => `<tr><td>${esc(time(row.at))}</td><td>${row.pressure === '' || row.pressure === null || row.pressure === undefined ? '—' : esc(row.pressure)}</td>${channels.map((channel) => {
       const probe = num(row[channel.key]?.probe), chart = num(row[channel.key]?.chart);
-      return `<td>${probe === null ? '—' : probe.toFixed(1)}</td><td>${chart === null ? '—' : chart.toFixed(chart % 1 ? 1 : 0)}</td><td class="diff">${probe === null || chart === null ? '' : signed(probe - chart)}</td>`;
+      return `<td class="digital">${probe === null ? '—' : probe.toFixed(1)}</td><td class="physical">${chart === null ? '—' : chart.toFixed(chart % 1 ? 1 : 0)}</td><td class="diff">${probe === null || chart === null ? '' : signed(probe - chart)}</td>`;
     }).join('')}<td class="remarks">${esc(row.comments || '')}</td></tr>`).join('');
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(`Temperature comparison ${job.jobNumber || ''}`.trim())}</title><style>
       @page { size: letter; margin: 0.5in; }
@@ -84,22 +84,28 @@
       svg { width: 100%; height: auto; display: block; } svg text { font-size: 10px; fill: #57606a; } svg .grid { stroke: #e5e8eb; stroke-width: 1; }
       .muted, .note { color: #57606a; } .warn { border: 1px solid #d4a72c; background: #fff8c5; padding: 8px 12px; border-radius: 6px; } .note { margin-top: 18px; font-size: 10.5px; }
       .actions { margin: 0 0 14px; } .actions button { font: inherit; padding: 6px 14px; border: 1px solid #c4cad1; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
+      /* Digital (blue) and physical (orange), matching the chart line and dots. Values stay dark
+         on a light tint so they read and print clearly; headers carry the darker shade. */
+      .rows th.digital, .digital-ink { color: #1c5cab; } .rows th.physical, .physical-ink { color: #b5441a; }
+      .rows th.digital { background: #e3eefb; border-bottom: 2px solid ${PROBE}; } .rows th.physical { background: #fde9e0; border-bottom: 2px solid ${CHART}; }
+      .rows td.digital { background: #f1f6fd; } .rows td.physical { background: #fef4ef; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       @media print { .actions { display: none; } body { padding: 0; } }
     </style></head><body>
       <div class="actions"><button type="button" onclick="window.print()">Print / Save as PDF</button></div>
-      <h1>Temperature comparison: electronic probes and recorder charts</h1>
+      <h1>Temperature comparison: <span class="digital-ink">digital probes</span> vs <span class="physical-ink">physical charts</span></h1>
       <p class="sub">${esc(data.company || 'Grant G Solutions')} · prepared ${esc(stamp(data.generatedAt || Date.now()))}</p>
       <div class="facts">${facts.map(([label, value]) => `<div><span>${esc(label)}</span>${esc(value)}</div>`).join('')}</div>
-      ${data.probeCount === 0 ? '<p class="warn">No electronic probe readings were loaded when this report was made, so the probe columns are empty. Open the host page that recorded the test, let Temperatures finish loading, and make the report again.</p>'
-        : data.probeCount ? `<p class="muted">${Number(data.probeCount).toLocaleString()} electronic probe readings${data.probeSpan ? `, ${esc(stamp(data.probeSpan[0]))} to ${esc(stamp(data.probeSpan[1]))}` : ''}.</p>` : ''}
+      ${data.probeCount === 0 ? '<p class="warn">No electronic probe readings were loaded when this report was made, so the Digital columns are empty. Open the host page that recorded the test, let Temperatures finish loading, and make the report again.</p>'
+        : data.probeCount ? `<p class="muted">${Number(data.probeCount).toLocaleString()} digital probe readings${data.probeSpan ? `, ${esc(stamp(data.probeSpan[0]))} to ${esc(stamp(data.probeSpan[1]))}` : ''}.</p>` : ''}
       <h2>Summary</h2>
-      <table class="summary"><thead><tr><th>Probe</th><th>Readings compared</th><th>Average difference (probe − chart)</th><th>Range of difference</th><th>Within ±1 °F</th><th>Within ±2 °F</th></tr></thead><tbody>${summary}</tbody></table>
+      <table class="summary"><thead><tr><th>Probe</th><th>Readings compared</th><th>Average difference (digital − physical)</th><th>Range of difference</th><th>Within ±1 °F</th><th>Within ±2 °F</th></tr></thead><tbody>${summary}</tbody></table>
       <h2>Over the test</h2>
-      <div class="legend"><span><i class="line"></i>Electronic probe (every reading)</span><span><i class="dot"></i>Recorder chart (log entries)</span></div>
+      <div class="legend"><span><i class="line"></i>Digital probe (every reading)</span><span><i class="dot"></i>Physical chart (log entries)</span></div>
       ${charts}
       <h2>Log entries</h2>
       <table class="rows"><thead><tr><th rowspan="2">Time</th><th rowspan="2">PSI</th>${head}<th rowspan="2">Remarks</th></tr><tr>${sub}</tr></thead><tbody>${body}</tbody></table>
-      <p class="note">Probe values are the electronic probe's own reading nearest each log time (${esc(data.loggerNote || 'field data logger')}); a dash means no probe reading was recorded at that time. Chart values are the recorder-chart temperatures entered in the test log. Differences are probe minus chart. No values have been adjusted.</p>
+      <p class="note"><b class="digital-ink">Digital</b> values are the electronic probe's own reading nearest each log time (${esc(data.loggerNote || 'field data logger')}); a dash means no digital reading was recorded at that time. <b class="physical-ink">Physical</b> values are the recorder-chart temperatures entered in the test log. Differences are digital minus physical. No values have been adjusted.</p>
     </body></html>`;
   }
 
