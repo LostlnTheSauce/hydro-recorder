@@ -261,7 +261,6 @@
         // chart values at each row, and a summary per probe.
         const from = rows[0].at - 10 * 60000, to = rows.at(-1).at + 10 * 60000;
         const inRange = live.filter(r => r.at >= from && r.at <= to);
-        const stride = Math.max(1, Math.ceil(inRange.length / 900));
         const equipment = this.g.selectedEquipmentForSheet();
         const serials = { ambient: equipment.ambient_chart?.serial, pipe: equipment.pipe_chart?.serial, soil: equipment.ground_chart?.serial };
         const t = this.g.testState, d = t.design || {};
@@ -271,7 +270,7 @@
             generatedAt: Date.now(),
             job: { jobNumber: t.jobNumber, poAfe: t.poAfe, line: d.lineName || d.projectName, location: t.location, owner: t.owner || 'Atmos Energy', contractor: t.contractor || 'Bobcat Contracting', ownerRep: t.ownerRep, period },
             channels: this.g.temperatureChannels().filter(c => keys.includes(c.key)).map(c => ({ key: c.key, name: c.name, chartSerial: serials[c.key] })),
-            series: Object.fromEntries(keys.map(key => [key, inRange.filter((r, i) => i % stride === 0 && W.number(r[key]) !== null).map(r => ({ at: r.at, value: Number(r[key]) }))])),
+            series: Object.fromEntries(keys.map(key => [key, window.HydroTempReport.thin(inRange.filter(r => W.number(r[key]) !== null), 900).map(r => ({ at: r.at, value: Number(r[key]) }))])),
             rows,
             probeCount: live.length,
             probeSpan: live.length ? [live[0].at, live.at(-1).at] : null,
