@@ -433,3 +433,30 @@ table td { background:#ffffff55; }
 .design-pipeline-table input { width:100%; min-width:72px; min-height:34px!important; padding:4px 8px; }
 .live-window-control { display:inline-flex; align-items:center; gap:6px; font-size:.82rem; white-space:nowrap; cursor:pointer; }
 .live-window-control input { width:auto; min-height:0!important; margin:0; }
+/* Calibration papers: QR card in the equipment library and the phone scanning page. */
+.calibration-scan-card { display:flex; align-items:center; gap:14px; margin:4px 0 16px; padding:12px 14px; border:1px solid var(--line); border-radius:8px; background:var(--wash); color:var(--ink); text-decoration:none; }
+.calibration-scan-card canvas { width:92px; height:92px; image-rendering:pixelated; background:#fff; border-radius:4px; flex:none; }
+.calibration-scan-card small { display:block; color:var(--muted); font-size:.8rem; margin-top:2px; }
+.cal-page { max-width:860px; margin:0 auto; padding:0 16px 40px; }
+#calStatus { margin:0 0 12px; font-size:.9rem; }
+.cal-list { display:grid; gap:10px; }
+.cal-card { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px 16px; padding:14px 16px; border:1px solid var(--line); border-left:4px solid #c98a2a; border-radius:8px; background:var(--paper); }
+.cal-card.has-paper { border-left-color:var(--accent); }
+.cal-card h3 { font-size:1.05rem; margin:2px 0; } .cal-card h3 small { color:var(--muted); font-weight:500; font-size:.85rem; } .cal-card p { margin:0; font-size:.85rem; color:var(--muted); }
+.cal-card-actions { display:flex; gap:8px; } .cal-card-actions button { min-width:96px; }
+.cal-scanner { width:min(560px,100vw); max-width:100vw; max-height:100dvh; border:0; border-radius:10px; padding:0; background:var(--paper); color:var(--ink); box-shadow:0 24px 100px #19324744; }
+.cal-scanner::backdrop { background:#102b4380; }
+.cal-scan-inner { display:grid; gap:12px; padding:20px; } .cal-scan-inner h2 { font-size:1.3rem; margin:4px 0 0; } .cal-scan-inner header p { margin:0; color:var(--muted); }
+.cal-pages { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; } .cal-pages:empty { display:none; }
+.cal-page-thumb { margin:0; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:var(--wash); }
+.cal-page-thumb img { display:block; width:100%; aspect-ratio:3/4; object-fit:contain; background:#fff; }
+.cal-page-thumb figcaption { display:flex; justify-content:space-between; align-items:center; padding:4px 6px; font-size:.78rem; }
+.cal-page-thumb figcaption button { min-height:34px; min-width:34px; padding:2px 8px; margin-left:4px; }
+.cal-take, .cal-take-library { display:flex; justify-content:center; align-items:center; min-height:52px; border-radius:8px; font-weight:700; cursor:pointer; text-align:center; }
+.cal-take { background:var(--accent); color:#fff; font-size:1.05rem; } .cal-take-library { border:1px solid #c7d2d8; background:#fff; color:var(--ink); min-height:44px; font-weight:600; }
+.cal-tip { margin:0; font-size:.8rem; color:var(--muted); } .cal-scan-message { margin:0; font-size:.88rem; } .cal-scan-message:empty { display:none; }
+@media (max-width:600px) {
+  .cal-scanner { width:100vw; height:100dvh; border-radius:0; margin:0; }
+  .cal-card-actions { width:100%; } .cal-card-actions button { flex:1; }
+  .calibration-scan-card canvas { width:72px; height:72px; }
+}

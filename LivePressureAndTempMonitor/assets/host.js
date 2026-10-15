@@ -2018,8 +2018,37 @@
   const equipmentForm = document.getElementById('equipmentForm');
   const equipmentTableBody = document.getElementById('equipmentTableBody');
 
+  // The library is also shared with the website, so the phone scanning page lists the same
+  // equipment. Whole list, newest save wins.
+  const equipmentSavedAtKey = 'grantg-hydro-equipment-saved-at';
+  const equipmentSavedAt = () => Number(localStorage.getItem(equipmentSavedAtKey)) || 0;
+
+  async function shareEquipmentInventory(savedAt = equipmentSavedAt() || Date.now()) {
+    if (demo?.enabled) return;
+    try {
+      const response = await fetch('calibration-api.php?action=equipment', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify({ items: equipmentInventory, savedAt }) });
+      const result = await response.json();
+      if (response.ok) adoptSharedEquipment(result);
+    } catch (_) { /* offline: shared on the next save or page load */ }
+  }
+
+  function adoptSharedEquipment(shared) {
+    if (!shared || !Array.isArray(shared.items)) return;
+    const mine = equipmentSavedAt();
+    if (shared.updatedAt > mine) {
+      equipmentInventory = shared.items;
+      localStorage.setItem(equipmentStorageKey, JSON.stringify(equipmentInventory));
+      localStorage.setItem(equipmentSavedAtKey, String(shared.updatedAt));
+      renderEquipmentLibrary();
+    } else if (mine > shared.updatedAt || !shared.updatedAt) {
+      shareEquipmentInventory(mine || Date.now());
+    }
+  }
+
   function saveEquipmentInventory() {
     localStorage.setItem(equipmentStorageKey, JSON.stringify(equipmentInventory));
+    localStorage.setItem(equipmentSavedAtKey, String(Date.now()));
+    shareEquipmentInventory();
   }
 
   function equipmentIdentity(item) {
@@ -2082,7 +2111,9 @@
   document.getElementById('cancelEquipmentEdit').addEventListener('click', resetEquipmentForm);
 
   // Calibration papers live on the website; the library table shows and manages them.
-  window.HydroCalibration?.init({ csrf, table: equipmentTableBody, inventory: () => equipmentInventory, labels: equipmentTypeLabels, onChange: renderEquipmentTable });
+  window.HydroCalibration?.init({ csrf, table: equipmentTableBody, inventory: () => equipmentInventory, labels: equipmentTypeLabels, onChange: renderEquipmentTable, onEquipment: adoptSharedEquipment });
+  const scanQr = document.getElementById('calibrationScanQr');
+  if (scanQr && window.SimpleQr) { const url = new URL('calibration.php', location.href).href; window.SimpleQr.draw(scanQr, url); document.getElementById('calibrationScanLink').href = url; }
   gauges.forEach((gauge) => gauge.root.querySelector('.calibration-print')?.addEventListener('click', () => window.HydroCalibration?.openSet(gauge)));
   document.querySelector('#calibrationSet [data-close]')?.addEventListener('click', () => document.getElementById('calibrationSet').close());
 

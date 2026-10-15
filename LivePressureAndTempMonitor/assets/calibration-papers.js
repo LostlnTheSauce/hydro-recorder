@@ -21,6 +21,7 @@
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Calibration papers are unavailable.');
       papers = new Map(result.papers.map((p) => [p.equipment_id, p]));
+      if (result.equipment) options?.onEquipment?.(result.equipment);
       maxBytes = Number(result.maxBytes) || maxBytes;
       loadError = '';
     } catch (error) { loadError = error.message || String(error); }
@@ -246,5 +247,5 @@
     refresh();
   }
 
-  root.HydroCalibration = { init, refresh, cell, due, openSet, buildSet, papers: () => papers };
+  root.HydroCalibration = { init, refresh, cell, due, openSet, buildSet, upload, loadPdfLib, title: (item) => title(item), papers: () => papers, maxBytes: () => maxBytes, loadError: () => loadError };
 })(window);
