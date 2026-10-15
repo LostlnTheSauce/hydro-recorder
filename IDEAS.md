@@ -14,9 +14,25 @@ Have the site count pump strokes by itself instead of typing the counter at each
   reads the pickup signal without touching the counter's electronics.
 - Still needed: the signal voltage at the box terminals (multimeter, with the pump turning
   slowly), or the box's label/model. That decides how the optocoupler is wired.
-- Site side: the Nano plugs into the field laptop over USB. The bridge passes the count up and the Stroke
-  count panel fills each checkpoint automatically, still with a Save button. Can share the Nano
-  with the bypass meter below.
+- **Decision (October 2026): Arduino Nano**, not a new counter. A Red Lion CUB5 with a serial card
+  (~$300) would do it, but costs too much for this. The Nano mounts dry under the trailer table and
+  listens alongside the existing counter, so the LCD counter the crew and inspectors read stays as is.
+- Parts (about $30–45):
+  - Arduino Nano (official, or a clone; clones use the CH340 USB chip and may need its Windows driver)
+  - PC817 optocoupler module, 1 channel, 3.6–30 V input (buy a 2-pack)
+  - Nano screw-terminal adapter board (wiring with no soldering)
+  - Lever connectors (Wago 221) to tap the sensor signal without cutting wires; a few feet of
+    18–22 AWG wire
+  - USB cable long enough to reach the laptop (6–10 ft)
+  - Small project box, plus zip ties or Velcro to hang it under the table
+- First, before wiring anything: with the pump turning slowly, measure the signal at the box
+  terminals with a multimeter, and count the pickup's wires. A 3-wire pickup gives clean pulses:
+  the optocoupler is right. A 2-wire pickup is passive, with a weak AC signal at low speed: use an
+  LM393 comparator module instead (about $5) so slow strokes are not missed.
+- Site side: the Nano plugs into the field laptop by USB. The host page reads it like it reads the
+  gauge (browser serial), and the Stroke count panel fills each checkpoint from it, with Save still
+  there to confirm or correct. The LCD counter stays the reference to check against. Can share the
+  Nano with the bypass meter below.
 
 ### Bypass (diversion) flow meter
 Know how much water goes back to the tank instead of into the line. The bypass is needed: it
