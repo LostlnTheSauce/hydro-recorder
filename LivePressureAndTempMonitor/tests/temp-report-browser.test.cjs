@@ -9,7 +9,8 @@ const { fixture } = require('./workflow-browser.test.cjs');
 const root = path.resolve(__dirname, '..');
 
 async function main() {
-  const { stats } = require('../assets/temp-report.js');
+  const { stats, build } = require('../assets/temp-report.js');
+  assert.match(build({ probeCount: 0, rows: [{ at: 1790000000000 }], channels: [] }), /No electronic probe readings were loaded/, 'says so when no probe readings are loaded');
   const s = stats([{ pipe: { probe: 78.6, chart: 77 } }, { pipe: { probe: 78.4, chart: 78 } }, { pipe: { probe: null, chart: 78 } }], 'pipe');
   assert.deepEqual([s.count, s.mean.toFixed(2), s.min.toFixed(2), s.max.toFixed(2), s.within1, s.within2], [2, '1.00', '0.40', '1.60', 50, 100]);
   const server = http.createServer((req, res) => {
@@ -34,7 +35,9 @@ async function main() {
       g.testState.officialStart = new Date(start).toISOString();
       for (let i = 0; i <= 125 * 30; i++) {
         g.readings.push({ at: start + i * 2000, pressure: 1738 - i / 1800, unit: 'PSI' });
-        if (i < 40 * 30 || i > 50 * 30) g.temperatureReadings.push({ at: start + i * 2000 + 500, source: 'live', sourceId: 's', ambient: 91 + Math.sin(i / 600) * 1.5, pipe: 78.6 - i / 3750, soil: 75.6 });
+        // A dropout from 35 to 55 minutes, and a slow stretch (one reading every 4 minutes) from 60 to 95.
+        const minute = i / 30;
+        if ((minute < 35 || minute > 55) && (minute < 60 || minute > 95 || i % 120 === 0)) g.temperatureReadings.push({ at: start + i * 2000 + 500, source: 'live', sourceId: 's', ambient: 91 + Math.sin(i / 600) * 1.5, pipe: 78.6 - i / 3750, soil: 75.6 });
       }
       for (let m = 0; m <= 120; m += 15) g.temperatureReadings.push({ at: start + m * M, source: 'sheet', ambient: 90 + (m % 30 ? 1 : 0), pipe: 77, soil: 74 });
       g.temperatureReadings.sort((a, b) => a.at - b.at);
@@ -47,6 +50,9 @@ async function main() {
     const text = await report.locator('body').innerText();
     assert.match(text, /Temperature comparison: electronic probes and recorder charts/);
     assert.match(text, /ATM 4501[\s\S]*303\.12191[\s\S]*East Baton Rouge, LA[\s\S]*Dylan Lee/);
+    assert.match(text, /electronic probe readings, /, 'states how many probe readings were used');
+    const slow = await report.locator('table.rows tbody tr').nth(5).innerText();
+    assert.doesNotMatch(slow, /—/, 'slow-logger stretch (a reading every 4 minutes) is still compared');
     const summary = await report.locator('table.summary tbody tr').allInnerTexts();
     assert.equal(summary.length, 3);
     assert.match(summary[2], /^Soil[\s\S]*\t8\t\+1\.6 °F\t\+1\.6 to \+1\.6 °F\t0%\t100%$/, summary[2]);

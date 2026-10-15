@@ -241,10 +241,14 @@
         const typed = this.g.temperatureReadings.filter(r => r.source === 'sheet' || r.source === 'manual');
         const sheetRows = this.g.sheetRows();
         const keys = ['ambient', 'pipe', 'soil'];
+        // The probe's nearest reading within 5 minutes: temperatures change slowly, and a slow or
+        // overheated field laptop can deliver readings minutes apart.
+        const PROBE_WINDOW = 5 * 60000;
+        const nearestProbe = (at) => { const reading = window.TemperatureChartRenderer.nearest(live, at); return reading && Math.abs(Number(reading.at) - at) <= PROBE_WINDOW ? reading : null; };
         const rows = [...sheetRows.preTestRows, ...sheetRows.officialRows, ...sheetRows.postTestRows].map(r => {
-          const probe = this.g.nearestTemperatureReading(r.at, undefined, live);
+          const probe = nearestProbe(r.at);
           const sheet = typed.find(t => Math.abs(Number(t.at) - r.at) <= 30000);
-          return { at: r.at, pressure: r.pressure, comments: r.comments, ...Object.fromEntries(keys.map(key => [key, { probe: W.number(probe?.[key]), chart: W.number(sheet?.[key]) }])) };
+          return { at: r.at, pressure: r.pressure, comments: r.comments, probeAt: probe ? Number(probe.at) : null, ...Object.fromEntries(keys.map(key => [key, { probe: W.number(probe?.[key]), chart: W.number(sheet?.[key]) }])) };
         });
         if (kind === 'probes') {
           const value = (v, digits) => v === null ? '' : v.toFixed(digits);
@@ -269,9 +273,12 @@
             channels: this.g.temperatureChannels().filter(c => keys.includes(c.key)).map(c => ({ key: c.key, name: c.name, chartSerial: serials[c.key] })),
             series: Object.fromEntries(keys.map(key => [key, inRange.filter((r, i) => i % stride === 0 && W.number(r[key]) !== null).map(r => ({ at: r.at, value: Number(r[key]) }))])),
             rows,
-            loggerNote: 'MadgeTech field logger',
+            probeCount: live.length,
+            probeSpan: live.length ? [live[0].at, live.at(-1).at] : null,
+            loggerNote: 'MadgeTech field logger; nearest reading within 5 minutes',
           });
-          return this.message('Report opened in a new tab. Choose Save as PDF in the print dialog.');
+          return this.message(live.length ? `Report opened in a new tab with ${live.length.toLocaleString()} probe readings. Choose Save as PDF in the print dialog.`
+            : 'Report opened, but no electronic probe readings are loaded on this page yet. Open Temperatures, wait for the probe readings to load, then try again.');
         } catch (error) { return this.message(error.message || String(error)); }
       }
       const events = this.g.testState.events;
