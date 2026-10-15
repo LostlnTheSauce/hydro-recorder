@@ -289,10 +289,11 @@
     try { HydroTempReport.open(HydroTempReport.fromRecord(record)); }
     catch (e) { status.textContent = e.message || String(e); }
   });
-  // The whole test as a printable report: details, pressure, all temperature charts and the log.
-  $('#replayFullReport').addEventListener('click', () => {
+  // The official test as a printable package: round recorder charts, the combined graph, details,
+  // equipment, stroke count and the log, from the digital probes only.
+  $('#replayPackage').addEventListener('click', () => {
     if (!record) return;
-    try { HydroTempReport.open(HydroTempReport.fullFromRecord(record)); }
+    try { HydroTempReport.open(HydroTempReport.packageFromRecord(record)); }
     catch (e) { status.textContent = e.message || String(e); }
   });
   $('#closeReplay').addEventListener('click', closeReplay);
