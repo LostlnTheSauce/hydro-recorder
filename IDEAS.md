@@ -67,10 +67,34 @@ MadgeTech logger, once it reconnects.
 Only if the phone's browser can't open the camera from "Take picture" (see the browser camera
 permission steps). A camera view in the page itself, asking for permission once.
 
+### Temperature check in the post-test package (trial)
+How much of a pressure change the measured temperatures explain. Test run on ATM 4501 (October
+2026): about 33 psi per 1 °F of water for 8" × 0.322" X52. The probes explained about 4 of the
+10.5 psi, and the whole drop equals about 0.31 °F of average cooling. The shape matched (flat in the
+afternoon heat, falling as the air cooled). Decide after reviewing whether it goes in the package.
+To make it stronger: pipe probe on buried pipe (not near the test head), an extra probe on exposed
+steel in the sun, and the test head/manifold/hose lengths in the pipeline data.
+
+### Pressure-volume (air in the line) check
+Gallons vs pressure while pumping up, compared with what the pipe should take per psi. Waits for
+the bypass meter: until the returned water is measured, stroke gallons overstate what went in.
+
+### Lower-power field computer
+For running longer on the power station. See the notes in the October 2026 conversation: a
+fanless Intel N100/N150 mini PC (Windows 11, about 6–15 W) with a USB-C portable monitor, both
+powered from the station's DC outlets rather than its AC inverter. Check the MadgeTech software, the
+gauge's USB serial adapter and Chrome all run on it before switching (x86 Windows, not ARM).
+
+## Considered, not now
+- Stabilized indicator before the official start; phone alerts (someone is always in the trailer);
+  auto-emailing the package; weather; photo log.
+- Motorized bypass valve to hold the pressure-up rate: interesting, unlikely.
+
 ## Field notes
 - Keep the laptop and hotspot box cool. The laptop with dead fans throttled MadgeTech, and temps
   arrived minutes apart. Use the laptop with working fans and give the box airflow/shade.
 - The generator may affect the temperature probes. Watch for it.
+- A portable power station is planned to keep the field laptop and hotspot running.
 
 ## Done
 - Post-test package PDF (round charts, combined graph, equipment, strokes, log).
