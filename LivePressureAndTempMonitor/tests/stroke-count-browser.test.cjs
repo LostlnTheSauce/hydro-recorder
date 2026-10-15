@@ -29,7 +29,8 @@ async function main() {
     assert.equal(await card.locator('[data-stroke-input="start"]').inputValue(), '1300', 'start pressure prefilled from the gauge');
     assert.equal(await card.locator('[data-stroke-input="start-counter"]').inputValue(), '0');
     await card.locator('[data-stroke-input="target"]').fill('1340');
-    await card.locator('[data-stroke-input="capacity"]').fill('0.0043');
+    assert.equal(await card.locator('[data-stroke-input="setup-pump"]').inputValue(), 'pump-pdq', 'the test pump is chosen from the equipment list');
+    assert.equal(await card.locator('.stroke-other-rate').isHidden(), true);
     await card.locator('[data-stroke="start"]').click();
     const counter = card.locator('[data-stroke-input="counter"]');
     assert.match(await card.locator('.stroke-entry label').innerText(), /Counter at\s+1310 psi/);
