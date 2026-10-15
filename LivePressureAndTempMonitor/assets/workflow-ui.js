@@ -45,7 +45,7 @@
       this.card.querySelector('.workflow-heading').append(fresh);
       this.card.before(this.root.querySelector('.gauge-actions'));
       this.records = document.createElement('section'); this.records.className = 'workflow-records';
-      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="probe-report">Probe vs chart report (PDF)</button><button type="button" data-export="probes">Download probe vs Sheet temps CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
+      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="probe-report">Digital vs physical temps report (PDF)</button><button type="button" data-export="probes">Download digital vs physical temps CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
       this.root.append(this.records);
       this.records.append(this.root.querySelector('.paperwork-sync-panel'));
       this.records.append(this.root.querySelector('.ramp-panel'));
@@ -252,8 +252,8 @@
         });
         if (kind === 'probes') {
           const value = (v, digits) => v === null ? '' : v.toFixed(digits);
-          return download(`${name}_probe-vs-sheet-temps.csv`,
-            ['Date / time', 'Pressure PSI', 'Ambient probe F', 'Ambient Sheet F', 'Pipe probe F', 'Pipe Sheet F', 'Soil probe F', 'Soil Sheet F', 'Remarks'],
+          return download(`${name}_digital-vs-physical-temps.csv`,
+            ['Date / time', 'Pressure PSI', 'Ambient digital F', 'Ambient physical F', 'Pipe digital F', 'Pipe physical F', 'Soil digital F', 'Soil physical F', 'Remarks'],
             rows.map(r => [stamp(r.at), r.pressure, ...keys.flatMap(key => [value(r[key].probe, 1), value(r[key].chart, 0)]), r.comments]));
         }
         if (!rows.length) return this.message('There are no log rows to compare yet. Save the official test start first.');
