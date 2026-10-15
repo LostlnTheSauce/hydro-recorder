@@ -82,7 +82,7 @@
       .legend .line { width: 22px; height: 2px; background: ${PROBE}; } .legend .dot { width: 9px; height: 9px; border-radius: 50%; background: ${CHART}; }
       figure { margin: 0 0 12px; break-inside: avoid; } figcaption { font-weight: 600; margin-bottom: 2px; }
       svg { width: 100%; height: auto; display: block; } svg text { font-size: 10px; fill: #57606a; } svg .grid { stroke: #e5e8eb; stroke-width: 1; }
-      .muted, .note { color: #57606a; } .note { margin-top: 18px; font-size: 10.5px; }
+      .muted, .note { color: #57606a; } .warn { border: 1px solid #d4a72c; background: #fff8c5; padding: 8px 12px; border-radius: 6px; } .note { margin-top: 18px; font-size: 10.5px; }
       .actions { margin: 0 0 14px; } .actions button { font: inherit; padding: 6px 14px; border: 1px solid #c4cad1; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
       @media print { .actions { display: none; } body { padding: 0; } }
     </style></head><body>
@@ -90,6 +90,8 @@
       <h1>Temperature comparison: electronic probes and recorder charts</h1>
       <p class="sub">${esc(data.company || 'Grant G Solutions')} · prepared ${esc(stamp(data.generatedAt || Date.now()))}</p>
       <div class="facts">${facts.map(([label, value]) => `<div><span>${esc(label)}</span>${esc(value)}</div>`).join('')}</div>
+      ${data.probeCount === 0 ? '<p class="warn">No electronic probe readings were loaded when this report was made, so the probe columns are empty. Open the host page that recorded the test, let Temperatures finish loading, and make the report again.</p>'
+        : data.probeCount ? `<p class="muted">${Number(data.probeCount).toLocaleString()} electronic probe readings${data.probeSpan ? `, ${esc(stamp(data.probeSpan[0]))} to ${esc(stamp(data.probeSpan[1]))}` : ''}.</p>` : ''}
       <h2>Summary</h2>
       <table class="summary"><thead><tr><th>Probe</th><th>Readings compared</th><th>Average difference (probe − chart)</th><th>Range of difference</th><th>Within ±1 °F</th><th>Within ±2 °F</th></tr></thead><tbody>${summary}</tbody></table>
       <h2>Over the test</h2>
