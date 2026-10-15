@@ -26,6 +26,15 @@ async function main() {
     const gaugeAt = (pressure) => page.evaluate((p) => { const g = window.testGauges[0]; g.readings.push({ at: Date.now(), pressure: p, unit: 'PSI' }); g.updateUi(); g.strokeCount.render(); }, pressure);
     await gaugeAt(1300.4);
     const card = page.locator('[data-gauge="A"] .stroke-card');
+    // Hidden until it is wanted: a one-line summary and Show.
+    assert.equal(await card.evaluate((el) => el.classList.contains('collapsed')), true, 'hidden before a count starts');
+    assert.match(await card.innerText(), /Not started/);
+    assert.equal(await card.locator('[data-stroke-input]').count(), 0);
+    await card.locator('[data-stroke="toggle"]').click();
+    assert.equal(await card.locator('[data-stroke="toggle"]').innerText(), 'Hide');
+    // Every box lines up.
+    const tops = await card.locator('.stroke-setup input:visible, .stroke-setup select').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    assert.equal(new Set(tops).size, 1, `fields line up: ${tops}`);
     assert.equal(await card.locator('[data-stroke-input="start"]').inputValue(), '1300', 'start pressure prefilled from the gauge');
     assert.equal(await card.locator('[data-stroke-input="start-counter"]').inputValue(), '0');
     await card.locator('[data-stroke-input="target"]').fill('1340');
@@ -54,6 +63,12 @@ async function main() {
     await counter.fill('410'); await counter.press('Enter');
     assert.match(await card.locator('.stroke-done').innerText(), /complete · 410 strokes/, 'stops at the target');
 
+    // Hide while counting: the summary keeps the totals; Show brings it all back; the choice is remembered.
+    await card.locator('[data-stroke="toggle"]').click();
+    assert.match(await card.innerText(), /410 strokes · 1\.76 gal · complete/);
+    await page.reload();
+    await page.locator('[data-gauge="A"] .stroke-card.collapsed').waitFor();
+    await card.locator('[data-stroke="toggle"]').click();
     const rows = await card.locator('.stroke-table tbody tr').allInnerTexts();
     assert.deepEqual(rows.map((r) => r.split('\t').slice(0, 3).join(' ')), ['1340 psi 410 102', '1330 psi 308 104', '1320 psi 204 101', '1310 psi 103 103', '1300 psi 0 start']);
     const saved = await page.evaluate(() => window.testGauges[0].testState.workflow);
