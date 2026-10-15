@@ -109,6 +109,61 @@
     </body></html>`;
   }
 
+  // Closest reading to `at` in a list sorted by time.
+  function nearestIn(list, at) {
+    let low = 0, high = list.length - 1;
+    if (high < 0) return null;
+    while (low < high) { const mid = (low + high) >> 1; if (Number(list[mid].at) < at) low = mid + 1; else high = mid; }
+    const after = list[low], before = low > 0 ? list[low - 1] : null;
+    return before && Math.abs(Number(before.at) - at) <= Math.abs(Number(after.at) - at) ? before : after;
+  }
+
+  // Report data from a saved test (History page): the same log rows the operator page builds
+  // (pre-test entries, then every 15 minutes from the official start to its end), the digital
+  // probe's nearest reading within 5 minutes, and the physical values read back from the Sheet.
+  function fromRecord(record) {
+    const test = record.test || {}, events = Array.isArray(test.events) ? test.events : [];
+    const readings = [...(record.readings || [])].sort((a, b) => a.at - b.at);
+    const temps = [...(record.temperatureReadings || [])].sort((a, b) => a.at - b.at);
+    const live = temps.filter((r) => r.source === 'live'), typed = temps.filter((r) => r.source === 'sheet' || r.source === 'manual');
+    const startEvent = [...events].reverse().find((e) => e.type === 'official-start');
+    const endEvent = [...events].reverse().find((e) => e.type === 'official-end');
+    const start = Number(startEvent?.at) || Number(test.workflow?.officialStart) || Date.parse(test.officialStart) || 0;
+    const end = Number(endEvent?.at) || Number(test.workflow?.officialEnd) || Date.parse(test.officialEnd) || 0;
+    if (!start) throw new Error('This test has no official start time, so there are no log rows to compare.');
+    const pressureAt = (at, preferred) => {
+      if (num(preferred) !== null) return Math.round(Number(preferred));
+      const reading = nearestIn(readings, at);
+      return reading && Math.abs(reading.at - at) <= 30000 ? Math.round(Number(reading.pressure)) : '';
+    };
+    const pre = events.filter((e) => ['ramp', 'note'].includes(e.type) && Number(e.at) < start).sort((a, b) => a.at - b.at)
+      .map((e) => ({ at: Number(e.at), pressure: pressureAt(Number(e.at), e.pressure), comments: /^Begin pressurizing/i.test(e.label) ? 'Pressure is at 0 psi / Begin pressurizing' : e.label }));
+    const last = end || Math.max(start, Number(readings.at(-1)?.at) || 0);
+    const official = [];
+    for (let at = start; at <= last; at += 15 * 60000) official.push(at);
+    if (end && official.at(-1) !== end) official.push(end);
+    const keys = ['ambient', 'pipe', 'soil'];
+    const rows = [...pre, ...official.map((at, index, all) => ({ at, pressure: pressureAt(at), comments: [index === 0 ? 'Begin test' : '', end && index === all.length - 1 ? 'End test' : ''].filter(Boolean).join(' / ') }))]
+      .map((row) => {
+        const probe = nearestIn(live, row.at), sheet = typed.find((t) => Math.abs(Number(t.at) - row.at) <= 30000);
+        const near = probe && Math.abs(Number(probe.at) - row.at) <= 5 * 60000 ? probe : null;
+        return { ...row, ...Object.fromEntries(keys.map((key) => [key, { probe: num(near?.[key]), chart: num(sheet?.[key]) }])) };
+      });
+    const from = rows[0].at - 10 * 60000, to = rows.at(-1).at + 10 * 60000;
+    const inRange = live.filter((r) => r.at >= from && r.at <= to), stride = Math.max(1, Math.ceil(inRange.length / 900));
+    const names = { ambient: 'Ambient', pipe: 'Pipe', soil: 'Soil' };
+    const when = (at) => new Date(at).toLocaleString([], { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return {
+      generatedAt: Date.now(),
+      job: { jobNumber: test.jobNumber, poAfe: test.poAfe, line: test.design?.lineName || test.design?.projectName, location: test.location,
+        owner: test.owner || 'Atmos Energy', contractor: test.contractor || 'Bobcat Contracting', ownerRep: test.ownerRep, period: [start, end].filter(Boolean).map(when).join(' to ') },
+      channels: keys.map((key) => ({ key, name: names[key] })),
+      series: Object.fromEntries(keys.map((key) => [key, inRange.filter((r, i) => i % stride === 0 && num(r[key]) !== null).map((r) => ({ at: r.at, value: Number(r[key]) }))])),
+      rows, probeCount: live.length, probeSpan: live.length ? [live[0].at, live.at(-1).at] : null,
+      loggerNote: 'MadgeTech field logger; nearest reading within 5 minutes',
+    };
+  }
+
   // Opens the report in a new tab and brings up the print dialog (Save as PDF).
   function open(data) {
     const win = root.open('', '_blank');
@@ -120,7 +175,7 @@
     return win;
   }
 
-  const api = { build, stats, open };
+  const api = { build, stats, open, fromRecord };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.HydroTempReport = api;
 })(typeof window !== 'undefined' ? window : globalThis);
