@@ -198,16 +198,28 @@
   }
 
   // Dialog: tick the equipment going on this test (the test's own selections start ticked).
-  function openSet(gauge) {
+  // `tests`: the running tests ({ name, gauge }); with more than one, the dialog asks which
+  // test the set is for (its equipment starts ticked and its job details go on the cover).
+  function openSet(tests) {
     const dialog = document.getElementById('calibrationSet');
     if (!dialog) return;
-    const chosen = new Set(Object.values(gauge.testState.equipment || {}).filter(Boolean));
+    tests = (Array.isArray(tests) ? tests : [{ name: '', gauge: tests }]).filter((t) => t?.gauge);
+    if (!tests.length) return;
+    const picker = dialog.querySelector('.cal-set-test'), select = picker.querySelector('select');
+    select.innerHTML = tests.map((t, i) => `<option value="${i}">${esc(t.name || `Test ${i + 1}`)}${t.gauge.testState.jobNumber ? ` · ${esc(t.gauge.testState.jobNumber)}` : ''}</option>`).join('');
+    picker.hidden = tests.length < 2;
+    select.onchange = () => { gauge = tests[Number(select.value)].gauge; tick(); };
+    let gauge = tests[0].gauge;
     const items = inventory();
     const order = ['deadweight', 'digital_gauge', 'pressure_recorder', 'ambient_chart', 'pipe_chart', 'ground_chart', 'pump'];
     const sorted = [...items].sort((a, b) => (order.indexOf(a.type) - order.indexOf(b.type)) || String(a.name).localeCompare(String(b.name)));
+    const tick = () => {
+      const chosen = new Set(Object.values(gauge.testState.equipment || {}).filter(Boolean));
+      dialog.querySelectorAll('.cal-set-list input').forEach((box) => { const item = sorted.find((i) => i.id === box.value); box.checked = chosen.has(box.value) && item?.type !== 'pump'; });
+    };
     dialog.querySelector('.cal-set-list').innerHTML = sorted.length ? sorted.map((item) => {
       const paper = papers.get(item.id), status = due(item);
-      return `<label class="cal-set-item"><input type="checkbox" value="${esc(item.id)}"${chosen.has(item.id) && item.type !== 'pump' ? ' checked' : ''}>`
+      return `<label class="cal-set-item"><input type="checkbox" value="${esc(item.id)}">`
         + `<span><b>${esc(title(item))}</b>${item.serial ? ` · S/N ${esc(item.serial)}` : ''}</span>`
         + `<small class="${paper ? '' : 'cal-missing'}">${paper ? 'Paper on file' : item.type === 'pump' ? 'No calibration' : 'No paper'}${status.state === 'past' ? ' · <b class="cal-missing">past due</b>' : status.dueAt ? ` · due ${esc(status.text)}` : ''}</small></label>`;
     }).join('') : '<p>No equipment in the library yet.</p>';
@@ -237,6 +249,7 @@
         message.textContent = error.message || String(error);
       } finally { button.disabled = false; }
     };
+    tick();
     dialog.querySelector('.cal-set-download').hidden = true;
     dialog.showModal();
   }

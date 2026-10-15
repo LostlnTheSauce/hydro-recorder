@@ -87,7 +87,9 @@ async function main() {
     assert.equal(await page.locator('#equipmentTableBody tr').count(), 5, 'paper buttons never remove equipment');
     // Print set: the test's selected equipment starts ticked (the pump does not).
     await page.evaluate(() => { const g = window.testGauges[0]; g.testState.jobNumber = 'ATM 4501'; });
-    await page.locator('[data-gauge="A"] .calibration-print').click();
+    assert.equal(await page.locator('.calibration-print, [data-gauge] #calibrationPrint').count(), 0, 'no per-test button in Setup');
+    await page.locator('#equipmentLibrary #calibrationPrint').click();
+    assert.equal(await page.locator('#calibrationSet .cal-set-test').isHidden(), true, 'one running test: no test choice');
     const dialog = page.locator('#calibrationSet');
     await dialog.waitFor();
     const ticked = await dialog.locator('.cal-set-list input:checked').evaluateAll((list) => list.map((i) => i.value));
@@ -108,6 +110,14 @@ async function main() {
     assert.equal(doc.getTitle(), 'Calibration papers - ATM 4501');
     await dialog.locator('[data-close]').click();
     assert.equal(await dialog.isVisible(), false);
+    // With two tests running, the dialog asks which; its equipment is ticked.
+    await page.evaluate(() => { const [a, b] = window.testGauges; b.testState.jobNumber = 'ATM 4502'; b.testState.equipment = { deadweight: 'deadweight-5492' };
+      window.HydroCalibration.openSet([{ name: 'Test 1', gauge: a }, { name: 'Test 2', gauge: b }]); });
+    assert.equal(await dialog.locator('.cal-set-test').isVisible(), true);
+    assert.deepEqual(await dialog.locator('.cal-set-test option').allInnerTexts(), ['Test 1 · ATM 4501', 'Test 2 · ATM 4502']);
+    await dialog.locator('.cal-set-test select').selectOption('1');
+    assert.deepEqual(await dialog.locator('.cal-set-list input:checked').evaluateAll((list) => list.map((i) => i.value)), ['deadweight-5492']);
+    await dialog.locator('[data-close]').click();
     assert.deepEqual(errors, []);
     console.log('Calibration papers: PDF and photo added to equipment, view link, bad file refused, replace/remove, print set with test equipment ticked, cover + papers in one PDF passed.');
   } finally { await browser.close(); server.close(); }
