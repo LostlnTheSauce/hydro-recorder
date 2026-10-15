@@ -124,6 +124,8 @@ async function main() {
     assert.deepEqual(errors,[]);
     console.log('Browser integration passed: persistent holds, strokes, independent tests, records, missing data, temperature views, archived-attempt offset and narrow layout.');
     // Practice is a separate tab with the SAME origin/storage, not an isolated browser context.
+    // The one-time equipment restore check finishes on its own shortly after load.
+    await page.waitForFunction(() => localStorage.getItem('grantg-hydro-equipment-recovered-v1'), null, { timeout: 15000 });
     const realStorage = await page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()));
     const storedReadings = p => p.evaluate(() => new Promise((resolve, reject) => {
       const open = indexedDB.open('grantg-hydrotest-recordings', 1);

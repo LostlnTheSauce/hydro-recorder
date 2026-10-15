@@ -2019,9 +2019,32 @@
   const equipmentTableBody = document.getElementById('equipmentTableBody');
 
   // The library is also shared with the website, so the phone scanning page lists the same
-  // equipment. Whole list, newest save wins.
+  // equipment. Lists are merged, never dropped: a browser that has not shared yet adds the
+  // shared items to its own; a newer list from another device replaces this one only after
+  // this browser has shared, and the previous list is kept as a backup either way.
   const equipmentSavedAtKey = 'grantg-hydro-equipment-saved-at';
+  const equipmentPreviousKey = 'grantg-hydro-equipment-previous';
   const equipmentSavedAt = () => Number(localStorage.getItem(equipmentSavedAtKey)) || 0;
+  const equipmentFields = (item) => JSON.stringify(['type', 'name', 'serial', 'manufacturer', 'range', 'calibrationDate', 'capacity'].map((k) => String(item?.[k] ?? '')).concat(String(Number(item?.intervalMonths) || 6)));
+  // A starter item nobody has edited (so a copy with real details should win over it).
+  const untouchedStarter = (item) => { const starter = starterEquipment.find((s) => s.id === item.id); return Boolean(starter) && equipmentFields(starter) === equipmentFields(item); };
+
+  // Everything in `primary`, plus items only in `secondary`; an untouched starter item is
+  // replaced by an edited copy of it from `secondary`.
+  function mergeEquipment(primary, secondary) {
+    const merged = primary.map((item) => ({ ...item }));
+    (secondary || []).forEach((item) => {
+      if (!item || !item.id) return;
+      const at = merged.findIndex((entry) => entry.id === item.id);
+      if (at < 0) merged.push({ ...item });
+      else if (untouchedStarter(merged[at]) && !untouchedStarter(item)) merged[at] = { ...item, isDefault: merged[at].isDefault || item.isDefault };
+    });
+    return merged;
+  }
+
+  function keepPreviousEquipment() {
+    try { localStorage.setItem(equipmentPreviousKey, JSON.stringify({ at: Date.now(), items: equipmentInventory })); } catch (_) {}
+  }
 
   async function shareEquipmentInventory(savedAt = equipmentSavedAt() || Date.now()) {
     if (demo?.enabled) return;
@@ -2033,16 +2056,59 @@
   }
 
   function adoptSharedEquipment(shared) {
-    if (!shared || !Array.isArray(shared.items)) return;
+    if (!shared || !Array.isArray(shared.items) || demo?.enabled) return;
     const mine = equipmentSavedAt();
-    if (shared.updatedAt > mine) {
+    if (!mine) {
+      // Never shared from this browser: keep everything here and add what the website has.
+      keepPreviousEquipment();
+      equipmentInventory = mergeEquipment(equipmentInventory, shared.items);
+      saveEquipmentInventory();
+      renderEquipmentLibrary();
+    } else if (shared.updatedAt > mine) {
+      keepPreviousEquipment();
       equipmentInventory = shared.items;
       localStorage.setItem(equipmentStorageKey, JSON.stringify(equipmentInventory));
       localStorage.setItem(equipmentSavedAtKey, String(shared.updatedAt));
       renderEquipmentLibrary();
-    } else if (mine > shared.updatedAt || !shared.updatedAt) {
-      shareEquipmentInventory(mine || Date.now());
+    } else if (mine > shared.updatedAt) {
+      shareEquipmentInventory(mine);
     }
+  }
+
+  // Every saved test keeps a copy of the equipment library. This puts back anything missing
+  // here (newest copy first), without removing or changing what is already in the library.
+  async function restoreEquipmentFromSavedTests() {
+    const copies = [];
+    for (const slot of ['A', 'B']) {
+      try {
+        for (const summary of (await window.HydroJobs.list(slot)).slice(0, 20)) {
+          const job = await window.HydroJobs.get(summary.id);
+          if (Array.isArray(job?.equipment)) copies.push({ at: Number(job.archivedAt) || 0, items: job.equipment });
+        }
+      } catch (_) {}
+    }
+    try {
+      const listed = await (await fetch('history-api.php?action=list')).json();
+      const jobs = (listed.jobs || []).sort((a, b) => Number(b.updated_at) - Number(a.updated_at)).slice(0, 25);
+      for (const job of jobs) {
+        try {
+          const read = await (await fetch(`history-api.php?${new URLSearchParams({ action: 'read', id: job.id })}`)).json();
+          if (Array.isArray(read.metadata?.equipment)) copies.push({ at: Number(read.updatedAt) || Number(job.updated_at) || 0, items: read.metadata.equipment });
+        } catch (_) {}
+      }
+    } catch (_) {}
+    copies.sort((a, b) => b.at - a.at);
+    const recovered = copies.reduce((merged, copy) => mergeEquipment(merged, copy.items), []);
+    const was = new Map(equipmentInventory.map((item) => [item.id, equipmentFields(item)]));
+    const next = mergeEquipment(equipmentInventory, recovered);
+    const changed = next.filter((item) => was.get(item.id) !== equipmentFields(item)).length;
+    if (changed) {
+      keepPreviousEquipment();
+      equipmentInventory = next;
+      saveEquipmentInventory();
+      renderEquipmentLibrary();
+    }
+    return { changed, copies: copies.length };
   }
 
   function saveEquipmentInventory() {
@@ -2111,6 +2177,20 @@
   document.getElementById('cancelEquipmentEdit').addEventListener('click', resetEquipmentForm);
 
   // Calibration papers live on the website; the library table shows and manages them.
+  const restoreButton = document.getElementById('restoreEquipment'), restoreStatus = document.getElementById('restoreEquipmentStatus');
+  async function runEquipmentRestore(quiet) {
+    if (demo?.enabled) return;
+    if (restoreButton) restoreButton.disabled = true;
+    try {
+      const { changed, copies } = await restoreEquipmentFromSavedTests();
+      localStorage.setItem('grantg-hydro-equipment-recovered-v1', String(Date.now()));
+      if (restoreStatus && (!quiet || changed)) restoreStatus.textContent = changed ? `Restored ${changed} piece${changed === 1 ? '' : 's'} of equipment from saved tests. Check the list and calibration dates.` : `Nothing missing: the library already has everything from ${copies} saved test${copies === 1 ? '' : 's'}.`;
+    } finally { if (restoreButton) restoreButton.disabled = false; }
+  }
+  restoreButton?.addEventListener('click', () => runEquipmentRestore(false));
+  // Once per browser: put back equipment lost to the first version of library sharing.
+  if (!localStorage.getItem('grantg-hydro-equipment-recovered-v1')) setTimeout(() => runEquipmentRestore(true), 1500);
+
   window.HydroCalibration?.init({ csrf, table: equipmentTableBody, inventory: () => equipmentInventory, labels: equipmentTypeLabels, onChange: renderEquipmentTable, onEquipment: adoptSharedEquipment });
   const scanQr = document.getElementById('calibrationScanQr');
   if (scanQr && window.SimpleQr) { const url = new URL('calibration.php', location.href).href; window.SimpleQr.draw(scanQr, url); document.getElementById('calibrationScanLink').href = url; }

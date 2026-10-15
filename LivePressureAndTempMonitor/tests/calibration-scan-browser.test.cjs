@@ -12,7 +12,7 @@ const root = path.resolve(__dirname, '..');
 
 async function main() {
   const papers = new Map();
-  let shared = { updatedAt: 0, items: [] }, equipmentPosts = 0;
+  let shared = { updatedAt: 0, items: [] };
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const json = (status, body) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -24,7 +24,6 @@ async function main() {
       return req.on('end', () => {
         const body = Buffer.concat(chunks);
         if (action === 'equipment') {
-          equipmentPosts++;
           const p = JSON.parse(body.toString());
           if (p.savedAt > shared.updatedAt) shared = { updatedAt: p.savedAt, items: p.items };
           return json(200, { ok: true, ...shared });
@@ -70,13 +69,13 @@ async function main() {
     const qr = await host.locator('#calibrationScanQr').evaluate((c) => c.width > 50);
     assert.equal(qr, true, 'QR code drawn for the phone page');
 
-    // A fresh browser picks up the newer shared library instead of its starter list.
+    // A fresh browser adds the shared library to its own, and nothing is lost on the website.
     const other = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const host2 = await other.newPage(); host2.on('pageerror', (e) => errors.push(e.message));
-    const postsBefore = equipmentPosts;
     await host2.goto(`${base}/host.php`);
     await host2.waitForFunction(() => JSON.parse(localStorage.getItem('grantg-hydro-equipment-v1') || '[]').some((i) => i.serial === '5500'));
-    assert.equal(equipmentPosts, postsBefore, 'adopting does not send an older list back');
+    await host2.waitForTimeout(500);
+    assert.equal(shared.items.length, 6, 'the shared list still has every item');
     await other.close();
 
     // The phone page.
@@ -126,7 +125,7 @@ async function main() {
     await page.locator(`.cal-card:has([data-file="${pump.id}"]) a`, { hasText: 'View paper' }).waitFor();
     assert.equal(papers.get(pump.id).file_name, 'pump.pdf');
     assert.deepEqual(errors, []);
-    console.log('Calibration scan: laptop shares its library (newest wins, adopted without echo), QR to the phone page, phone lists equipment, multi-page scan with turn/remove saved as one PDF, PDF upload passed.');
+    console.log('Calibration scan: laptop shares its library (merged, nothing lost), QR to the phone page, phone lists equipment, multi-page scan with turn/remove saved as one PDF, PDF upload passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
