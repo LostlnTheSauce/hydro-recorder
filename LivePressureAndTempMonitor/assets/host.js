@@ -2027,17 +2027,21 @@
   }
 
   function renderEquipmentLibrary() {
+    renderEquipmentTable();
+    gauges.forEach((gauge) => gauge.applyEquipmentOptions());
+  }
+
+  function renderEquipmentTable() {
     if (!equipmentTableBody) return;
     if (!equipmentInventory.length) {
-      equipmentTableBody.innerHTML = '<tr><td colspan="6" class="event-empty">No equipment has been added.</td></tr>';
+      equipmentTableBody.innerHTML = '<tr><td colspan="7" class="event-empty">No equipment has been added.</td></tr>';
     } else {
       equipmentTableBody.innerHTML = equipmentInventory.map((item) => {
         const rangeOrCapacity = item.type === 'pump' ? (item.capacity ? `${item.capacity} gal/stroke` : 'Capacity needed') : (item.range || '—');
         const calibration = item.type === 'pump' ? 'Not applicable' : (item.calibrationDate ? `${new Date(`${item.calibrationDate}T12:00:00`).toLocaleDateString()} • ${Number(item.intervalMonths) || 6} months` : 'Date needed');
-        return `<tr><td>${escapeHtml(equipmentTypeLabels[item.type] || item.type)}</td><td>${escapeHtml(equipmentIdentity(item))}</td><td>${escapeHtml(rangeOrCapacity)}</td><td>${escapeHtml(calibration)}</td><td>${item.isDefault ? 'Yes' : ''}</td><td><button type="button" class="ghost edit-equipment" data-equipment-action="edit" data-equipment-id="${escapeHtml(item.id)}">Edit</button><button type="button" class="ghost remove-equipment" data-equipment-action="remove" data-equipment-id="${escapeHtml(item.id)}">Remove</button></td></tr>`;
+        return `<tr><td>${escapeHtml(equipmentTypeLabels[item.type] || item.type)}</td><td>${escapeHtml(equipmentIdentity(item))}</td><td>${escapeHtml(rangeOrCapacity)}</td><td>${escapeHtml(calibration)}</td><td>${window.HydroCalibration ? window.HydroCalibration.cell(item) : ''}</td><td>${item.isDefault ? 'Yes' : ''}</td><td><button type="button" class="ghost edit-equipment" data-equipment-action="edit" data-equipment-id="${escapeHtml(item.id)}">Edit</button><button type="button" class="ghost remove-equipment" data-equipment-action="remove" data-equipment-id="${escapeHtml(item.id)}">Remove</button></td></tr>`;
       }).join('');
     }
-    gauges.forEach((gauge) => gauge.applyEquipmentOptions());
   }
 
   equipmentForm.addEventListener('submit', (event) => {
@@ -2076,6 +2080,11 @@
   }
 
   document.getElementById('cancelEquipmentEdit').addEventListener('click', resetEquipmentForm);
+
+  // Calibration papers live on the website; the library table shows and manages them.
+  window.HydroCalibration?.init({ csrf, table: equipmentTableBody, inventory: () => equipmentInventory, labels: equipmentTypeLabels, onChange: renderEquipmentTable });
+  gauges.forEach((gauge) => gauge.root.querySelector('.calibration-print')?.addEventListener('click', () => window.HydroCalibration?.openSet(gauge)));
+  document.querySelector('#calibrationSet [data-close]')?.addEventListener('click', () => document.getElementById('calibrationSet').close());
 
   equipmentTableBody.addEventListener('click', (event) => {
     const button = event.target.closest('[data-equipment-id]');

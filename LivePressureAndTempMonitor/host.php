@@ -215,6 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
             <label>Full offset above (psi)<input class="offset-taper" type="number" min="0" step="1" inputmode="decimal" placeholder="Blank = always full"><small>Optional. Blank: the full offset everywhere. E.g. 50: full offset above 50 psi, fading evenly to 0 at 0 psi so a blow-down lands cleanly on 0. Never below 0.</small></label>
           </div>
           <div class="calibration-summary" aria-live="polite"></div>
+          <div class="calibration-set-row"><button type="button" class="calibration-print">Print calibration papers (PDF)</button><small>One PDF with a cover sheet and each piece of equipment's calibration paper, for the inspectors. Add papers in the Equipment library.</small></div>
           <div class="ramp-panel">
             <h3>Timestamped field entries</h3>
             <div class="ramp-actions">
@@ -355,8 +356,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
         <label class="check-field"><input id="equipmentDefault" type="checkbox"> Use as default for this type</label>
         <div class="equipment-form-actions"><button class="primary" id="saveEquipment" type="submit">Add equipment</button><button class="ghost hidden" id="cancelEquipmentEdit" type="button">Cancel</button></div>
       </form>
-      <div class="equipment-table-wrap"><table><thead><tr><th>Type</th><th>Name / serial</th><th>Range or capacity</th><th>Calibration</th><th>Default</th><th></th></tr></thead><tbody id="equipmentTableBody"></tbody></table></div>
+      <div class="equipment-table-wrap"><table><thead><tr><th>Type</th><th>Name / serial</th><th>Range or capacity</th><th>Calibration</th><th>Calibration paper</th><th>Default</th><th></th></tr></thead><tbody id="equipmentTableBody"></tbody></table></div>
     </details>
+    <dialog id="calibrationSet" aria-labelledby="calibrationSetTitle"><form><span class="eyebrow">CALIBRATION PAPERS</span><h2 id="calibrationSetTitle">Print calibration papers</h2><p>Tick the equipment going on this test. The PDF has a cover sheet listing each item and its calibration due date, then each paper.</p><div class="cal-set-list"></div><p class="cal-set-message" role="status"></p><a class="cal-set-download button-link" hidden>Download PDF</a><div class="dialog-actions"><button type="button" data-close>Close</button><button type="submit" value="build" class="primary">Build PDF</button></div></form></dialog>
     <section class="tools-workspace" data-tool-section="tools">
       <nav class="tool-tabs" aria-label="Hydrotest tools">
         <button class="active" type="button" data-tool-tab="calculator">Calculator</button>
@@ -384,6 +386,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/logbook.js?v=2"></script>
   <script src="assets/stroke-count.js?v=1"></script>
   <script src="assets/temp-report.js?v=1"></script>
+  <script src="assets/calibration-papers.js?v=1"></script>
   <script src="assets/host.js?v=56"></script>
 <?php endif; ?>
 </body>
