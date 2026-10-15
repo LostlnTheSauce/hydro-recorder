@@ -660,6 +660,7 @@
       this.bindDesignImporter();
       this.bindGoogleSheet();
       this.root.querySelectorAll('.equipment-select').forEach((select) => select.addEventListener('change', () => {
+        if (select.dataset.equipmentRole === 'pump' && select.value && this.workflowController?.state()?.baseline) { this.useStrokePump(select.value); this.renderCalibrationSummary(); return; }
         this.testState.equipment[select.dataset.equipmentRole] = select.value;
         this.saveTestState();
         this.renderCalibrationSummary();
@@ -914,6 +915,31 @@
       const date = new Date(this.testState.officialStart ? new Date(this.testState.officialStart) : Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-');
       const names = [this.testState.jobNumber, design.lineName, this.settings().name].filter(Boolean);
       return `${[...new Set(names)].slice(0, 2).join(' - ') || testNameForSlot(this.slot)} - ${date} Hydrotest`;
+    }
+
+    pumpChoices() {
+      return equipmentInventory.filter((item) => item.type === 'pump').map((item) => ({ id: item.id, name: item.name || 'Pump', capacity: Number(item.capacity) || 0 }));
+    }
+
+    // Uses another pump for this test's stroke count: selects it in Setup and, after a
+    // confirmation, figures the gallons again at its rate. Strokes and counter readings are unchanged.
+    useStrokePump(id) {
+      const item = equipmentInventory.find((entry) => entry.id === id && entry.type === 'pump');
+      if (!item) return false;
+      const rate = Number(item.capacity) || 0, s = this.workflowController?.state();
+      if (s?.baseline && rate !== Number(s.baseline.capacity)) {
+        if (!(rate > 0)) { window.alert(`${item.name || 'That pump'} has no gal/stroke set. Add it under Equipment first.`); return false; }
+        const total = s.strokes.at(-1);
+        if (!window.confirm(`Figure the stroke count's gallons with ${item.name || 'this pump'} at ${rate} gal/stroke instead of ${s.baseline.capacity}?${total ? ` ${total.counter - s.baseline.counter} strokes would be ${((total.counter - s.baseline.counter) * rate).toFixed(2)} gal (now ${total.totalGallons.toFixed(2)}).` : ''} The counter readings and strokes stay as typed.`)) return false;
+        window.HydroWorkflow.setPumpRate(s, rate);
+      }
+      this.testState.equipment.pump = id;
+      const select = this.root.querySelector('.equipment-select[data-equipment-role="pump"]');
+      if (select) select.value = id;
+      this.saveTestState();
+      if (this.strokeCount) this.strokeCount.persist(s?.baseline ? `Pump: ${item.name || 'pump'} · ${s.baseline.capacity} gal/stroke.` : '');
+      else this.workflowController?.persist();
+      return true;
     }
 
     selectedEquipmentForSheet() {

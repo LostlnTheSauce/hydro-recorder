@@ -259,10 +259,10 @@ table td { background:#ffffff55; }
 #replayHighlights p { color:var(--ink); font-size:.85rem; margin-top:5px; }
 .replay-event-log { margin-top:20px; }
 #replayClock { font: .85rem Consolas,monospace; margin-left:auto; }
-#historyEdit { width:min(460px,calc(100vw - 28px)); max-height:calc(100dvh - 40px); border:1px solid var(--line); border-radius:8px; padding:28px; color:var(--ink); background:var(--paper); box-shadow:0 24px 100px #19324744; }
-#historyEdit::backdrop { background:#102b4380; backdrop-filter:blur(3px); }
+#historyEdit, #pumpChoice { width:min(460px,calc(100vw - 28px)); max-height:calc(100dvh - 40px); border:1px solid var(--line); border-radius:8px; padding:28px; color:var(--ink); background:var(--paper); box-shadow:0 24px 100px #19324744; }
+#historyEdit::backdrop, #pumpChoice::backdrop { background:#102b4380; backdrop-filter:blur(3px); }
 #historyEditForm { display:grid; gap:18px; }
-#historyEdit h2 { font-size:1.5rem; }
+#historyEdit h2, #pumpChoice h2 { font-size:1.5rem; } #pumpChoice form { display:grid; gap:18px; } #pumpChoiceHelp { font-size:.9rem; }
 #historyEditHelp { font-size:.9rem; overflow-wrap:anywhere; }
 #historyEditError { color:#a33232; font-size:.85rem; }
 #historyEditError:empty { display:none; }
@@ -292,6 +292,7 @@ table td { background:#ffffff55; }
 .page-pressure .demo-pressure-panel { order:-2; }
 .stroke-header { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; }
 .stroke-header p { font-size:.82rem; }
+.stroke-pump { font-size:.8rem; display:flex; align-items:center; gap:6px; margin-left:auto; } .stroke-pump select { font-size:.8rem; min-height:30px; }
 .stroke-setup { display:flex; flex-wrap:wrap; align-items:end; gap:10px 14px; margin-top:12px; }
 .stroke-setup label { flex:0 1 140px; }
 .stroke-setup label small { margin-left:2px; }

@@ -293,8 +293,22 @@
   // equipment, stroke count and the log, from the digital probes only.
   $('#replayPackage').addEventListener('click', () => {
     if (!record) return;
-    try { HydroTempReport.open(HydroTempReport.packageFromRecord(record)); }
-    catch (e) { status.textContent = e.message || String(e); }
+    try {
+      const data = HydroTempReport.packageFromRecord(record), mismatch = data.pumpMismatch;
+      if (!mismatch) { HydroTempReport.open(data); return; }
+      // The stroke count was figured at a different rate than the pump this test lists: ask which.
+      const dialog = $('#pumpChoice');
+      $('#pumpChoiceHelp').textContent = `The stroke count was figured at ${mismatch.counted} gal/stroke, but this test's pump is ${mismatch.name} at ${mismatch.rate} gal/stroke. Strokes and counter readings stay the same either way; only the gallons change.`;
+      $('#pumpChoiceCounted').textContent = `As counted (${mismatch.counted})`;
+      $('#pumpChoicePump').textContent = `${mismatch.name} (${mismatch.rate})`;
+      dialog.returnValue = '';
+      dialog.onclose = () => {
+        if (!dialog.returnValue) return;
+        try { HydroTempReport.open(dialog.returnValue === 'pump' ? HydroTempReport.packageFromRecord(record, { pumpRate: mismatch.rate }) : data); }
+        catch (e) { status.textContent = e.message || String(e); }
+      };
+      dialog.showModal();
+    } catch (e) { status.textContent = e.message || String(e); }
   });
   $('#closeReplay').addEventListener('click', closeReplay);
   $('#refreshHistory').addEventListener('click', refresh); $('#historySearch').addEventListener('input', list);
