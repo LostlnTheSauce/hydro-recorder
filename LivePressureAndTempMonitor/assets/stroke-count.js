@@ -24,6 +24,14 @@
       });
       this.card.addEventListener('input', (event) => { if (event.target.matches('[data-stroke-input="start"]')) event.target.dataset.edited = '1'; });
       this.card.addEventListener('change', (event) => {
+        if (event.target.matches('[data-stroke-input="setup-pump"]')) {
+          // "Other rate" shows the box for typing a gal/stroke that is not in the equipment list.
+          event.target.dataset.edited = '1';
+          const other = event.target.value === 'other';
+          this.card.querySelector('.stroke-other-rate').hidden = !other;
+          if (other) this.card.querySelector('[data-stroke-input="capacity"]').focus();
+          return;
+        }
         if (!event.target.matches('[data-stroke-input="pump"]')) return;
         if (!event.target.value || !this.g.useStrokePump?.(event.target.value)) this.render(true);
       });
@@ -80,12 +88,22 @@
       try {
         if (action === 'start') {
           const start = num(this.value('start')), counter = num(this.value('start-counter')), step = num(this.value('step')) || 10;
-          const target = num(this.value('target')), capacity = num(this.value('capacity'));
+          const target = num(this.value('target')), pumpId = this.value('setup-pump');
+          const pump = pumpId && pumpId !== 'other' ? (this.g.pumpChoices?.() || []).find((p) => p.id === pumpId) : null;
+          const capacity = pump ? pump.capacity : num(this.value('capacity'));
+          if (!(capacity > 0)) throw new Error(pumpId === 'other' ? 'Type the pump’s gallons per stroke.' : 'Choose the pump (or Other rate and type its gal/stroke).');
           if (start === null) throw new Error('Enter the starting pressure.');
           if (target !== null && target <= start) throw new Error('The target pressure must be above the starting pressure.');
           if (step <= 0) throw new Error('Enter how many psi between checkpoints.');
           root.HydroWorkflow.manualStroke(s, now, start, counter ?? 0, capacity);
           s.strokePlan = { step, target, skipped: [] };
+          // The pump chosen here is the test's pump too.
+          if (pump) {
+            this.g.testState.equipment.pump = pump.id;
+            const select = this.g.root.querySelector('.equipment-select[data-equipment-role="pump"]');
+            if (select) select.value = pump.id;
+            this.g.saveTestState?.();
+          }
           this.persist(`Stroke count started at ${start} psi, counter ${counter ?? 0}. Type the counter at ${start + step} psi and press Enter.`);
         } else if (action === 'save') {
           const next = this.next(), counter = num(this.value('counter'));
@@ -155,15 +173,22 @@
       const focused = document.activeElement?.closest?.('.stroke-card') === this.card ? document.activeElement.dataset.strokeInput : null;
       const typed = this.value('counter');
       if (!s.baseline) {
-        const pump = this.g.selectedEquipmentForSheet?.().pump;
         const keep = (name, fallback) => (this.card.querySelector(`[data-stroke-input="${name}"]`) ? this.value(name) : fallback);
+        // Pumps from the equipment list; the test's pump is chosen unless another was picked here.
+        const pumps = this.g.pumpChoices?.() || [], testPump = this.g.testState.equipment?.pump;
+        const usable = pumps.filter((p) => p.capacity > 0);
+        const pickedHere = this.card.querySelector('[data-stroke-input="setup-pump"]')?.dataset.edited ? this.value('setup-pump') : null;
+        const picked = pickedHere || (usable.find((p) => p.id === testPump) || usable[0])?.id || 'other';
+        const pumpOptions = pumps.map((p) => `<option value="${esc(p.id)}"${p.capacity > 0 ? '' : ' disabled'}${p.id === picked ? ' selected' : ''}>${esc(p.name)} · ${p.capacity > 0 ? `${esc(p.capacity)} gal/stroke` : 'no rate set'}</option>`).join('')
+          + `<option value="other"${picked === 'other' ? ' selected' : ''}>Other rate…</option>`;
         this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>After the hold: enter the pressure and counter you are starting from, then the counter at each checkpoint.</p></header>
           <div class="stroke-setup">
             <label>Start pressure<input data-stroke-input="start" type="number" step="any" inputmode="decimal" value="${esc(keep('start', latest ? Math.round(latest.pressure) : ''))}"><small>psi</small></label>
             <label>Start counter<input data-stroke-input="start-counter" type="number" min="0" step="1" inputmode="numeric" value="${esc(keep('start-counter', 0))}"></label>
             <label>Target pressure<input data-stroke-input="target" type="number" step="any" inputmode="decimal" value="${esc(keep('target', num(this.g.testState.design?.targetPressure) ?? ''))}"><small>psi</small></label>
             <label>Every<input data-stroke-input="step" type="number" min="1" step="any" inputmode="decimal" value="${esc(keep('step', 10))}"><small>psi</small></label>
-            <label>Pump<input data-stroke-input="capacity" type="number" min="0" step="any" inputmode="decimal" value="${esc(keep('capacity', pump?.capacity ?? ''))}"><small>gal/stroke</small></label>
+            <label>Pump<select data-stroke-input="setup-pump"${pickedHere ? ' data-edited="1"' : ''}>${pumpOptions}</select></label>
+            <label class="stroke-other-rate"${picked === 'other' ? '' : ' hidden'}>Gal/stroke<input data-stroke-input="capacity" type="number" min="0" step="any" inputmode="decimal" value="${esc(keep('capacity', ''))}"><small>pump not in the list</small></label>
             <button type="button" class="primary" data-stroke="start">Start stroke count</button>
           </div><p class="stroke-message" role="status" hidden></p>`;
       } else {

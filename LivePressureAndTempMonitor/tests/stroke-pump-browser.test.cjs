@@ -35,6 +35,28 @@ async function main() {
     page.on('dialog', (dialog) => { asked = dialog.message(); return answer || dialog.type() === 'alert' ? dialog.accept() : dialog.dismiss(); });
     await page.evaluate(() => { const g = window.testGauges[0]; g.readings.push({ at: Date.now(), pressure: 1300, unit: 'PSI' }); g.updateUi(); g.strokeCount.render(); });
     const card = page.locator('[data-gauge="A"] .stroke-card');
+    // Before starting, the pump is picked from the equipment list (a pump with no rate cannot be).
+    const startPump = card.locator('[data-stroke-input="setup-pump"]');
+    assert.deepEqual(await startPump.locator('option').evaluateAll((o) => o.map((x) => [x.value, x.textContent, x.disabled])),
+      [['pump-pdq', 'PDQ Pump · 0.0043 gal/stroke', false], ['pump-triplex', 'Triplex · 0.0068 gal/stroke', false], ['pump-blank', 'Old pump · no rate set', true], ['other', 'Other rate…', false]]);
+    assert.equal(await startPump.inputValue(), 'pump-pdq');
+    // Other rate: type one that is not in the list.
+    await startPump.selectOption('other');
+    assert.equal(await card.locator('.stroke-other-rate').isVisible(), true);
+    await card.locator('[data-stroke="start"]').click();
+    assert.match(await card.locator('.stroke-message').innerText(), /Type the pump’s gallons per stroke/);
+    await card.locator('[data-stroke-input="capacity"]').fill('0.005');
+    await card.locator('[data-stroke="start"]').click();
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.workflow.baseline.capacity), 0.005);
+    await card.locator('[data-stroke="undo"]').click();
+    // Picking the Triplex starts at its rate and makes it the test's pump.
+    await card.locator('[data-stroke-input="setup-pump"]').selectOption('pump-triplex');
+    await card.locator('[data-stroke="start"]').click();
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.workflow.baseline.capacity), 0.0068);
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.equipment.pump), 'pump-triplex');
+    assert.equal(await page.locator('[data-gauge="A"] .equipment-select[data-equipment-role="pump"]').inputValue(), 'pump-triplex');
+    await card.locator('[data-stroke="undo"]').click();
+    await card.locator('[data-stroke-input="setup-pump"]').selectOption('pump-pdq');
     await card.locator('[data-stroke-input="target"]').fill('1320');
     await card.locator('[data-stroke="start"]').click();
     const counter = card.locator('[data-stroke-input="counter"]');

@@ -302,6 +302,7 @@ table td { background:#ffffff55; }
 .stroke-setup { display:flex; flex-wrap:wrap; align-items:end; gap:10px 14px; margin-top:12px; }
 .stroke-setup label { flex:0 1 140px; }
 .stroke-setup label small { margin-left:2px; }
+.stroke-setup label:has([data-stroke-input="setup-pump"]) { flex:0 1 250px; }
 .stroke-entry { display:flex; flex-wrap:wrap; align-items:end; gap:10px 14px; margin-top:12px; padding:14px 16px; border-radius:8px; background:#f3f6f9; border:1px solid var(--line); }
 .stroke-entry.reached { background:var(--good-soft); border-color:#a9d4bb; }
 .stroke-entry label { font-size:1rem; flex:0 1 260px; }
