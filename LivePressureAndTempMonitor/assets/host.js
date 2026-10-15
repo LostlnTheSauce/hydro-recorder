@@ -406,11 +406,30 @@
       return Number(this.testState.offset) || 0;
     }
 
-    recordedPressure(rawPressure, offset = this.pressureOffset()) {
+    // "Full offset above": below that pressure the offset shrinks evenly to 0 at 0 psi. 0 = always full.
+    offsetTaper() {
+      return Math.max(0, Number(this.testState.offsetTaperPsi) || 0);
+    }
+
+    pressureSettings() { return { offset: this.pressureOffset(), taper: this.offsetTaper() }; }
+
+    recordedPressure(rawPressure, offset = this.pressureOffset(), taper = this.offsetTaper()) {
       const raw = Number(rawPressure);
       if (!Number.isFinite(raw)) return null;
       // Near zero the gauge reading is shown as is: the offset is not applied, but nothing is rounded away.
-      return Math.abs(raw) <= .5 ? raw : raw + Number(offset || 0);
+      if (Math.abs(raw) <= .5) return raw;
+      const scale = taper > 0 ? Math.min(1, Math.max(0, raw / taper)) : 1;
+      const recorded = raw + (Number(offset) || 0) * scale;
+      // The offset never takes a positive gauge reading below 0 psi.
+      return raw > 0 ? Math.max(0, recorded) : recorded;
+    }
+
+    // The gauge reading behind a recorded pressure (the inverse of recordedPressure).
+    rawPressure(recorded, offset, taper) {
+      const value = Number(recorded), off = Number(offset) || 0;
+      if (!Number.isFinite(value) || Math.abs(value) <= .5) return value;
+      if (taper > 0 && 1 + off / taper > 0 && value < taper + off) return value / (1 + off / taper);
+      return value - off;
     }
 
     settings() {
@@ -654,9 +673,28 @@
           offset.value = String(previous);
           return;
         }
+        const taper = this.offsetTaper();
         this.testState.offset = next;
-        if (next !== previous) this.reapplyPressureOffset(previous, next);
+        if (next !== previous) this.reapplyPressureSettings({ offset: previous, taper }, { offset: next, taper });
         if (activeTest && next !== previous) this.addTestEvent('configuration', `Pressure offset changed from ${previous} psi to ${next} psi`, this.latestPressure());
+        this.saveTestState();
+      });
+      const taperInput = this.root.querySelector('.offset-taper');
+      taperInput.value = this.testState.offsetTaperPsi ? String(this.testState.offsetTaperPsi) : '';
+      taperInput.addEventListener('change', () => {
+        const next = Math.max(0, Math.round(Number(taperInput.value) || 0));
+        const previous = this.offsetTaper();
+        if (next === previous) { taperInput.value = next ? String(next) : ''; return; }
+        const activeTest = this.officialTestIsActive();
+        const describe = (value) => (value ? `full above ${value} psi` : 'always full');
+        if (activeTest && !window.confirm(`The official test is active. Change the offset from ${describe(previous)} to ${describe(next)}? Recorded pressures below ${Math.max(previous, next)} psi are recalculated.`)) {
+          taperInput.value = previous ? String(previous) : '';
+          return;
+        }
+        this.testState.offsetTaperPsi = next || '';
+        taperInput.value = next ? String(next) : '';
+        this.reapplyPressureSettings({ offset: this.pressureOffset(), taper: previous }, { offset: this.pressureOffset(), taper: next });
+        if (activeTest) this.addTestEvent('configuration', `Pressure offset ${describe(next)}`, this.latestPressure());
         this.saveTestState();
       });
       this.root.querySelector('.download-atmos-log').addEventListener('click', (event) => this.downloadAtmosLog(event.currentTarget));
@@ -1298,21 +1336,26 @@
     }
 
     reapplyPressureOffset(previousOffset, nextOffset) {
-      const previous = Number(previousOffset) || 0;
-      const next = Number(nextOffset) || 0;
-      const delta = next - previous;
-      if (!Number.isFinite(delta) || delta === 0) return;
+      const taper = this.offsetTaper();
+      this.reapplyPressureSettings({ offset: previousOffset, taper }, { offset: nextOffset, taper });
+    }
+
+    // Recalculates the stored series (and event pressures) for a new offset or taper: each recorded
+    // pressure goes back to its gauge reading and through the new settings. Zero stays zero.
+    reapplyPressureSettings(previous, next) {
+      const prevOffset = Number(previous.offset) || 0, prevTaper = Number(previous.taper) || 0;
+      const nextOffset = Number(next.offset) || 0, nextTaper = Number(next.taper) || 0;
+      if (prevOffset === nextOffset && prevTaper === nextTaper) return;
+      const convert = (recorded) => {
+        const raw = this.rawPressure(recorded, prevOffset, prevTaper);
+        if (Math.abs(Number(recorded)) <= .5 || Math.abs(raw) <= .5) return Number(recorded);
+        return this.recordedPressure(raw, nextOffset, nextTaper);
+      };
       const archivedThrough = Number(this.testState.workflow?.archives?.at(-1)?.endedAt) || 0;
-      this.readings = this.readings.map((reading) => {
-        if (archivedThrough && reading.at <= archivedThrough) return reading;
-        const previousRecorded = Number(reading.pressure);
-        const rawPressure = previousRecorded - previous;
-        const isZeroBaseline = Math.abs(previousRecorded) <= .5 || Math.abs(rawPressure) <= .5;
-        return { ...reading, pressure: isZeroBaseline ? previousRecorded : previousRecorded + delta };
-      });
+      this.readings = this.readings.map((reading) => (archivedThrough && reading.at <= archivedThrough ? reading : { ...reading, pressure: convert(reading.pressure) }));
       this.testState.events = this.testState.events.map((event) => {
         const fixedZero = event.type === 'ramp' && /^Begin pressurizing/i.test(event.label);
-        return Number.isFinite(Number(event.pressure)) && !fixedZero ? { ...event, pressure: Number(event.pressure) + delta } : event;
+        return Number.isFinite(Number(event.pressure)) && !fixedZero ? { ...event, pressure: convert(event.pressure) } : event;
       });
       this.peak = this.readings.length ? this.readings.reduce((maximum, reading) => Math.max(maximum, Number(reading.pressure)), -Infinity) : null;
       this.low = this.readings.length ? this.readings.reduce((minimum, reading) => Math.min(minimum, Number(reading.pressure)), Infinity) : null;
