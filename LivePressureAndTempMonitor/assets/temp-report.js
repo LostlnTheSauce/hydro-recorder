@@ -5,6 +5,35 @@
 (function (root) {
   'use strict';
   const PROBE = '#2a78d6', CHART = '#eb6834';
+  const STYLE = `
+      @page { size: letter; margin: 0.5in; }
+      * { box-sizing: border-box; }
+      body { margin: 0 auto; max-width: 7.5in; padding: 16px; font: 12px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2328; background: #fff; }
+      h1 { font-size: 19px; margin: 0; } h2 { font-size: 14px; margin: 22px 0 8px; }
+      .sub { color: #57606a; margin: 2px 0 14px; }
+      .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 24px; padding: 10px 12px; border: 1px solid #d0d7de; border-radius: 6px; }
+      .facts div span { color: #57606a; margin-right: 6px; }
+      table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+      th, td { padding: 4px 6px; border-bottom: 1px solid #e5e8eb; text-align: right; }
+      th:first-child, td:first-child { text-align: left; }
+      thead th { color: #57606a; font-weight: 600; font-size: 11px; border-bottom: 1px solid #c4cad1; }
+      .summary th small { display: block; color: #57606a; font-weight: 400; }
+      .rows { font-size: 10.5px; } .rows td.remarks { text-align: left; color: #57606a; max-width: 1.6in; } .rows td.diff { color: #57606a; }
+      .legend { display: flex; gap: 18px; color: #57606a; margin: 4px 0 6px; }
+      .legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+      .legend .line { width: 22px; height: 2px; background: ${PROBE}; } .legend .dot { width: 9px; height: 9px; border-radius: 50%; background: ${CHART}; }
+      figure { margin: 0 0 12px; break-inside: avoid; } figcaption { font-weight: 600; margin-bottom: 2px; }
+      svg { width: 100%; height: auto; display: block; } svg text { font-size: 10px; fill: #57606a; } svg .grid { stroke: #e5e8eb; stroke-width: 1; }
+      .muted, .note { color: #57606a; } .warn { border: 1px solid #d4a72c; background: #fff8c5; padding: 8px 12px; border-radius: 6px; } .note { margin-top: 18px; font-size: 10.5px; }
+      .actions { margin: 0 0 14px; } .actions button { font: inherit; padding: 6px 14px; border: 1px solid #c4cad1; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
+      /* Digital (blue) and physical (orange), matching the chart line and dots. Values stay dark
+         on a light tint so they read and print clearly; headers carry the darker shade. */
+      .rows th.digital, .digital-ink { color: #1c5cab; } .rows th.physical, .physical-ink { color: #b5441a; }
+      .rows th.digital { background: #e3eefb; border-bottom: 2px solid ${PROBE}; } .rows th.physical { background: #fde9e0; border-bottom: 2px solid ${CHART}; }
+      .rows td.digital { background: #f1f6fd; } .rows td.physical { background: #fef4ef; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @media print { .actions { display: none; } body { padding: 0; } }
+    `;
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const num = (value) => (value === '' || value === null || value === undefined || !Number.isFinite(Number(value)) ? null : Number(value));
   const signed = (value, digits = 1) => (value === null ? '—' : `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(value).toFixed(digits)}`);
@@ -63,35 +92,7 @@
       const probe = num(row[channel.key]?.probe), chart = num(row[channel.key]?.chart);
       return `<td class="digital">${probe === null ? '—' : probe.toFixed(1)}</td><td class="physical">${chart === null ? '—' : chart.toFixed(chart % 1 ? 1 : 0)}</td><td class="diff">${probe === null || chart === null ? '' : signed(probe - chart)}</td>`;
     }).join('')}<td class="remarks">${esc(row.comments || '')}</td></tr>`).join('');
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(`Temperature comparison ${job.jobNumber || ''}`.trim())}</title><style>
-      @page { size: letter; margin: 0.5in; }
-      * { box-sizing: border-box; }
-      body { margin: 0 auto; max-width: 7.5in; padding: 16px; font: 12px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2328; background: #fff; }
-      h1 { font-size: 19px; margin: 0; } h2 { font-size: 14px; margin: 22px 0 8px; }
-      .sub { color: #57606a; margin: 2px 0 14px; }
-      .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 24px; padding: 10px 12px; border: 1px solid #d0d7de; border-radius: 6px; }
-      .facts div span { color: #57606a; margin-right: 6px; }
-      table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-      th, td { padding: 4px 6px; border-bottom: 1px solid #e5e8eb; text-align: right; }
-      th:first-child, td:first-child { text-align: left; }
-      thead th { color: #57606a; font-weight: 600; font-size: 11px; border-bottom: 1px solid #c4cad1; }
-      .summary th small { display: block; color: #57606a; font-weight: 400; }
-      .rows { font-size: 10.5px; } .rows td.remarks { text-align: left; color: #57606a; max-width: 1.6in; } .rows td.diff { color: #57606a; }
-      .legend { display: flex; gap: 18px; color: #57606a; margin: 4px 0 6px; }
-      .legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
-      .legend .line { width: 22px; height: 2px; background: ${PROBE}; } .legend .dot { width: 9px; height: 9px; border-radius: 50%; background: ${CHART}; }
-      figure { margin: 0 0 12px; break-inside: avoid; } figcaption { font-weight: 600; margin-bottom: 2px; }
-      svg { width: 100%; height: auto; display: block; } svg text { font-size: 10px; fill: #57606a; } svg .grid { stroke: #e5e8eb; stroke-width: 1; }
-      .muted, .note { color: #57606a; } .warn { border: 1px solid #d4a72c; background: #fff8c5; padding: 8px 12px; border-radius: 6px; } .note { margin-top: 18px; font-size: 10.5px; }
-      .actions { margin: 0 0 14px; } .actions button { font: inherit; padding: 6px 14px; border: 1px solid #c4cad1; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
-      /* Digital (blue) and physical (orange), matching the chart line and dots. Values stay dark
-         on a light tint so they read and print clearly; headers carry the darker shade. */
-      .rows th.digital, .digital-ink { color: #1c5cab; } .rows th.physical, .physical-ink { color: #b5441a; }
-      .rows th.digital { background: #e3eefb; border-bottom: 2px solid ${PROBE}; } .rows th.physical { background: #fde9e0; border-bottom: 2px solid ${CHART}; }
-      .rows td.digital { background: #f1f6fd; } .rows td.physical { background: #fef4ef; }
-      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      @media print { .actions { display: none; } body { padding: 0; } }
-    </style></head><body>
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(`Temperature comparison ${job.jobNumber || ''}`.trim())}</title><style>${STYLE}</style></head><body>
       <div class="actions"><button type="button" onclick="window.print()">Print / Save as PDF</button></div>
       <h1>Temperature comparison: <span class="digital-ink">digital probes</span> vs <span class="physical-ink">physical charts</span></h1>
       <p class="sub">${esc(data.company || 'Grant G Solutions')} · prepared ${esc(stamp(data.generatedAt || Date.now()))}</p>
@@ -107,6 +108,16 @@
       <table class="rows"><thead><tr><th rowspan="2">Time</th><th rowspan="2">PSI</th>${head}<th rowspan="2">Remarks</th></tr><tr>${sub}</tr></thead><tbody>${body}</tbody></table>
       <p class="note"><b class="digital-ink">Digital</b> values are the electronic probe's own reading nearest each log time (${esc(data.loggerNote || 'field data logger')}); a dash means no digital reading was recorded at that time. <b class="physical-ink">Physical</b> values are the recorder-chart temperatures entered in the test log. Differences are digital minus physical. No values have been adjusted.</p>
     </body></html>`;
+  }
+
+  // Fewer points for drawing, by time rather than by count: at most one point per slice of the
+  // span, so a stretch where readings arrived minutes apart keeps every one of them.
+  function thin(list, maxPoints = 900) {
+    if (list.length <= maxPoints) return list;
+    const slice = (Number(list.at(-1).at) - Number(list[0].at)) / maxPoints;
+    const kept = [];
+    list.forEach((item) => { if (!kept.length || Number(item.at) - Number(kept.at(-1).at) >= slice) kept.push(item); });
+    return kept;
   }
 
   // Closest reading to `at` in a list sorted by time.
@@ -137,7 +148,7 @@
       return reading && Math.abs(reading.at - at) <= 30000 ? Math.round(Number(reading.pressure)) : '';
     };
     const pre = events.filter((e) => ['ramp', 'note'].includes(e.type) && Number(e.at) < start).sort((a, b) => a.at - b.at)
-      .map((e) => ({ at: Number(e.at), pressure: pressureAt(Number(e.at), e.pressure), comments: /^Begin pressurizing/i.test(e.label) ? 'Pressure is at 0 psi / Begin pressurizing' : e.label }));
+      .map((e) => ({ at: Number(e.at), pre: true, pressure: pressureAt(Number(e.at), e.pressure), comments: /^Begin pressurizing/i.test(e.label) ? 'Pressure is at 0 psi / Begin pressurizing' : e.label }));
     const last = end || Math.max(start, Number(readings.at(-1)?.at) || 0);
     const official = [];
     for (let at = start; at <= last; at += 15 * 60000) official.push(at);
@@ -150,7 +161,7 @@
         return { ...row, ...Object.fromEntries(keys.map((key) => [key, { probe: num(near?.[key]), chart: num(sheet?.[key]) }])) };
       });
     const from = rows[0].at - 10 * 60000, to = rows.at(-1).at + 10 * 60000;
-    const inRange = live.filter((r) => r.at >= from && r.at <= to), stride = Math.max(1, Math.ceil(inRange.length / 900));
+    const inRange = live.filter((r) => r.at >= from && r.at <= to);
     const names = { ambient: 'Ambient', pipe: 'Pipe', soil: 'Soil' };
     const when = (at) => new Date(at).toLocaleString([], { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
     return {
@@ -158,10 +169,105 @@
       job: { jobNumber: test.jobNumber, poAfe: test.poAfe, line: test.design?.lineName || test.design?.projectName, location: test.location,
         owner: test.owner || 'Atmos Energy', contractor: test.contractor || 'Bobcat Contracting', ownerRep: test.ownerRep, period: [start, end].filter(Boolean).map(when).join(' to ') },
       channels: keys.map((key) => ({ key, name: names[key] })),
-      series: Object.fromEntries(keys.map((key) => [key, inRange.filter((r, i) => i % stride === 0 && num(r[key]) !== null).map((r) => ({ at: r.at, value: Number(r[key]) }))])),
-      rows, probeCount: live.length, probeSpan: live.length ? [live[0].at, live.at(-1).at] : null,
+      series: Object.fromEntries(keys.map((key) => [key, thin(inRange.filter((r) => num(r[key]) !== null), 900).map((r) => ({ at: r.at, value: Number(r[key]) }))])),
+      rows, probeCount: live.length, probeSpan: live.length ? [live[0].at, live.at(-1).at] : null, officialStart: start, officialEnd: end,
       loggerNote: 'MadgeTech field logger; nearest reading within 5 minutes',
     };
+  }
+
+  // Pressure over the test on one psi axis (at least 20 psi tall), with the test window
+  // lines when set and the official start and end marked.
+  function pressureSvg(series, from, to, windowLines, marks, timeLabel) {
+    const W = 680, H = 230, L = 52, R = 12, T = 12, B = 30;
+    const values = series.map((p) => p.value);
+    if (!values.length) return '<p class="muted">No pressure readings in this period.</p>';
+    const windows = [windowLines?.bottom, windowLines?.top].filter((v) => num(v) !== null).map(Number);
+    let low = Math.min(...values, ...windows), high = Math.max(...values, ...windows);
+    if (high - low < 20) { const mid = (high + low) / 2; low = mid - 10; high = mid + 10; }
+    const rough = (high - low) / 5, power = 10 ** Math.floor(Math.log10(rough));
+    const step = [1, 2, 2.5, 5, 10].map((f) => f * power).find((v) => v >= rough);
+    low = Math.floor(low / step) * step; high = Math.ceil(high / step) * step;
+    const x = (at) => L + (at - from) / Math.max(1, to - from) * (W - L - R);
+    const y = (value) => T + (high - value) / (high - low) * (H - T - B);
+    const grid = [];
+    for (let value = low; value <= high + 1e-9; value += step) grid.push(`<line x1="${L}" x2="${W - R}" y1="${y(value).toFixed(1)}" y2="${y(value).toFixed(1)}" class="grid"/><text x="${L - 6}" y="${(y(value) + 3.5).toFixed(1)}" text-anchor="end">${Number(value.toFixed(1)).toLocaleString()}</text>`);
+    const ticks = [];
+    for (let i = 0; i <= 4; i++) { const at = from + (to - from) * i / 4; ticks.push(`<text x="${x(at).toFixed(1)}" y="${H - 10}" text-anchor="${i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}">${esc(timeLabel(at))}</text>`); }
+    const lines = windows.map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#57606a" stroke-width="1" stroke-dasharray="5 4"/><text x="${W - R - 2}" y="${(y(v) - 4).toFixed(1)}" text-anchor="end">window ${Number(v).toLocaleString()}</text>`).join('');
+    const markLines = (marks || []).filter((m) => m.at >= from && m.at <= to).map((m) => `<line x1="${x(m.at).toFixed(1)}" x2="${x(m.at).toFixed(1)}" y1="${T}" y2="${H - B}" stroke="#8c959f" stroke-width="1"/><text x="${(x(m.at) + 4).toFixed(1)}" y="${T + 10}">${esc(m.label)}</text>`).join('');
+    let path = '', last = null;
+    series.forEach((p) => { path += `${last === null || p.at - last > 300000 ? 'M' : 'L'}${x(p.at).toFixed(1)},${y(p.value).toFixed(1)}`; last = p.at; });
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pressure over the test">${grid.join('')}${ticks.join('')}${lines}${markLines}<path d="${path}" fill="none" stroke="#1f2328" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+  }
+
+  // Full test report from a saved test: details, pressure summary, the pressure chart, one
+  // temperature chart per probe (digital line, physical dots), the 15-minute log and events.
+  function fullFromRecord(record) {
+    const data = fromRecord(record), test = record.test || {}, design = test.design || {};
+    const readings = [...(record.readings || [])].sort((a, b) => a.at - b.at);
+    const official = data.rows.filter((row) => !row.pre);
+    const start = data.officialStart, end = data.officialEnd || Number(readings.at(-1)?.at) || start;
+    const inTest = readings.filter((r) => r.at >= start && r.at <= end && num(r.pressure) !== null);
+    const from = start - 15 * 60000, to = end + 15 * 60000;
+    const shown = thin(readings.filter((r) => r.at >= from && r.at <= to && num(r.pressure) !== null), 1400);
+    const at = (t) => { const r = nearestIn(readings, t); return r && Math.abs(r.at - t) <= 60000 ? Number(r.pressure) : null; };
+    const startP = at(start), endP = at(end);
+    return { ...data, full: true, design, chartFrom: from, chartTo: to,
+      pressureSeries: shown.map((r) => ({ at: r.at, value: Number(r.pressure) })),
+      window: { bottom: test.windowBottom || design.windowBottom, top: test.windowTop || design.windowTop },
+      pressure: { start: startP, end: endP, change: startP !== null && endP !== null ? endP - startP : null,
+        min: inTest.length ? Math.min(...inTest.map((r) => Number(r.pressure))) : null, max: inTest.length ? Math.max(...inTest.map((r) => Number(r.pressure))) : null,
+        hours: (end - start) / 3600000, offset: num(test.offset) },
+      events: [...(test.events || []), ...(record.notes || []).map((n) => ({ at: n.at, label: n.text }))].filter((e) => e && e.at).sort((a, b) => a.at - b.at),
+      officialRows: official.length };
+  }
+
+  function buildFull(data) {
+    const channels = data.channels || [], rows = data.rows || [], job = data.job || {}, design = data.design || {}, p = data.pressure || {};
+    const time = (at) => new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const stamp = (at) => new Date(at).toLocaleString([], { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const psi = (v, digits = 1) => (v === null || v === undefined ? '—' : `${Number(v).toFixed(digits)} psi`);
+    const facts = [['Job number', job.jobNumber], ['PO / AFE', job.poAfe], ['Line', job.line], ['Location', job.location], ['Owner', job.owner], ['Contractor', job.contractor],
+      ["Owner's rep / inspector", job.ownerRep], ['Official test', job.period], ['Test medium', design.testMedium], ['Section length', design.sectionLengthFt ? `${design.sectionLengthFt} ft` : ''],
+      ['Target pressure', design.targetPressure ? `${design.targetPressure} psi` : ''], ['Test window', data.window?.bottom && data.window?.top ? `${data.window.bottom}–${data.window.top} psi` : '']].filter(([, v]) => v);
+    const insideWindow = num(data.window?.bottom) !== null && num(data.window?.top) !== null && p.min !== null
+      ? (p.min >= Number(data.window.bottom) && p.max <= Number(data.window.top) ? 'Yes' : 'No') : '—';
+    const tempRow = (channel) => {
+      const first = rows.find((r) => !r.pre && num(r[channel.key]?.probe) !== null), last = [...rows].reverse().find((r) => !r.pre && num(r[channel.key]?.probe) !== null);
+      const pf = rows.find((r) => !r.pre && num(r[channel.key]?.chart) !== null), pl = [...rows].reverse().find((r) => !r.pre && num(r[channel.key]?.chart) !== null);
+      const fmt = (v, d = 1) => (v === null || v === undefined ? '—' : `${Number(v).toFixed(d)}°`);
+      return `<tr><th>${esc(channel.name)}</th><td class="digital">${fmt(first?.[channel.key].probe)} → ${fmt(last?.[channel.key].probe)}</td><td class="physical">${fmt(pf?.[channel.key].chart, 0)} → ${fmt(pl?.[channel.key].chart, 0)}</td></tr>`;
+    };
+    const charts = channels.map((channel) => `<figure><figcaption>${esc(channel.name)} temperature</figcaption>${chartSvg(channel, (data.series?.[channel.key] || []).filter((s) => s.at >= data.chartFrom && s.at <= data.chartTo), rows.filter((r) => !r.pre), data.chartFrom, data.chartTo, time)}</figure>`).join('');
+    const head = channels.map((channel) => `<th colspan="2">${esc(channel.name)} °F</th>`).join('');
+    const sub = channels.map(() => '<th class="digital">Digital</th><th class="physical">Physical</th>').join('');
+    const body = rows.map((row) => `<tr><td>${esc(stamp(row.at))}</td><td>${row.pressure === '' || row.pressure === null || row.pressure === undefined ? '—' : esc(row.pressure)}</td>${channels.map((channel) => {
+      const d = num(row[channel.key]?.probe), c = num(row[channel.key]?.chart);
+      return `<td class="digital">${d === null ? '—' : d.toFixed(1)}</td><td class="physical">${c === null ? '—' : c.toFixed(c % 1 ? 1 : 0)}</td>`;
+    }).join('')}<td class="remarks">${esc(row.comments || '')}</td></tr>`).join('');
+    const events = (data.events || []).map((e) => `<tr><td>${esc(stamp(e.at))}</td><td class="remarks">${esc(e.label || '')}</td><td>${num(e.pressure) === null ? '' : `${Number(e.pressure).toFixed(1)}`}</td></tr>`).join('');
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(`Hydrostatic test ${job.jobNumber || ''}`.trim())}</title><style>${STYLE}
+      .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
+      .tiles div { border: 1px solid #d0d7de; border-radius: 6px; padding: 8px 10px; } .tiles span { display: block; color: #57606a; font-size: 10.5px; } .tiles b { font-size: 15px; }
+      .rows td:first-child { white-space: nowrap; } .page-break { break-before: page; }
+    </style></head><body>
+      <div class="actions"><button type="button" onclick="window.print()">Print / Save as PDF</button></div>
+      <h1>Hydrostatic test report</h1>
+      <p class="sub">${esc(data.company || 'Grant G Solutions')} · prepared ${esc(stamp(data.generatedAt || Date.now()))}</p>
+      <div class="facts">${facts.map(([label, value]) => `<div><span>${esc(label)}</span>${esc(value)}</div>`).join('')}</div>
+      <h2>Pressure</h2>
+      <div class="tiles"><div><span>Start of test</span><b>${psi(p.start)}</b></div><div><span>End of test</span><b>${psi(p.end)}</b></div><div><span>Change</span><b>${p.change === null || p.change === undefined ? '—' : `${signed(p.change)} psi`}</b></div><div><span>Duration</span><b>${p.hours ? `${p.hours.toFixed(1)} h` : '—'}</b></div>
+        <div><span>Lowest in test</span><b>${psi(p.min)}</b></div><div><span>Highest in test</span><b>${psi(p.max)}</b></div><div><span>Stayed inside window</span><b>${insideWindow}</b></div><div><span>Gauge offset applied</span><b>${p.offset === null || p.offset === undefined ? '—' : `${signed(p.offset)} psi`}</b></div></div>
+      <figure style="margin-top:12px">${pressureSvg(data.pressureSeries || [], data.chartFrom, data.chartTo, data.window, [{ at: data.officialStart, label: 'Start' }, { at: data.officialEnd, label: 'End' }].filter((m) => m.at), time)}</figure>
+      <h2>Temperatures</h2>
+      <table class="summary"><thead><tr><th>Probe</th><th class="digital">Digital, start → end</th><th class="physical">Physical, start → end</th></tr></thead><tbody>${channels.map(tempRow).join('')}</tbody></table>
+      <div class="legend" style="margin-top:10px"><span><i class="line"></i>Digital probe (every reading)</span><span><i class="dot"></i>Physical chart (log entries)</span></div>
+      ${charts}
+      <h2 class="page-break">Test log</h2>
+      <table class="rows"><thead><tr><th rowspan="2">Time</th><th rowspan="2">PSI</th>${head}<th rowspan="2">Remarks</th></tr><tr>${sub}</tr></thead><tbody>${body}</tbody></table>
+      ${events ? `<h2>Events and notes</h2><table class="rows"><thead><tr><th>Time</th><th>Entry</th><th>PSI</th></tr></thead><tbody>${events}</tbody></table>` : ''}
+      <p class="note">Pressure is the recorded gauge pressure with the gauge offset shown above applied. <b class="digital-ink">Digital</b> temperatures are the electronic probes' readings nearest each log time (${esc(data.loggerNote || 'field data logger')}); <b class="physical-ink">Physical</b> temperatures are the recorder-chart values entered in the test log. Missing readings are shown as dashes. No values have been adjusted.</p>
+    </body></html>`;
   }
 
   // Opens the report in a new tab and brings up the print dialog (Save as PDF).
@@ -169,13 +275,13 @@
     const win = root.open('', '_blank');
     if (!win) throw new Error('The report window was blocked. Allow pop-ups for this site and try again.');
     win.document.open();
-    win.document.write(build(data));
+    win.document.write(data.full ? buildFull(data) : build(data));
     win.document.close();
     setTimeout(() => { try { win.focus(); win.print(); } catch (_) {} }, 400);
     return win;
   }
 
-  const api = { build, stats, open, fromRecord };
+  const api = { build, buildFull, stats, open, fromRecord, fullFromRecord, thin };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.HydroTempReport = api;
 })(typeof window !== 'undefined' ? window : globalThis);

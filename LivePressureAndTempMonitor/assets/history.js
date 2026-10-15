@@ -289,6 +289,12 @@
     try { HydroTempReport.open(HydroTempReport.fromRecord(record)); }
     catch (e) { status.textContent = e.message || String(e); }
   });
+  // The whole test as a printable report: details, pressure, all temperature charts and the log.
+  $('#replayFullReport').addEventListener('click', () => {
+    if (!record) return;
+    try { HydroTempReport.open(HydroTempReport.fullFromRecord(record)); }
+    catch (e) { status.textContent = e.message || String(e); }
+  });
   $('#closeReplay').addEventListener('click', closeReplay);
   $('#refreshHistory').addEventListener('click', refresh); $('#historySearch').addEventListener('input', list);
   $('#historyFolder').addEventListener('change', list); refresh();

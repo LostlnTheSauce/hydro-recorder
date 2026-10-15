@@ -87,6 +87,14 @@ const server=http.createServer(async(req,res)=>{
     assert.match(reportRows[0],/980\t72\.0\t—\t\t75\.0\t—\t\t71\.0\t—\t\tBegin test/,reportRows[0]);
     assert.match(reportRows[4],/End test/);
     await report.close();
+    // Full test report: details, pressure summary, pressure chart plus one chart per probe, and the log.
+    const [full]=await Promise.all([phone.waitForEvent('page'),view.locator('#replayFullReport').click()]);
+    await full.waitForLoadState();
+    assert.match(await full.locator('h1').innerText(),/Hydrostatic test report/);
+    assert.match(await full.locator('.tiles').innerText(),/Start of test\s+980\.0 psi[\s\S]*Duration\s+1\.0 h/);
+    assert.equal(await full.locator('figure svg').count(),4,'pressure chart plus ambient, pipe and soil');
+    assert.equal(await full.locator('table.rows').first().locator('tbody tr').count(),5);
+    await full.close();
     const m=()=>view.locator('.temperature-chart').evaluate(c=>({start:c._temperatureMeta.start,end:c._temperatureMeta.end,selected:c._temperatureMeta.selectedAt}));
     const before=await m();await view.locator('.temp-scrubber').fill('5000');await view.waitForTimeout(100);
     assert((await m()).selected>before.start,'Finger-friendly scrubber selects recording time');
