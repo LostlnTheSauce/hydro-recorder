@@ -8,12 +8,20 @@ time (on github.com: open this file, then the pencil icon), or ask Claude to. Mo
 
 ### Automatic stroke counter
 Have the site count pump strokes by itself instead of typing the counter at each checkpoint.
-- Today: a magnetic pickup senses a bolt going past on the pump pulley. It feeds a 4-terminal
-  box that drives the LCD stroke counter.
+- Today: a pickup senses a bolt going past on the pump pulley and drives the LCD stroke counter.
+  The "4-terminal box" is a **TOBSUN EA25-5V DC-DC converter** (12/24 V in, 5 V out) that powers the
+  pickup (photo October 2026). The pickup's brown cable: red and white go to the converter's 5 V + and
+  −; a thin dark-red wire is the **signal** and runs to the counter's green terminal block. So it is a
+  powered (3-wire) sensor with clean 5 V pulses: the PC817 is the right part, no comparator needed.
+- To confirm: meter DC volts, black lead on the white wire (5 V −), red lead on the dark-red signal,
+  turn the pump slowly. 0 V jumping to ~5 V at the bolt = wire the PC817 normally. ~5 V dropping to
+  0 V = the sensor switches to ground, so the PC817 input goes IN+ to 5 V +, IN− to signal. No change =
+  measure at the counter's terminals (the counter may supply the pull-up).
+- Hookup plan: PC817 input taps the signal and 5 V − with Wago connectors (nothing cut; the LCD counter
+  keeps counting). PC817 output to Nano 5V / GND / D2. The Nano is powered by the laptop's USB only,
+  never from the trailer's 5 V converter. The module's LED blinks at each bolt pass, for a first test.
 - Parts: Arduino Nano (bought or buying), PC817 optocoupler module rated 3.6–30 V input. It
   reads the pickup signal without touching the counter's electronics.
-- Still needed: the signal voltage at the box terminals (multimeter, with the pump turning
-  slowly), or the box's label/model. That decides how the optocoupler is wired.
 - **Decision (October 2026): Arduino Nano**, not a new counter. A Red Lion CUB5 with a serial card
   (~$300) would do it, but costs too much for this. The Nano mounts dry under the trailer table and
   listens alongside the existing counter, so the LCD counter the crew and inspectors read stays as is.
@@ -25,10 +33,6 @@ Have the site count pump strokes by itself instead of typing the counter at each
     18–22 AWG wire
   - USB cable long enough to reach the laptop (6–10 ft)
   - Small project box, plus zip ties or Velcro to hang it under the table
-- First, before wiring anything: with the pump turning slowly, measure the signal at the box
-  terminals with a multimeter, and count the pickup's wires. A 3-wire pickup gives clean pulses:
-  the optocoupler is right. A 2-wire pickup is passive, with a weak AC signal at low speed: use an
-  LM393 comparator module instead (about $5) so slow strokes are not missed.
 - Site side: the Nano plugs into the field laptop by USB. The host page reads it like it reads the
   gauge (browser serial), and the Stroke count panel fills each checkpoint from it, with Save still
   there to confirm or correct. The LCD counter stays the reference to check against. Can share the
