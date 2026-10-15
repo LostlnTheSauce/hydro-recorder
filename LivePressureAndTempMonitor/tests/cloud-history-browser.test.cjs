@@ -87,13 +87,17 @@ const server=http.createServer(async(req,res)=>{
     assert.match(reportRows[0],/980\t72\.0\t—\t\t75\.0\t—\t\t71\.0\t—\t\tBegin test/,reportRows[0]);
     assert.match(reportRows[4],/End test/);
     await report.close();
-    // Full test report: details, pressure summary, pressure chart plus one chart per probe, and the log.
-    const [full]=await Promise.all([phone.waitForEvent('page'),view.locator('#replayFullReport').click()]);
+    // Post-test package: round recorder charts, the combined graph, details, charts and the log.
+    const [full]=await Promise.all([phone.waitForEvent('page'),view.locator('#replayPackage').click()]);
     await full.waitForLoadState();
-    assert.match(await full.locator('h1').innerText(),/Hydrostatic test report/);
-    assert.match(await full.locator('.tiles').innerText(),/Start of test\s+980\.0 psi[\s\S]*Duration\s+1\.0 h/);
+    assert.match(await full.locator('h1').innerText(),/post-test package/);
+    assert.match(await full.locator('.tiles').first().innerText(),/Start of test\s+980\.0 psi[\s\S]*Duration\s+1\.0 h/);
+    assert.match(await full.locator('.said').innerText(),/official test ran 1\.0 hours/);
+    const images=await full.locator('figure img').evaluateAll(list=>list.map(i=>({alt:i.alt,png:i.src.startsWith('data:image/png'),w:i.naturalWidth})));
+    assert.deepEqual(images.map(i=>i.alt),['Round pressure recorder chart','Round temperature recorder chart','Pressure and temperatures over the official test']);
+    assert(images.every(i=>i.png&&i.w>300),JSON.stringify(images));
     assert.equal(await full.locator('figure svg').count(),4,'pressure chart plus ambient, pipe and soil');
-    assert.equal(await full.locator('table.rows').first().locator('tbody tr').count(),5);
+    assert.equal(await full.locator('h2:has-text("Test log") + table tbody tr').count(),5);
     await full.close();
     const m=()=>view.locator('.temperature-chart').evaluate(c=>({start:c._temperatureMeta.start,end:c._temperatureMeta.end,selected:c._temperatureMeta.selectedAt}));
     const before=await m();await view.locator('.temp-scrubber').fill('5000');await view.waitForTimeout(100);

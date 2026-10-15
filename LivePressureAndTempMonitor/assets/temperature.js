@@ -811,5 +811,5 @@
     observer.observe(wrap);
   }
 
-  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, clampZoom, smoothReadings, probePreferred };
+  window.TemperatureChartRenderer = { DEFAULT_CHANNELS, channels, renderPanel, bindPanel, nearest, clampZoom, smoothReadings, probePreferred, drawTimeline };
 })();
