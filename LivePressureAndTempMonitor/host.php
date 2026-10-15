@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <main class="monitor-shell" id="hostApp" data-api="api.php" data-csrf="<?= htmlspecialchars(csrf_token()) ?>" data-dashboard-view="pressure">
     <header class="app-header">
       <div class="brand-lockup"><div class="brand-mark"><img src="assets/grant-g-logo.png" alt=""></div><div><p>Grant G Solutions</p><h1>Field recorder</h1></div></div>
-      <div class="header-actions"><a class="small-link" href="history.php" target="_blank" rel="noopener">Test history &amp; replay ↗</a><a class="small-link demo-launch" href="host.php?demo=1" target="_blank" rel="noopener">Practice demo ↗</a><span class="pill amber" id="remoteHeaderStatus">Remote viewing off</span><a class="small-link" href="?logout=1">Sign out</a></div>
+      <div class="header-actions"><a class="small-link" href="history.php" target="_blank" rel="noopener">Test history &amp; replay ↗</a><a class="small-link" href="calibration.php" target="_blank" rel="noopener">Calibration papers ↗</a><a class="small-link demo-launch" href="host.php?demo=1" target="_blank" rel="noopener">Practice demo ↗</a><span class="pill amber" id="remoteHeaderStatus">Remote viewing off</span><a class="small-link" href="?logout=1">Sign out</a></div>
     </header>
     <p id="cloudSaveStatus" role="status">Preparing automatic online history…</p>
     <p id="localSaveAlert" class="save-alert" role="alert" hidden></p>
@@ -356,6 +356,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
         <label class="check-field"><input id="equipmentDefault" type="checkbox"> Use as default for this type</label>
         <div class="equipment-form-actions"><button class="primary" id="saveEquipment" type="submit">Add equipment</button><button class="ghost hidden" id="cancelEquipmentEdit" type="button">Cancel</button></div>
       </form>
+      <a class="calibration-scan-card" id="calibrationScanLink" href="calibration.php" target="_blank" rel="noopener"><canvas id="calibrationScanQr" aria-hidden="true"></canvas><span><b>Scan calibration papers with your phone</b><small>Scan this code (or open Calibration papers on the phone) and take a picture of each page. The phone uses this equipment list.</small></span></a>
       <div class="equipment-table-wrap"><table><thead><tr><th>Type</th><th>Name / serial</th><th>Range or capacity</th><th>Calibration</th><th>Calibration paper</th><th>Default</th><th></th></tr></thead><tbody id="equipmentTableBody"></tbody></table></div>
     </details>
     <dialog id="calibrationSet" aria-labelledby="calibrationSetTitle"><form><span class="eyebrow">CALIBRATION PAPERS</span><h2 id="calibrationSetTitle">Print calibration papers</h2><p>Tick the equipment going on this test. The PDF has a cover sheet listing each item and its calibration due date, then each paper.</p><div class="cal-set-list"></div><p class="cal-set-message" role="status"></p><a class="cal-set-download button-link" hidden>Download PDF</a><div class="dialog-actions"><button type="button" data-close>Close</button><button type="submit" value="build" class="primary">Build PDF</button></div></form></dialog>

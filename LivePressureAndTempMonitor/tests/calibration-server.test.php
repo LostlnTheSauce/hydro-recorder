@@ -31,4 +31,20 @@ check(calibration_get($db, 'missing') === null, 'Missing paper is null');
 check(calibration_delete($db, 'pump-pdq') && !calibration_delete($db, 'pump-pdq'), 'Delete once');
 check(count(calibration_list($db)) === 2, 'Deleted paper gone');
 check(calibration_limit() > 0 && calibration_limit() <= CALIBRATION_MAX_BYTES, 'Limit within the cap');
+// Shared equipment list: newest save wins, fields cleaned, bad entries refused.
+equipment_schema($db); equipment_schema($db);
+check(equipment_get($db) === ['updatedAt' => 0, 'items' => []], 'Empty list before the first save');
+$items = [['id' => 'pump-pdq', 'type' => 'pump', 'name' => "PDQ\tPump", 'capacity' => '0.0043', 'isDefault' => true, 'extra' => 'dropped'],
+    ['id' => 'b30e1fc4-763e-4c99-bd32-5138a91a082e', 'type' => 'deadweight', 'name' => 'T1 Deadweights', 'serial' => '5496', 'calibrationDate' => '2026-05-07', 'intervalMonths' => 6]];
+$saved = equipment_save($db, $items, 5000);
+check($saved['updatedAt'] === 5000 && count($saved['items']) === 2, 'First save stored');
+check($saved['items'][0]['name'] === 'PDQ Pump' && !isset($saved['items'][0]['extra']) && $saved['items'][0]['isDefault'] === true, 'Cleaned');
+check($saved['items'][1]['calibrationDate'] === '2026-05-07' && $saved['items'][1]['intervalMonths'] === 6, 'Dates kept');
+check(equipment_save($db, [], 4000)['updatedAt'] === 5000 && count(equipment_get($db)['items']) === 2, 'Older copy does not overwrite');
+check(count(equipment_save($db, [$items[1]], 6000)['items']) === 1, 'Newer copy (with a removal) wins');
+rejects(fn () => equipment_save($db, [['id' => 'x', 'type' => 'rocket', 'name' => 'a']], 7000), 'Unknown type refused');
+rejects(fn () => equipment_save($db, [['id' => '../x', 'type' => 'pump']], 7000), 'Bad ID refused');
+rejects(fn () => equipment_save($db, ['a' => []], 7000), 'Not a list refused');
+rejects(fn () => equipment_save($db, [], 'soon'), 'Bad time refused');
+check(equipment_get($db)['updatedAt'] === 6000, 'Refusals change nothing');
 echo "Calibration papers: PDF/JPEG/PNG by content, clean names, one per equipment (replace), list without bytes, refusals, delete passed.\n";

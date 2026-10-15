@@ -14,8 +14,8 @@ deployment:
     - export DEST=$HOME/public_html/hydro
     - export STAMP=$(date +%s)
     - /bin/mkdir -p $DEST/assets $DEST/inc
-    - /bin/cp $SITE/.htaccess $SITE/api.php $SITE/calibration-api.php $SITE/history-api.php $SITE/history.php $SITE/host.php $SITE/temperature.php $SITE/viewer.php $DEST/
+    - /bin/cp $SITE/.htaccess $SITE/api.php $SITE/calibration.php $SITE/calibration-api.php $SITE/history-api.php $SITE/history.php $SITE/host.php $SITE/temperature.php $SITE/viewer.php $DEST/
     - /bin/cp $SITE/calculator.html $SITE/recorder-report.html $DEST/
     - /bin/cp $SITE/inc/*.php $DEST/inc/
     - /bin/cp $SITE/assets/* $DEST/assets/
-    - /bin/sed -i -E "s/(\.(js|css))\?v=[0-9]+/\1?v=$STAMP/g" $DEST/host.php $DEST/viewer.php $DEST/history.php
+    - /bin/sed -i -E "s/(\.(js|css))\?v=[0-9]+/\1?v=$STAMP/g" $DEST/host.php $DEST/viewer.php $DEST/history.php $DEST/calibration.php

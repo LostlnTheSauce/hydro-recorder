@@ -4,7 +4,7 @@ require __DIR__ . '/inc/bootstrap.php';
 require __DIR__ . '/inc/calibration.php';
 require_host();
 try {
-    $db = db(); calibration_schema($db);
+    $db = db(); calibration_schema($db); equipment_schema($db);
     $action = (string) ($_GET['action'] ?? 'list');
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_csrf();
@@ -18,6 +18,12 @@ try {
             unset($paper['sha256']);
             json_response(['ok' => true, 'paper' => $paper]);
         }
+        if ($action === 'equipment') {
+            if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 500000) json_response(['error' => 'Equipment list too large.'], 413);
+            $p = json_input();
+            session_write_close();
+            json_response(['ok' => true] + equipment_save($db, $p['items'] ?? null, $p['savedAt'] ?? null));
+        }
         if ($action === 'delete') {
             $p = json_input();
             session_write_close();
@@ -27,7 +33,7 @@ try {
     }
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') json_response(['error' => 'Unsupported request.'], 405);
     session_write_close();
-    if ($action === 'list') json_response(['ok' => true, 'papers' => calibration_list($db), 'maxBytes' => calibration_limit()]);
+    if ($action === 'list') json_response(['ok' => true, 'papers' => calibration_list($db), 'maxBytes' => calibration_limit(), 'equipment' => equipment_get($db)]);
     if ($action === 'file') {
         $paper = calibration_get($db, $_GET['equipment'] ?? null);
         if (!$paper) json_response(['error' => 'No calibration paper for that equipment.'], 404);
