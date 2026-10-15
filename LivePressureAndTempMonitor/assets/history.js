@@ -237,6 +237,8 @@
       logData=HydroHistoryLog.prepare(record); applyLogPreferences();
       syncActiveJob();
       $('#replaySummary').textContent = `${record.readings.length.toLocaleString()} pressure readings · ${record.temperatureReadings.length.toLocaleString()} temperature readings · Snapshot saved ${stamp(data.updatedAt)}`;
+      const sheetLink = $('#replaySheet'), sheetUrl = /^https:\/\/docs\.google\.com\//.test(test.sheet?.url || '') ? test.sheet.url : '';
+      sheetLink.hidden = !sheetUrl; if (sheetUrl) sheetLink.href = sheetUrl; else sheetLink.removeAttribute('href');
       $('#jobDetails').textContent = [test.design?.projectName, test.location, test.poAfe ? `PO/AFE ${test.poAfe}` : '', test.jobNumber ? `Job ${test.jobNumber}` : ''].filter(Boolean).join(' · ') || 'No job details entered.';
       const tbody = $('#replayEvents'); tbody.replaceChildren();
       const highlights = $('#replayHighlights'); highlights.replaceChildren();
@@ -280,6 +282,12 @@
     if (!record) return;
     const url = URL.createObjectURL(new Blob([JSON.stringify(record)], {type:'application/json'}));
     const a = document.createElement('a'); a.href = url; a.download = `Hydrotest_${record.id}_backup.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
+  });
+  // Digital probes vs physical (recorder chart) temperatures for this saved test, as a printable report.
+  $('#replayReport').addEventListener('click', () => {
+    if (!record) return;
+    try { HydroTempReport.open(HydroTempReport.fromRecord(record)); }
+    catch (e) { status.textContent = e.message || String(e); }
   });
   $('#closeReplay').addEventListener('click', closeReplay);
   $('#refreshHistory').addEventListener('click', refresh); $('#historySearch').addEventListener('input', list);

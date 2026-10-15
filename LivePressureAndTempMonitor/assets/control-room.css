@@ -230,6 +230,8 @@ table td { background:#ffffff55; }
 #replaySummary { font-size:.78rem; }
 .replay-actions { display:flex; flex-wrap:wrap; gap:7px; flex-shrink:0; }
 .replay-actions button { font-size:.83rem; padding:10px 13px; }
+.replay-actions .button-link { display:inline-flex; align-items:center; font-size:.83rem; padding:10px 13px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); text-decoration:none; font-weight:600; }
+.replay-actions .button-link[hidden] { display:none; }
 .replay-layout { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:20px; align-items:start; }
 #replay .temperature-panel { padding:20px; }
 #replay [data-temperature-panel] { display:flex; flex-direction:column; }

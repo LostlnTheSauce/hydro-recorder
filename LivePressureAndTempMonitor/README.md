@@ -83,7 +83,7 @@ Live readings stay on the server while the test runs, however long. They are cle
 
 ## Test history
 
-`history.php` signs in with the host password from any device. It is read-only: opening it never touches a running recording. Open a test to replay the graph, read the pressure and temperature log at a chosen interval, and see events and notes. **Rename**, **Move** (folders) and **Delete** (to Trash, restorable) only change how the test is listed. A test that is still recording shows its last upload; refresh for newer readings.
+`history.php` signs in with the host password from any device. A saved test also has **Digital vs physical report (PDF)** (the same report as Records, built from the saved readings and the Sheet temperatures read back at the last sync) and, when it has one, **Open Google Sheet**. It is read-only: opening it never touches a running recording. Open a test to replay the graph, read the pressure and temperature log at a chosen interval, and see events and notes. **Rename**, **Move** (folders) and **Delete** (to Trash, restorable) only change how the test is listed. A test that is still recording shows its last upload; refresh for newer readings.
 
 ## Google Sheet paperwork
 
