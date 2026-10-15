@@ -37,6 +37,8 @@ async function main() {
       const g = window.testGauges[0], now = Date.now();
       g.testState.offset = 9; g.root.querySelector('.pressure-offset').value = '9';
       g.readings.splice(0, g.readings.length, ...raws.map((raw, i) => ({ at: now - (raws.length - i) * 1000, pressure: g.recordedPressure(raw), unit: 'PSI' })));
+      // An event entered with the full offset on a near-zero gauge (0.4 + 9), as earlier versions did.
+      g.testState.events = [{ id: 'up', at: now - 20000, type: 'note', label: 'Begin pressure up', pressure: 9.4 }];
     }, series);
     assert.deepEqual(await page.evaluate(() => window.testGauges[0].readings.map((r) => r.pressure)), [1745, 1009, 109, 59, 29, 14, 0.4, 0]);
     await page.locator('[data-dashboard-tab="setup"]').click();
@@ -44,6 +46,7 @@ async function main() {
     await page.locator('[data-gauge="A"] .offset-taper').dispatchEvent('change');
     const tapered = await page.evaluate(() => window.testGauges[0].readings.map((r) => Math.round(r.pressure * 100) / 100));
     assert.deepEqual(tapered, [1745, 1009, 109, 59, 23.6, 5.9, 0.4, 0], 'low end recalculated; hold unchanged');
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.events[0].pressure), 0.4, 'a near-zero event comes back to the gauge reading');
     assert.equal(await page.evaluate(() => window.testGauges[0].testState.offsetTaperPsi), 50, 'saved with the test');
     // Back to blank restores the full offset.
     await page.locator('[data-gauge="A"] .offset-taper').fill('');

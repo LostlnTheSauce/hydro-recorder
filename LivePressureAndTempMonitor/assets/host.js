@@ -1348,7 +1348,9 @@
       if (prevOffset === nextOffset && prevTaper === nextTaper) return;
       const convert = (recorded) => {
         const raw = this.rawPressure(recorded, prevOffset, prevTaper);
-        if (Math.abs(Number(recorded)) <= .5 || Math.abs(raw) <= .5) return Number(recorded);
+        if (Math.abs(Number(recorded)) <= .5) return Number(recorded);
+        // A value whose gauge reading was near zero goes back to that reading (9.4 with +9 is 0.4).
+        if (Math.abs(raw) <= .5) return Math.round(raw * 1000) / 1000;
         return this.recordedPressure(raw, nextOffset, nextTaper);
       };
       const archivedThrough = Number(this.testState.workflow?.archives?.at(-1)?.endedAt) || 0;
