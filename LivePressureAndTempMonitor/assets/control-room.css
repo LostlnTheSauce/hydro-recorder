@@ -300,7 +300,9 @@ table td { background:#ffffff55; }
 .stroke-header p { font-size:.82rem; }
 .stroke-pump { font-size:.8rem; display:flex; align-items:center; gap:6px; margin-left:auto; } .stroke-pump select { font-size:.8rem; min-height:30px; }
 .stroke-setup { display:flex; flex-wrap:wrap; align-items:end; gap:10px 14px; margin-top:12px; }
-.stroke-setup label { flex:0 1 140px; }
+.stroke-setup label { flex:0 1 150px; display:grid; gap:6px; align-content:end; }
+.stroke-toggle { margin-left:auto; min-height:34px; padding:4px 14px; font-size:.82rem; } .stroke-pump + .stroke-toggle { margin-left:0; }
+.stroke-card.collapsed { padding:12px 20px; } .stroke-card.collapsed .stroke-header { align-items:center; }
 .stroke-setup label small { margin-left:2px; }
 .stroke-setup label:has([data-stroke-input="setup-pump"]) { flex:0 1 250px; }
 .stroke-entry { display:flex; flex-wrap:wrap; align-items:end; gap:10px 14px; margin-top:12px; padding:14px 16px; border-radius:8px; background:#f3f6f9; border:1px solid var(--line); }

@@ -35,6 +35,7 @@ async function main() {
     page.on('dialog', (dialog) => { asked = dialog.message(); return answer || dialog.type() === 'alert' ? dialog.accept() : dialog.dismiss(); });
     await page.evaluate(() => { const g = window.testGauges[0]; g.readings.push({ at: Date.now(), pressure: 1300, unit: 'PSI' }); g.updateUi(); g.strokeCount.render(); });
     const card = page.locator('[data-gauge="A"] .stroke-card');
+    await card.locator('[data-stroke="toggle"]').click();
     // Before starting, the pump is picked from the equipment list (a pump with no rate cannot be).
     const startPump = card.locator('[data-stroke-input="setup-pump"]');
     assert.deepEqual(await startPump.locator('option').evaluateAll((o) => o.map((x) => [x.value, x.textContent, x.disabled])),

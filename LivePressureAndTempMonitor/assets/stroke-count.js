@@ -20,7 +20,8 @@
       page.insertBefore(this.card, page.querySelector('.logbook-card'));
       this.card.addEventListener('click', (event) => {
         const button = event.target.closest('[data-stroke]');
-        if (button) this.act(button.dataset.stroke);
+        if (button?.dataset.stroke === 'toggle') this.toggle();
+        else if (button) this.act(button.dataset.stroke);
       });
       this.card.addEventListener('input', (event) => { if (event.target.matches('[data-stroke-input="start"]')) event.target.dataset.edited = '1'; });
       this.card.addEventListener('change', (event) => {
@@ -40,6 +41,20 @@
         if (event.target.matches('[data-stroke-input="counter"]')) { event.preventDefault(); this.act('save'); }
         else if (event.target.closest('.stroke-setup')) { event.preventDefault(); this.act('start'); }
       });
+      this.signature = '';
+      this.render(true);
+    }
+
+    // Shown or hidden: the user's choice for this test slot; until they choose, shown only
+    // once a count has been started.
+    openKey() { return `grantg-hydro-stroke-open-${this.g.slot}`; }
+    isOpen() {
+      let saved = null;
+      try { saved = localStorage.getItem(this.openKey()); } catch (_) {}
+      return saved === null ? Boolean(this.state().baseline) : saved === '1';
+    }
+    toggle() {
+      try { localStorage.setItem(this.openKey(), this.isOpen() ? '0' : '1'); } catch (_) {}
       this.signature = '';
       this.render(true);
     }
@@ -155,7 +170,8 @@
       const s = this.state(), plan = this.plan(), next = this.next();
       const latest = this.g.readings.at(-1);
       const reached = next !== null && latest && latest.pressure >= next;
-      const signature = JSON.stringify([s.baseline?.at, s.baseline?.capacity, this.g.testState.equipment?.pump, s.strokes.length, plan.skipped.length, plan.target, plan.finished, next, reached]);
+      const open = this.isOpen();
+      const signature = JSON.stringify([open, s.baseline?.at, s.baseline?.capacity, this.g.testState.equipment?.pump, s.strokes.length, plan.skipped.length, plan.target, plan.finished, next, reached]);
       if (next !== null && reached && this.dingedFor !== next) {
         this.dingedFor = next;
         if (this.signature) this.helpers?.ding?.();
@@ -169,7 +185,16 @@
       }
       this.signature = signature;
       // While a count is running, the panel moves to the top of the Live test page.
-      this.card.classList.toggle('active', Boolean(s.baseline) && next !== null);
+      this.card.classList.toggle('active', open && Boolean(s.baseline) && next !== null);
+      this.card.classList.toggle('collapsed', !open);
+      const toggle = `<button type="button" class="ghost stroke-toggle" data-stroke="toggle" aria-expanded="${open}">${open ? 'Hide' : 'Show'}</button>`;
+      if (!open) {
+        const total = s.strokes.at(-1);
+        const summary = !s.baseline ? 'Not started. Show it after the hold to count strokes.'
+          : `${total ? `${(total.counter - s.baseline.counter).toLocaleString()} strokes · ${total.totalGallons.toFixed(2)} gal · ` : ''}${next === null ? 'complete' : `next ${next} psi`}`;
+        this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>${esc(summary)}</p>${toggle}</header>`;
+        return;
+      }
       const focused = document.activeElement?.closest?.('.stroke-card') === this.card ? document.activeElement.dataset.strokeInput : null;
       const typed = this.value('counter');
       if (!s.baseline) {
@@ -181,14 +206,14 @@
         const picked = pickedHere || (usable.find((p) => p.id === testPump) || usable[0])?.id || 'other';
         const pumpOptions = pumps.map((p) => `<option value="${esc(p.id)}"${p.capacity > 0 ? '' : ' disabled'}${p.id === picked ? ' selected' : ''}>${esc(p.name)} · ${p.capacity > 0 ? `${esc(p.capacity)} gal/stroke` : 'no rate set'}</option>`).join('')
           + `<option value="other"${picked === 'other' ? ' selected' : ''}>Other rate…</option>`;
-        this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>After the hold: enter the pressure and counter you are starting from, then the counter at each checkpoint.</p></header>
+        this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>After the hold: enter the pressure and counter you are starting from, then the counter at each checkpoint.</p>${toggle}</header>
           <div class="stroke-setup">
-            <label>Start pressure<input data-stroke-input="start" type="number" step="any" inputmode="decimal" value="${esc(keep('start', latest ? Math.round(latest.pressure) : ''))}"><small>psi</small></label>
+            <label>Start pressure (psi)<input data-stroke-input="start" type="number" step="any" inputmode="decimal" value="${esc(keep('start', latest ? Math.round(latest.pressure) : ''))}"></label>
             <label>Start counter<input data-stroke-input="start-counter" type="number" min="0" step="1" inputmode="numeric" value="${esc(keep('start-counter', 0))}"></label>
-            <label>Target pressure<input data-stroke-input="target" type="number" step="any" inputmode="decimal" value="${esc(keep('target', num(this.g.testState.design?.targetPressure) ?? ''))}"><small>psi</small></label>
-            <label>Every<input data-stroke-input="step" type="number" min="1" step="any" inputmode="decimal" value="${esc(keep('step', 10))}"><small>psi</small></label>
+            <label>Target pressure (psi)<input data-stroke-input="target" type="number" step="any" inputmode="decimal" value="${esc(keep('target', num(this.g.testState.design?.targetPressure) ?? ''))}"></label>
+            <label>Every (psi)<input data-stroke-input="step" type="number" min="1" step="any" inputmode="decimal" value="${esc(keep('step', 10))}"></label>
             <label>Pump<select data-stroke-input="setup-pump"${pickedHere ? ' data-edited="1"' : ''}>${pumpOptions}</select></label>
-            <label class="stroke-other-rate"${picked === 'other' ? '' : ' hidden'}>Gal/stroke<input data-stroke-input="capacity" type="number" min="0" step="any" inputmode="decimal" value="${esc(keep('capacity', ''))}"><small>pump not in the list</small></label>
+            <label class="stroke-other-rate"${picked === 'other' ? '' : ' hidden'}>Gal per stroke<input data-stroke-input="capacity" type="number" min="0" step="any" inputmode="decimal" value="${esc(keep('capacity', ''))}"></label>
             <button type="button" class="primary" data-stroke="start">Start stroke count</button>
           </div><p class="stroke-message" role="status" hidden></p>`;
       } else {
@@ -198,7 +223,7 @@
         const rate = Number(s.baseline.capacity), pumps = this.g.pumpChoices?.() || [], chosen = this.g.testState.equipment?.pump;
         const current = pumps.find((p) => p.id === chosen && p.capacity === rate) || pumps.find((p) => p.capacity === rate);
         const pumpSelect = `<label class="stroke-pump">Pump <select data-stroke-input="pump">${current ? '' : `<option value="" selected>As counted · ${esc(rate)} gal/stroke</option>`}${pumps.map((p) => `<option value="${esc(p.id)}"${current?.id === p.id ? ' selected' : ''}>${esc(p.name)} · ${p.capacity ? `${esc(p.capacity)} gal/stroke` : 'no rate set'}</option>`).join('')}</select></label>`;
-        this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>Started at ${esc(s.baseline.pressure)} psi, counter ${esc(s.baseline.counter)}${plan.target ? ` · target ${esc(plan.target)} psi` : ''} · every ${esc(plan.step)} psi</p>${pumpSelect}</header>
+        this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>Started at ${esc(s.baseline.pressure)} psi, counter ${esc(s.baseline.counter)}${plan.target ? ` · target ${esc(plan.target)} psi` : ''} · every ${esc(plan.step)} psi</p>${pumpSelect}${toggle}</header>
           ${next === null ? `<div class="stroke-done">Stroke count complete${total ? ` · ${total.counter - s.baseline.counter} strokes · ${total.totalGallons.toFixed(2)} gal` : ''}.</div>`
             : `<div class="stroke-entry${reached ? ' reached' : ''}"><label>Counter at <b>${next} psi</b><input data-stroke-input="counter" type="number" min="0" step="1" inputmode="numeric" placeholder="Type, then Enter" autocomplete="off"></label><button type="button" class="primary" data-stroke="save">Save ⏎</button><span class="stroke-status"></span></div>`}
           <div class="stroke-actions"><button type="button" data-stroke="undo">${plan.finished ? 'Reopen' : s.strokes.length || plan.skipped.length ? 'Undo last' : 'Cancel stroke count'}</button>${next === null ? '' : `<button type="button" data-stroke="skip">Skip this point</button>${s.strokes.length ? '<button type="button" data-stroke="finish">Finish here</button>' : ''}`}</div>
