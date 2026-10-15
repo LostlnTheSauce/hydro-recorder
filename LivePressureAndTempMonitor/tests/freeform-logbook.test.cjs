@@ -60,19 +60,29 @@ async function main() {
     await a.locator('[data-act="note"]').click();
     assert.equal(await page.evaluate(()=>testGauges[0].testState.events.at(-1).pressure),984.1);
     await a.locator('[data-act="records"]').click();
-    await a.locator('.test-start').fill('2026-10-11T07:05');
-    await a.locator('.test-end').fill('2026-10-11T15:05');
+    // Test times for paperwork: a date box (today until set) and a blank time box.
+    const timeBox = (sel) => a.locator(`${sel} + .split-datetime`);
+    const setTime = async (sel, value) => { const [d, t] = value.split('T'); await timeBox(sel).locator('.split-date').fill(d); await timeBox(sel).locator('.split-time').fill(t); };
+    const today = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+    for (const sel of ['.test-start', '.test-end']) {
+      assert.equal(await timeBox(sel).locator('.split-date').inputValue(), today, 'date defaults to today');
+      assert.equal(await timeBox(sel).locator('.split-time').inputValue(), '', 'time left blank');
+      assert.equal(await a.locator(sel).inputValue(), '', 'nothing saved until a time is typed');
+    }
+    await setTime('.test-start', '2026-10-11T07:05');
+    await setTime('.test-end', '2026-10-11T15:05');
+    assert.equal(await a.locator('.test-start').inputValue(), '2026-10-11T07:05');
     assert.equal(await page.evaluate(()=>testGauges[0].testState.workflow.officialStart),0,'Draft does not change saved boundaries');
     await a.locator('[data-act="period"]').click();
     assert.equal(await a.locator('.workflow-log-body tr').count(),33);
     assert.equal(await page.evaluate(()=>testGauges[0].sheetRows().officialRows.length),33);
     assert.equal(await page.evaluate(()=>testGauges[0].sheetRows().preTestRows.length),3);
     assert.equal(await page.evaluate(()=>testGauges[0].sheetRows().officialRows[0].pressure),984);
-    await a.locator('.test-end').fill('2026-10-11T07:00');
+    await setTime('.test-end', '2026-10-11T07:00');
     await a.locator('[data-act="period"]').click();
     assert.match(await a.locator('.period-message').innerText(),/after/);
     assert.equal(await page.evaluate(()=>testGauges[0].testState.workflow.officialEnd),new Date('2026-10-11T15:05:00-05:00').getTime());
-    await a.locator('.test-end').fill('2026-10-11T15:07');
+    await setTime('.test-end', '2026-10-11T15:07');
     await a.locator('[data-act="period"]').click();
     assert.equal(await a.locator('.workflow-log-body tr').count(),34,'Actual off-quarter end retained');
     assert.equal(await page.evaluate(()=>testGauges[0].testState.events.filter(e=>e.type==='official-end').length),1);
