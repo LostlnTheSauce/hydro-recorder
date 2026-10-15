@@ -51,7 +51,7 @@
   }
 
   // One probe: its readings as a line, the recorder-chart entries as dots, on one °F axis.
-  function chartSvg(channel, series, rows, from, to, timeLabel) {
+  function chartSvg(channel, series, rows, from, to, timeLabel, color = PROBE) {
     const W = 680, H = 210, L = 44, R = 12, T = 12, B = 30;
     const points = rows.map((row) => ({ at: row.at, value: num(row[channel.key]?.chart) })).filter((p) => p.value !== null);
     const values = [...series.map((p) => p.value), ...points.map((p) => p.value)];
@@ -69,7 +69,7 @@
     let path = '', last = null;
     series.forEach((p) => { path += `${last === null || p.at - last > 300000 ? 'M' : 'L'}${x(p.at).toFixed(1)},${y(p.value).toFixed(1)}`; last = p.at; });
     const dots = points.map((p) => `<circle cx="${x(p.at).toFixed(1)}" cy="${y(p.value).toFixed(1)}" r="4" fill="${CHART}" stroke="#fff" stroke-width="2"/>`).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(channel.name)}: digital probe line and physical chart readings">${grid.join('')}${ticks.join('')}<path d="${path}" fill="none" stroke="${PROBE}" stroke-width="2" stroke-linejoin="round"/>${dots}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(channel.name)}: digital probe line and physical chart readings">${grid.join('')}${ticks.join('')}<path d="${path}" fill="none" stroke="${esc(color)}" stroke-width="2" stroke-linejoin="round"/>${dots}</svg>`;
   }
 
   function build(data) {
@@ -200,6 +200,18 @@
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pressure over the test">${grid.join('')}${ticks.join('')}${lines}${markLines}<path d="${path}" fill="none" stroke="#1f2328" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   }
 
+  // An event keeps the pressure it was entered with, unless the recorded series at that moment
+  // (the last reading at or before it) differs by more than 0.5 psi: then the series was
+  // recalculated for a new offset or taper after the event and the event missed it.
+  function eventPressure(event, readings) {
+    if (num(event.pressure) === null) return event;
+    let low = 0, high = readings.length;
+    while (low < high) { const mid = (low + high) >> 1; if (Number(readings[mid].at) <= event.at) low = mid + 1; else high = mid; }
+    const r = readings[low - 1];
+    if (!r || event.at - r.at > 5000 || num(r.pressure) === null) return event;
+    return Math.abs(Number(r.pressure) - Number(event.pressure)) > .5 ? { ...event, pressure: Number(r.pressure) } : event;
+  }
+
   // Full test report from a saved test: details, pressure summary, the pressure chart, one
   // temperature chart per probe (digital line, physical dots), the 15-minute log and events.
   function fullFromRecord(record) {
@@ -218,7 +230,7 @@
       pressure: { start: startP, end: endP, change: startP !== null && endP !== null ? endP - startP : null,
         min: inTest.length ? Math.min(...inTest.map((r) => Number(r.pressure))) : null, max: inTest.length ? Math.max(...inTest.map((r) => Number(r.pressure))) : null,
         hours: (end - start) / 3600000, offset: num(test.offset) },
-      events: [...(test.events || []), ...(record.notes || []).map((n) => ({ at: n.at, label: n.text }))].filter((e) => e && e.at).sort((a, b) => a.at - b.at),
+      events: [...(test.events || []), ...(record.notes || []).map((n) => ({ at: n.at, label: n.text }))].filter((e) => e && e.at).sort((a, b) => a.at - b.at).map((e) => eventPressure(e, readings)),
       officialRows: official.length };
   }
 
@@ -244,7 +256,7 @@
       return { channel, start, end, change: start !== null && end !== null ? end - start : null, low: values.length ? Math.min(...values) : null, high: values.length ? Math.max(...values) : null };
     });
     const tempTable = `<table class="summary"><thead><tr><th>Probe</th><th>Start of test</th><th>End of test</th>${data.package ? '<th>Change</th>' : ''}<th>Low</th><th>High</th></tr></thead><tbody>${tempStats.map((t) => `<tr><th>${esc(t.channel.name)}</th><td>${fmt(t.start)}</td><td>${fmt(t.end)}</td>${data.package ? `<td>${t.change === null ? '—' : `${signed(t.change)}°`}</td>` : ''}<td>${fmt(t.low)}</td><td>${fmt(t.high)}</td></tr>`).join('')}</tbody></table>`;
-    const tempCharts = channels.map((channel) => `<figure><figcaption>${esc(channel.name)} temperature (°F)</figcaption>${chartSvg(channel, (data.series?.[channel.key] || []).filter((s) => s.at >= data.chartFrom && s.at <= data.chartTo), [], data.chartFrom, data.chartTo, time)}</figure>`).join('');
+    const tempCharts = channels.map((channel) => `<figure><figcaption>${esc(channel.name)} temperature (°F)</figcaption>${chartSvg(channel, (data.series?.[channel.key] || []).filter((s) => s.at >= data.chartFrom && s.at <= data.chartTo), [], data.chartFrom, data.chartTo, time, data.lineColors?.[channel.key] || PROBE)}</figure>`).join('');
     const head = channels.map((channel) => `<th>${esc(channel.name)} °F</th>`).join('');
     const body = official.map((row) => `<tr><td>${esc(stamp(row.at))}</td><td>${row.pressure === '' || row.pressure === null || row.pressure === undefined ? '—' : esc(row.pressure)}</td>${channels.map((channel) => {
       const d = num(row[channel.key]?.probe);
@@ -308,7 +320,14 @@
     const live = (record.temperatureReadings || []).filter((r) => r.source === 'live' && r.at >= start && r.at <= end).sort((a, b) => a.at - b.at);
     const design = test.design || {};
     const official = (record.readings || []).filter((r) => r.at >= start && r.at <= end && num(r.pressure) !== null).sort((a, b) => a.at - b.at);
-    return { ...data, package: true, equipment, chartFrom: start, chartTo: end,
+    // The round recorder charts show the whole recording, pressure up to blow-down, like the paper
+    // chart would (at most the last 24 hours, one turn of the chart).
+    const recorded = (record.readings || []).filter((r) => num(r.pressure) !== null).sort((a, b) => a.at - b.at);
+    const recordEnd = recorded.length ? recorded.at(-1).at : end, recordStart = recorded.length ? Math.max(recorded[0].at, recordEnd - 86400000 + 60000) : start;
+    const wholeTemps = (record.temperatureReadings || []).filter((r) => r.source === 'live' && r.at >= recordStart && r.at <= recordEnd).sort((a, b) => a.at - b.at);
+    const lineColors = Object.fromEntries((root.TemperatureChartRenderer?.DEFAULT_CHANNELS || [{ key: 'ambient', color: '#3f7fbe' }, { key: 'pipe', color: '#e07832' }, { key: 'soil', color: '#77624c' }]).map((c) => [c.key, c.color]));
+    return { ...data, package: true, equipment, chartFrom: start, chartTo: end, lineColors,
+      wholeReadings: thin(recorded.filter((r) => r.at >= recordStart), 4000), wholeTemps: thin(wholeTemps, 3000), recordStart, recordEnd,
       pressureSeries: thin(official, 1400).map((r) => ({ at: r.at, value: Number(r.pressure) })),
       requiredHours: num(design.testDurationHours),
       extraFacts: [['Project', design.projectName], ['Estimated fill', design.estimatedFillGallons ? `${design.estimatedFillGallons} gal` : ''],
@@ -327,21 +346,20 @@
     holder.style.cssText = 'position:fixed;left:-20000px;top:0;width:1000px;';
     doc.body.append(holder);
     const canvas = (width) => { const c = doc.createElement('canvas'); c.style.width = `${width}px`; c.style.display = 'block'; holder.append(c); return c; };
-    const startIso = new Date(data.officialStart).toISOString(), endIso = new Date(data.officialEnd).toISOString();
     try {
       const pressure = root.PressureChartRenderer;
       if (pressure) {
-        const top = data.officialReadings.reduce((high, r) => Math.max(high, Number(r.pressure)), Number(data.window?.top) || 0);
+        const roundReadings = data.wholeReadings || data.officialReadings, roundTemps = data.wholeTemps || data.officialTemps;
+        const top = roundReadings.reduce((high, r) => Math.max(high, Number(r.pressure)), Number(data.window?.top) || 0);
         const chartMax = data.chartMax && data.chartMax >= top ? data.chartMax : Math.ceil((top * 1.15) / 500) * 500;
         const round = canvas(700);
-        pressure.draw(round, data.officialReadings, { chartMax, traceColor: data.traceColor, traceThickness: data.traceThickness, showWindow: true,
-          windowTop: num(data.window?.top) === null ? '' : String(data.window.top), windowBottom: num(data.window?.bottom) === null ? '' : String(data.window.bottom),
-          testStart: startIso, testEnd: endIso, windowThickness: 1, warningMargin: 10 });
+        // Just the trace, like the paper chart: no window lines.
+        pressure.draw(round, roundReadings, { chartMax, traceColor: data.traceColor, traceThickness: data.traceThickness, showWindow: false, windowTop: '', windowBottom: '' });
         images.roundPressure = round.toDataURL('image/png');
         const channels = (root.TemperatureChartRenderer?.DEFAULT_CHANNELS || []).filter((c) => ['ambient', 'pipe', 'soil'].includes(c.key));
         const temps = canvas(700);
         pressure.draw(temps, [], { chartMax: 150, gridStep: 10, title: 'TEMPERATURE RECORDER', scaleLabel: '0–150 °F', traceThickness: 1.6, legend: channels,
-          traces: channels.map((c) => ({ color: c.color, readings: data.officialTemps.map((r) => ({ at: r.at, value: num(r[c.key]) })) })) });
+          traces: channels.map((c) => ({ color: c.color, readings: roundTemps.map((r) => ({ at: r.at, value: num(r[c.key]) })) })) });
         images.roundTemps = temps.toDataURL('image/png');
       }
       const timeline = root.TemperatureChartRenderer?.drawTimeline;
@@ -368,7 +386,7 @@
     const moved = parts.tempStats.filter((t) => t.change !== null).map((t) => `${t.channel.name.toLowerCase()} ${t.start.toFixed(1)}° to ${t.end.toFixed(1)}° (${signed(t.change)}°)`);
     if (moved.length) said.push(`Over the same period the digital probes read ${moved.join(', ')}.`);
     const legend = (images.combinedLegend || []).map((c) => `<span><i class="swatch" style="background:${esc(c.color)}"></i>${esc(c.name)}</span>`).join('');
-    const rounds = images.roundPressure || images.roundTemps ? `<h2>Recorder charts (official test)</h2><div class="rounds">${images.roundPressure ? `<figure><figcaption>Pressure recorder</figcaption><img src="${images.roundPressure}" alt="Round pressure recorder chart"></figure>` : ''}${images.roundTemps ? `<figure><figcaption>Temperature recorder (digital probes)</figcaption><img src="${images.roundTemps}" alt="Round temperature recorder chart"></figure>` : ''}</div>` : '';
+    const rounds = images.roundPressure || images.roundTemps ? `<h2>Recorder charts (whole recording${data.recordStart && data.recordEnd ? `, ${esc(parts.time(data.recordStart))} to ${esc(parts.time(data.recordEnd))}` : ''})</h2><div class="rounds">${images.roundPressure ? `<figure><figcaption>Pressure recorder <span class="muted">· pressure up to blow-down</span></figcaption><img src="${images.roundPressure}" alt="Round pressure recorder chart"></figure>` : ''}${images.roundTemps ? `<figure><figcaption>Temperature recorder (digital probes)</figcaption><img src="${images.roundTemps}" alt="Round temperature recorder chart"></figure>` : ''}</div>` : '';
     const combined = images.combined ? `<h2>Pressure and temperatures together</h2><div class="legend"><span><i class="swatch" style="background:#c83d3d"></i>Pressure (left scale)</span>${legend}<span class="muted">temperatures on the right scale</span></div><figure><img src="${images.combined}" alt="Pressure and temperatures over the official test"></figure>` : '';
     const equipment = (data.equipment || []).length ? `<h2>Equipment</h2><table class="rows"><thead><tr><th>Role</th><th style="text-align:left">Equipment</th><th>Serial</th><th>Range</th><th>Calibrated</th><th>Calibration due</th></tr></thead><tbody>${data.equipment.map((e) => {
       const overdue = e.due && data.testDate && e.due < data.testDate;
