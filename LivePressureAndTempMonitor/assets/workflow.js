@@ -164,6 +164,14 @@
     state.strokes.push({ target: pressure, at, crossingAt: at, pressure, counter, strokes,
       gallons: strokes * state.baseline.capacity, totalGallons: (counter - state.baseline.counter) * state.baseline.capacity });
   }
+  // A different pump rate after the count: the counter readings and strokes stay as typed, the
+  // gallons are figured again at the new rate.
+  function setPumpRate(state, capacity) {
+    if (!state.baseline) throw new Error('Start the stroke count first.');
+    if (number(capacity) === null || capacity <= 0) throw new Error('Enter a positive pump capacity.');
+    state.baseline.capacity = capacity;
+    state.strokes.forEach((row) => { row.gallons = row.strokes * capacity; row.totalGallons = (row.counter - state.baseline.counter) * capacity; });
+  }
   function archive(state, test, at, reason) {
     if (!String(reason || '').trim()) throw new Error('Enter a reason for ending this attempt.');
     if (at < state.since) throw new Error('The attempt cannot end before the current stage began.');
@@ -193,5 +201,5 @@
       officialLastRow: official ? sheetLogRows[startIndex + official - 1] : 0,
     };
   }
-  return { stages, steps, number, SHEET_COLUMNS, create, nextQuarter, nextStart, deadline, advance, recordEvent, setBaseline, observe, saveStroke, officialTimes, archive, sheetCapacity, validatePeriod, manualStroke };
+  return { stages, steps, number, SHEET_COLUMNS, create, nextQuarter, nextStart, deadline, advance, recordEvent, setBaseline, observe, saveStroke, officialTimes, archive, sheetCapacity, validatePeriod, manualStroke, setPumpRate };
 });

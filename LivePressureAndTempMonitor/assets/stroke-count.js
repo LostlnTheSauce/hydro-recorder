@@ -23,6 +23,10 @@
         if (button) this.act(button.dataset.stroke);
       });
       this.card.addEventListener('input', (event) => { if (event.target.matches('[data-stroke-input="start"]')) event.target.dataset.edited = '1'; });
+      this.card.addEventListener('change', (event) => {
+        if (!event.target.matches('[data-stroke-input="pump"]')) return;
+        if (!event.target.value || !this.g.useStrokePump?.(event.target.value)) this.render(true);
+      });
       this.card.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') return;
         if (event.target.matches('[data-stroke-input="counter"]')) { event.preventDefault(); this.act('save'); }
@@ -133,7 +137,7 @@
       const s = this.state(), plan = this.plan(), next = this.next();
       const latest = this.g.readings.at(-1);
       const reached = next !== null && latest && latest.pressure >= next;
-      const signature = JSON.stringify([s.baseline?.at, s.strokes.length, plan.skipped.length, plan.target, plan.finished, next, reached]);
+      const signature = JSON.stringify([s.baseline?.at, s.baseline?.capacity, this.g.testState.equipment?.pump, s.strokes.length, plan.skipped.length, plan.target, plan.finished, next, reached]);
       if (next !== null && reached && this.dingedFor !== next) {
         this.dingedFor = next;
         if (this.signature) this.helpers?.ding?.();
@@ -165,7 +169,11 @@
       } else {
         const rows = [...s.strokes].reverse();
         const total = s.strokes.at(-1);
-        this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>Started at ${esc(s.baseline.pressure)} psi, counter ${esc(s.baseline.counter)}${plan.target ? ` · target ${esc(plan.target)} psi` : ''} · every ${esc(plan.step)} psi</p></header>
+        // The pump the gallons are figured with; another can be chosen at any time.
+        const rate = Number(s.baseline.capacity), pumps = this.g.pumpChoices?.() || [], chosen = this.g.testState.equipment?.pump;
+        const current = pumps.find((p) => p.id === chosen && p.capacity === rate) || pumps.find((p) => p.capacity === rate);
+        const pumpSelect = `<label class="stroke-pump">Pump <select data-stroke-input="pump">${current ? '' : `<option value="" selected>As counted · ${esc(rate)} gal/stroke</option>`}${pumps.map((p) => `<option value="${esc(p.id)}"${current?.id === p.id ? ' selected' : ''}>${esc(p.name)} · ${p.capacity ? `${esc(p.capacity)} gal/stroke` : 'no rate set'}</option>`).join('')}</select></label>`;
+        this.card.innerHTML = `<header class="stroke-header"><h3>Stroke count</h3><p>Started at ${esc(s.baseline.pressure)} psi, counter ${esc(s.baseline.counter)}${plan.target ? ` · target ${esc(plan.target)} psi` : ''} · every ${esc(plan.step)} psi</p>${pumpSelect}</header>
           ${next === null ? `<div class="stroke-done">Stroke count complete${total ? ` · ${total.counter - s.baseline.counter} strokes · ${total.totalGallons.toFixed(2)} gal` : ''}.</div>`
             : `<div class="stroke-entry${reached ? ' reached' : ''}"><label>Counter at <b>${next} psi</b><input data-stroke-input="counter" type="number" min="0" step="1" inputmode="numeric" placeholder="Type, then Enter" autocomplete="off"></label><button type="button" class="primary" data-stroke="save">Save ⏎</button><span class="stroke-status"></span></div>`}
           <div class="stroke-actions"><button type="button" data-stroke="undo">${plan.finished ? 'Reopen' : s.strokes.length || plan.skipped.length ? 'Undo last' : 'Cancel stroke count'}</button>${next === null ? '' : `<button type="button" data-stroke="skip">Skip this point</button>${s.strokes.length ? '<button type="button" data-stroke="finish">Finish here</button>' : ''}`}</div>

@@ -51,7 +51,7 @@ const server=http.createServer(async(req,res)=>{
     const trailer=await browser.newContext(), page=await trailer.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));await page.goto(base);
     await page.evaluate(()=>{
-      const at=Date.UTC(2026,9,6,11);window.record={id:'fixture-job-0000001',format:'grantg-hydrotest-backup',version:1,archivedAt:0,test:{slot:'A',jobNumber:'Trailer test',events:[{at,label:'25% leak check',pressure:250}],workflow:{officialStart:at,officialEnd:at+3600000}},notes:[],readings:Array.from({length:4001},(_,i)=>({at:at+i*1000,pressure:980+i/10000})),temperatureReadings:Array.from({length:2001},(_,i)=>({at:at+i*2000,pipe:75+i/10000,ambient:72,soil:71,source:'live'}))};
+      const at=Date.UTC(2026,9,6,11);window.record={id:'fixture-job-0000001',format:'grantg-hydrotest-backup',version:1,archivedAt:0,test:{slot:'A',jobNumber:'Trailer test',events:[{at,label:'25% leak check',pressure:250}],workflow:{officialStart:at,officialEnd:at+3600000,baseline:{at:at-600000,pressure:900,counter:0,capacity:0.0043},strokes:[{target:910,counter:1000,strokes:1000,gallons:4.3,totalGallons:4.3,at:at-300000}],strokePlan:{step:10}},equipment:{pump:'pump-triplex'}},equipment:[{id:'pump-triplex',type:'pump',name:'Triplex',capacity:'0.0068'}],notes:[],readings:Array.from({length:4001},(_,i)=>({at:at+i*1000,pressure:980+i/10000})),temperatureReadings:Array.from({length:2001},(_,i)=>({at:at+i*2000,pipe:75+i/10000,ambient:72,soil:71,source:'live'}))};
       window.gauge={checkJobCurrent:()=>true};HydroCloud.attach([gauge],async()=>structuredClone(record));
     });
     await page.waitForFunction(()=>document.getElementById('cloudSaveStatus').textContent.startsWith('Saved online'),null,{timeout:20000});
@@ -88,7 +88,10 @@ const server=http.createServer(async(req,res)=>{
     assert.match(reportRows[4],/End test/);
     await report.close();
     // Post-test package: round recorder charts, the combined graph, details, charts and the log.
-    const [full]=await Promise.all([phone.waitForEvent('page'),view.locator('#replayPackage').click()]);
+    // The count used 0.0043 but the test's pump is the Triplex: History asks which rate.
+    await view.locator('#replayPackage').click();
+    assert.match(await view.locator('#pumpChoiceHelp').innerText(),/figured at 0\.0043 gal\/stroke, but this test's pump is Triplex at 0\.0068/);
+    const [full]=await Promise.all([phone.waitForEvent('page'),view.locator('#pumpChoicePump').click()]);
     await full.waitForLoadState();
     assert.match(await full.locator('h1').innerText(),/post-test package/);
     assert.match(await full.locator('.tiles').first().innerText(),/Start of test\s+980\.0 psi[\s\S]*Duration\s+1\.0 h/);
@@ -98,6 +101,8 @@ const server=http.createServer(async(req,res)=>{
     assert(images.every(i=>i.png&&i.w>300),JSON.stringify(images));
     assert.equal(await full.locator('figure svg').count(),4,'pressure chart plus ambient, pipe and soil');
     assert.equal(await full.locator('h2:has-text("Test log") + table tbody tr').count(),5);
+    assert.match(await full.locator('body').innerText(),/Gallons figured at 0\.0068 gal\/stroke \(Triplex\)/);
+    assert.match(await full.locator('.halves').innerText(),/910 psi\s+1000\s+1000\s+6\.80\s+6\.80/);
     await full.close();
     const m=()=>view.locator('.temperature-chart').evaluate(c=>({start:c._temperatureMeta.start,end:c._temperatureMeta.end,selected:c._temperatureMeta.selectedAt}));
     const before=await m();await view.locator('.temp-scrubber').fill('5000');await view.waitForTimeout(100);

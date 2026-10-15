@@ -302,7 +302,9 @@
   }
 
   // Post-test package: everything a saved test can tell an interested party, official test only.
-  function packageFromRecord(record) {
+  // pumpRate (optional): figure the stroke gallons at this gal/stroke instead of the rate the count
+  // was started with (strokes and counter readings unchanged), for a test whose pump was changed.
+  function packageFromRecord(record, { pumpRate = null } = {}) {
     const data = fullFromRecord(record), test = record.test || {}, wf = test.workflow || {};
     const start = data.officialStart, end = data.officialEnd || data.chartTo;
     const inventory = Array.isArray(record.equipment) ? record.equipment : [];
@@ -317,6 +319,8 @@
       return { role: label, name: item.name || '', serial: item.serial || '', manufacturer: item.manufacturer || '', range: item.range || '', capacity: item.capacity || '', calibrated: Number.isFinite(calibrated) ? calibrated : null, due };
     }).filter(Boolean);
     const baseline = wf.baseline, strokes = Array.isArray(wf.strokes) ? wf.strokes : [];
+    const pumpItem = inventory.find((entry) => entry.id === (test.equipment || {}).pump);
+    const pump = pumpItem ? { name: pumpItem.name || 'Pump', capacity: Number(pumpItem.capacity) || 0 } : null;
     const live = (record.temperatureReadings || []).filter((r) => r.source === 'live' && r.at >= start && r.at <= end).sort((a, b) => a.at - b.at);
     const design = test.design || {};
     const official = (record.readings || []).filter((r) => r.at >= start && r.at <= end && num(r.pressure) !== null).sort((a, b) => a.at - b.at);
@@ -332,10 +336,19 @@
       requiredHours: num(design.testDurationHours),
       extraFacts: [['Project', design.projectName], ['Estimated fill', design.estimatedFillGallons ? `${design.estimatedFillGallons} gal` : ''],
         ['Begin GPS', design.beginGps], ['End GPS', design.endGps], ['Recorder GPS', design.recorderGps]],
-      strokes: baseline ? { baseline, rows: strokes, step: Number(wf.strokePlan?.step) || 10 } : null,
+      strokes: baseline ? strokesAt(baseline, strokes, Number(wf.strokePlan?.step) || 10, pumpRate, pump) : null,
+      pumpMismatch: baseline && pump && pump.capacity > 0 && pump.capacity !== Number(baseline.capacity) ? { name: pump.name, rate: pump.capacity, counted: Number(baseline.capacity) } : null,
       pipeline: Array.isArray(test.design?.pipelineRows) ? test.design.pipelineRows : [],
       chartMax: Number(test.chartMax) || 0, traceColor: test.traceColor || '#d43b3b', traceThickness: Number(test.traceThickness) || 1,
       officialReadings: thin(official, 4000), officialTemps: thin(live, 3000), officialEnd: end, testDate: start };
+  }
+
+  function strokesAt(baseline, rows, step, pumpRate, pump) {
+    const rate = Number(pumpRate) > 0 ? Number(pumpRate) : Number(baseline.capacity);
+    const name = pump && pump.capacity === rate ? pump.name : '';
+    if (rate === Number(baseline.capacity)) return { baseline, rows, step, pumpName: name };
+    return { baseline: { ...baseline, capacity: rate }, step, pumpName: name,
+      rows: rows.map((r) => ({ ...r, gallons: r.strokes * rate, totalGallons: (r.counter - baseline.counter) * rate })) };
   }
 
   // Draws the site's own charts (round pressure recorder, round temperature recorder and the
@@ -404,7 +417,7 @@
       const halves = lines.length > 16 ? [lines.slice(0, Math.ceil(lines.length / 2)), lines.slice(Math.ceil(lines.length / 2))] : [lines];
       strokes = `<h2>Stroke count</h2>
         <div class="tiles"><div><span>Pumped up</span><b>${esc(st.baseline.pressure)} → ${esc(last.target)} psi</b></div><div><span>Total strokes</span><b>${totalStrokes.toLocaleString()}</b></div><div><span>Total volume pumped</span><b>${capacity ? `${gallons.toFixed(2)} gal` : '—'}</b></div><div><span>Average per ${esc(st.step)} psi</span><b>${rise > 0 ? `${Math.round(totalStrokes / rise * st.step).toLocaleString()} strokes` : '—'}</b></div></div>
-        <p class="muted" style="margin:6px 0 0">${rise > 0 ? `${rise} psi increase. ` : ''}Gallons figured at ${capacity ? `${capacity} gal/stroke${rise > 0 ? `, ${(gallons / rise * st.step).toFixed(2)} gal per ${esc(st.step)} psi on average` : ''}` : 'no pump rate'}.</p>
+        <p class="muted" style="margin:6px 0 0">${rise > 0 ? `${rise} psi increase. ` : ''}Gallons figured at ${capacity ? `${capacity} gal/stroke${st.pumpName ? ` (${esc(st.pumpName)})` : ''}${rise > 0 ? `, ${(gallons / rise * st.step).toFixed(2)} gal per ${esc(st.step)} psi on average` : ''}` : 'no pump rate'}.</p>
         <div class="halves">${halves.map((half) => `<table class="rows compact"><thead><tr><th>Pressure</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th><th>Time</th></tr></thead><tbody>${half.join('')}</tbody></table>`).join('')}</div>`;
     }
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(`Post-test package ${job.jobNumber || ''}`.trim())}</title>${parts.style}<style>
