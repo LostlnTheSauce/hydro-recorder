@@ -163,6 +163,12 @@ label { font-size:.82rem; }
 /* Setup */
 .operations-header { margin-bottom:8px; }
 .calibration-summary { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.calibration-set-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:10px; } .calibration-set-row small { color:var(--muted, #57606a); font-size:.78rem; }
+.cal-paper { display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; } .cal-paper a { font-weight:600; } .cal-paper button { font-size:.78rem; min-height:30px; padding:4px 10px; } .cal-paper-none, .cal-missing { color:#a33232; }
+#calibrationSet { width:min(620px,calc(100vw - 28px)); max-height:calc(100dvh - 40px); border:1px solid var(--line); border-radius:8px; padding:24px; color:var(--ink); background:var(--paper); box-shadow:0 24px 100px #19324744; }
+#calibrationSet::backdrop { background:#102b4380; backdrop-filter:blur(3px); } #calibrationSet form { display:grid; gap:14px; } #calibrationSet h2 { font-size:1.4rem; }
+.cal-set-list { display:grid; gap:6px; max-height:52dvh; overflow:auto; } .cal-set-item { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:.88rem; }
+.cal-set-item small { grid-column:2; font-size:.78rem; } .cal-set-message { font-size:.85rem; } .cal-set-message:empty { display:none; }
 .calibration-chip { display:inline-block; padding:3px 9px; border-radius:999px; border:1px solid #a9d4bb; background:var(--good-soft); color:var(--good); font-size:.75rem; }
 .calibration-chip.due { border-color:#e8cf8f; background:var(--warn-soft); color:var(--warn); }
 .temperature-setup-note { font-size:.8rem; }
