@@ -45,7 +45,7 @@
       this.card.querySelector('.workflow-heading').append(fresh);
       this.card.before(this.root.querySelector('.gauge-actions'));
       this.records = document.createElement('section'); this.records.className = 'workflow-records';
-      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="probes">Download probe vs Sheet temps CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
+      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="probe-report">Probe vs chart report (PDF)</button><button type="button" data-export="probes">Download probe vs Sheet temps CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
       this.root.append(this.records);
       this.records.append(this.root.querySelector('.paperwork-sync-panel'));
       this.records.append(this.root.querySelector('.ramp-panel'));
@@ -234,20 +234,45 @@
       if (window.HydroDemo?.enabled) return this.message('Demo records are for practice only; exports are disabled.');
       const s = this.state(), name = (this.g.testState.jobNumber || `Test-${this.g.slot}`).replace(/[^a-z0-9_-]/gi, '_');
       if (kind === 'backup') return this.g.downloadTestBackup();
-      if (kind === 'probes') {
+      if (kind === 'probes' || kind === 'probe-report') {
         // Every Sheet log row with the electronic probes' own readings beside the temperatures
         // in the Sheet (as of the last sync) or typed on the site, for comparing them.
         const live = this.g.temperatureReadings.filter(r => r.source === 'live');
         const typed = this.g.temperatureReadings.filter(r => r.source === 'sheet' || r.source === 'manual');
-        const rows = this.g.sheetRows();
-        const value = (reading, key, digits) => W.number(reading?.[key]) === null ? '' : Number(reading[key]).toFixed(digits);
-        return download(`${name}_probe-vs-sheet-temps.csv`,
-          ['Date / time', 'Pressure PSI', 'Ambient probe F', 'Ambient Sheet F', 'Pipe probe F', 'Pipe Sheet F', 'Soil probe F', 'Soil Sheet F', 'Remarks'],
-          [...rows.preTestRows, ...rows.officialRows, ...rows.postTestRows].map(r => {
-            const probe = this.g.nearestTemperatureReading(r.at, undefined, live);
-            const sheet = typed.find(t => Math.abs(Number(t.at) - r.at) <= 30000);
-            return [stamp(r.at), r.pressure, ...['ambient', 'pipe', 'soil'].flatMap(key => [value(probe, key, 1), value(sheet, key, 0)]), r.comments];
-          }));
+        const sheetRows = this.g.sheetRows();
+        const keys = ['ambient', 'pipe', 'soil'];
+        const rows = [...sheetRows.preTestRows, ...sheetRows.officialRows, ...sheetRows.postTestRows].map(r => {
+          const probe = this.g.nearestTemperatureReading(r.at, undefined, live);
+          const sheet = typed.find(t => Math.abs(Number(t.at) - r.at) <= 30000);
+          return { at: r.at, pressure: r.pressure, comments: r.comments, ...Object.fromEntries(keys.map(key => [key, { probe: W.number(probe?.[key]), chart: W.number(sheet?.[key]) }])) };
+        });
+        if (kind === 'probes') {
+          const value = (v, digits) => v === null ? '' : v.toFixed(digits);
+          return download(`${name}_probe-vs-sheet-temps.csv`,
+            ['Date / time', 'Pressure PSI', 'Ambient probe F', 'Ambient Sheet F', 'Pipe probe F', 'Pipe Sheet F', 'Soil probe F', 'Soil Sheet F', 'Remarks'],
+            rows.map(r => [stamp(r.at), r.pressure, ...keys.flatMap(key => [value(r[key].probe, 1), value(r[key].chart, 0)]), r.comments]));
+        }
+        if (!rows.length) return this.message('There are no log rows to compare yet. Save the official test start first.');
+        // Printable report: the probes' readings across the log period (thinned for drawing), the
+        // chart values at each row, and a summary per probe.
+        const from = rows[0].at - 10 * 60000, to = rows.at(-1).at + 10 * 60000;
+        const inRange = live.filter(r => r.at >= from && r.at <= to);
+        const stride = Math.max(1, Math.ceil(inRange.length / 900));
+        const equipment = this.g.selectedEquipmentForSheet();
+        const serials = { ambient: equipment.ambient_chart?.serial, pipe: equipment.pipe_chart?.serial, soil: equipment.ground_chart?.serial };
+        const t = this.g.testState, d = t.design || {};
+        const period = [t.officialStart, t.officialEnd].filter(Boolean).map(v => new Date(v).toLocaleString([], { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })).join(' to ');
+        try {
+          window.HydroTempReport.open({
+            generatedAt: Date.now(),
+            job: { jobNumber: t.jobNumber, poAfe: t.poAfe, line: d.lineName || d.projectName, location: t.location, owner: t.owner || 'Atmos Energy', contractor: t.contractor || 'Bobcat Contracting', ownerRep: t.ownerRep, period },
+            channels: this.g.temperatureChannels().filter(c => keys.includes(c.key)).map(c => ({ key: c.key, name: c.name, chartSerial: serials[c.key] })),
+            series: Object.fromEntries(keys.map(key => [key, inRange.filter((r, i) => i % stride === 0 && W.number(r[key]) !== null).map(r => ({ at: r.at, value: Number(r[key]) }))])),
+            rows,
+            loggerNote: 'MadgeTech field logger',
+          });
+          return this.message('Report opened in a new tab. Choose Save as PDF in the print dialog.');
+        } catch (error) { return this.message(error.message || String(error)); }
       }
       const events = this.g.testState.events;
       const times = W.officialTimes(s, Date.now());
