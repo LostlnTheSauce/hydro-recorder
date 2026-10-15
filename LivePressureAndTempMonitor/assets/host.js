@@ -2194,7 +2194,8 @@
   window.HydroCalibration?.init({ csrf, table: equipmentTableBody, inventory: () => equipmentInventory, labels: equipmentTypeLabels, onChange: renderEquipmentTable, onEquipment: adoptSharedEquipment });
   const scanQr = document.getElementById('calibrationScanQr');
   if (scanQr && window.SimpleQr) { const url = new URL('calibration.php', location.href).href; window.SimpleQr.draw(scanQr, url); document.getElementById('calibrationScanLink').href = url; }
-  gauges.forEach((gauge) => gauge.root.querySelector('.calibration-print')?.addEventListener('click', () => window.HydroCalibration?.openSet(gauge)));
+  document.getElementById('calibrationPrint')?.addEventListener('click', () => window.HydroCalibration?.openSet(
+    gauges.filter((gauge) => gauge.active).map((gauge) => ({ name: testNameForSlot(gauge.slot), gauge }))));
   document.querySelector('#calibrationSet [data-close]')?.addEventListener('click', () => document.getElementById('calibrationSet').close());
 
   equipmentTableBody.addEventListener('click', (event) => {

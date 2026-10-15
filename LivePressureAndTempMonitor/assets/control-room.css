@@ -163,7 +163,7 @@ label { font-size:.82rem; }
 /* Setup */
 .operations-header { margin-bottom:8px; }
 .calibration-summary { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
-.calibration-set-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:10px; } .calibration-set-row small { color:var(--muted, #57606a); font-size:.78rem; }
+.calibration-set-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin:0 0 12px; } .cal-set-test { display:grid; gap:4px; font-size:.85rem; font-weight:600; } .calibration-set-row small { color:var(--muted, #57606a); font-size:.78rem; }
 .cal-paper { display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; } .cal-paper a { font-weight:600; } .cal-paper button { font-size:.78rem; min-height:30px; padding:4px 10px; } .cal-paper-none, .cal-missing { color:#a33232; }
 #calibrationSet { width:min(620px,calc(100vw - 28px)); max-height:calc(100dvh - 40px); border:1px solid var(--line); border-radius:8px; padding:24px; color:var(--ink); background:var(--paper); box-shadow:0 24px 100px #19324744; }
 #calibrationSet::backdrop { background:#102b4380; backdrop-filter:blur(3px); } #calibrationSet form { display:grid; gap:14px; } #calibrationSet h2 { font-size:1.4rem; }
