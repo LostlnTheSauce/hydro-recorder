@@ -230,6 +230,16 @@ async function main() {
       a.add({at:at-2000,pressure:984,unit:'PSI'});
       b.testState.jobNumber='Other running test';b.saveTestState();b.add({at:at-1000,pressure:1500,unit:'PSI'});
     },{session,at});
+    // Readings are written to the browser's database in the background; let that finish before reloading.
+    await jobPage.waitForFunction(() => new Promise((resolve) => {
+      const open = indexedDB.open('grantg-hydrotest-recordings', 1);
+      open.onerror = () => resolve(false);
+      open.onsuccess = () => {
+        const db = open.result, all = db.transaction('readings', 'readonly').objectStore('readings').getAll();
+        all.onsuccess = () => { const found = all.result.some((r) => r.pressure === 984) && all.result.some((r) => r.pressure === 1500); db.close(); resolve(found); };
+        all.onerror = () => { db.close(); resolve(false); };
+      };
+    }));
     await jobPage.reload(); await jobPage.waitForSelector('.workflow-card');
     await jobPage.waitForFunction(() => testGauges[0].temperatureReadings.length===5002);
     const beforeOther = await jobPage.evaluate(() => JSON.stringify([testGauges[1].testState,testGauges[1].readings,testGauges[1].temperatureReadings]));
