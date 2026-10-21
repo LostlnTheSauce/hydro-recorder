@@ -116,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
           <div><div class="eyebrow">Test <?= $testNumber ?></div><input class="gauge-name" value="Test <?= $testNumber ?>" aria-label="Test <?= $testNumber ?> name"></div>
           <div class="current-readout"><span>Current pressure</span><strong><b class="current-pressure waiting">---.-</b> <small class="current-unit">PSI</small></strong><em class="pressure-trend"></em><em class="pressure-rate" hidden></em></div>
           <label class="rate-target-control" title="Maximum pressure-up rate. The readout says Slow down when you are above it and Speed up when you are well under it. Leave blank to turn it off.">Max rate<input class="rate-target" type="number" min="0" step="0.5" inputmode="decimal" placeholder="Off" aria-label="Maximum pressure-up rate in psi per minute"><span>psi/min</span></label>
+          <div class="psi-voice-control" title="Say the pressure out loud each time it reaches the next step, rising or falling."><label><input class="psi-voice-on" type="checkbox"> Read out PSI</label><label>every<input class="psi-voice-step" type="number" min="0.5" step="0.5" value="5" inputmode="decimal" aria-label="Read out every this many psi"><span>psi</span></label><span class="psi-voice-hint" hidden>Click anywhere on the page to let it talk</span></div>
           <label class="live-scale-control"><span>Chart maximum</span><strong><input class="live-chart-max" type="number" min="1" step="100" value="1000" inputmode="decimal" aria-label="Live chart maximum pressure"> <small>PSI</small></strong></label>
           <label class="pen-control live-pen-control"><span>Pen size</span><input class="pen-size" type="range" min="0.1" max="5" step="0.1" value="1" aria-label="Pressure trace pen size"><strong>1.0</strong></label>
           <label class="live-window-control" title="Show or hide the top and bottom pressure test window lines on the chart"><input class="live-show-window" type="checkbox" checked><span>Window lines</span></label>
@@ -387,6 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/field-power.js?v=3"></script>
   <script src="assets/logbook.js?v=2"></script>
   <script src="assets/stroke-count.js?v=1"></script>
+  <script src="assets/psi-voice.js?v=1"></script>
   <script src="assets/temp-report.js?v=1"></script>
   <script src="assets/calibration-papers.js?v=1"></script>
   <script src="assets/host.js?v=56"></script>

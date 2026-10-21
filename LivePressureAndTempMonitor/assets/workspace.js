@@ -46,7 +46,7 @@
       const move = (selector, view) => root.querySelectorAll(selector).forEach(node => panels[view].append(node));
       const toolbar = root.querySelector('.gauge-toolbar');
       const side = document.createElement('div'); side.className = 'readout-side';
-      side.append(toolbar.querySelector('.connection-status'), root.querySelector('.gauge-actions'), root.querySelector('.rate-target-control'));
+      side.append(toolbar.querySelector('.connection-status'), root.querySelector('.gauge-actions'), root.querySelector('.rate-target-control'), root.querySelector('.psi-voice-control'));
       toolbar.append(side, root.querySelector('.pressure-state'));
       move('.demo-pressure-panel', 'pressure');
       move('.workflow-card', 'pressure');

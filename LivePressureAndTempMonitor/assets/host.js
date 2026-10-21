@@ -490,6 +490,7 @@
     restoreTestSetup() {
       const rateInput = this.root.querySelector('.rate-target');
       if (rateInput && document.activeElement !== rateInput) rateInput.value = this.rateTarget() ?? '';
+      this.psiVoice?.restore();
       const smoothing = this.root.querySelector('.temp-smoothing');
       if (smoothing) smoothing.value = String(this.smoothingSeconds());
       if (!this.root.querySelector('.enabled-probes')) {
@@ -1808,6 +1809,7 @@
     add(reading) {
       if (this.jobTransition || !this.checkJobCurrent()) return;
       this.readings.push(reading);
+      this.psiVoice?.reading(reading);
       if (this.readings.length > 500000) this.readings.splice(0, this.readings.length - 500000);
       if (readingStore) readingStore.add(window.HydroJobs.pressureKey(this.testState), reading);
       this.staleAlerted = false;
@@ -2898,6 +2900,7 @@
 
   // Stroke count panel on the Live test page (type the counter, Enter, next checkpoint).
   window.HydroStrokeCount?.attach(gauges, { ding: staleDing });
+  window.HydroPsiVoice?.attach(gauges);
   gaugeTicker.add(() => gauges.forEach((gauge) => gauge.strokeCount?.render()));
 
   // Trailer alerts: a banner that stays up while the problem lasts, with a ding
