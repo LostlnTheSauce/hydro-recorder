@@ -465,3 +465,10 @@ table td { background:#ffffff55; }
 }
 .equipment-restore { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin:0 0 12px; } .equipment-restore small { color:var(--muted); font-size:.8rem; }
 .split-datetime { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px; }
+/* Spoken pressure readout, beside Max rate. */
+.psi-voice-control { display:none; align-items:center; gap:8px; font-size:.78rem; color:var(--muted); font-weight:600; white-space:nowrap; }
+#hostApp .readout-side .psi-voice-control { display:inline-flex; }
+.psi-voice-control label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+.psi-voice-control input[type="checkbox"] { width:auto; min-height:0!important; margin:0; }
+.psi-voice-control .psi-voice-step { width:64px!important; min-height:34px!important; padding:4px 8px!important; }
+.psi-voice-hint { color:#a33232; font-weight:600; }
