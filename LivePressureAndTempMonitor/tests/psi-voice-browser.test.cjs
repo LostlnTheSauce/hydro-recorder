@@ -24,9 +24,12 @@ async function main() {
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
     // Stand-in voice that records what would be said.
     await page.addInitScript(() => {
-      window.__said = [];
-      const fake = { speak: (u) => window.__said.push(u.text), cancel: () => {} };
+      window.__said = []; window.__heard = [];
+      const voices = [{ name: 'Microsoft David - English (United States)', lang: 'en-US' }, { name: 'Microsoft Zira - English (United States)', lang: 'en-US' }, { name: 'Google Deutsch', lang: 'de-DE' }];
+      const fake = { speak: (u) => { window.__said.push(u.text); window.__heard.push({ text: u.text, voice: u.voice?.name || '', pitch: u.pitch, rate: u.rate }); }, cancel: () => {}, getVoices: () => voices, addEventListener: () => {} };
       Object.defineProperty(window, 'speechSynthesis', { configurable: true, get: () => fake });
+      // Plain stand-in so a pretend voice can be set on it.
+      window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; this.pitch = 1; this.rate = 1; this.voice = null; } };
     });
     await page.goto(`http://127.0.0.1:${server.address().port}/host.php`);
     const box = page.locator('[data-gauge="A"] .psi-voice-control');
@@ -64,8 +67,30 @@ async function main() {
     await box.locator('.psi-voice-on').uncheck();
     await feed([470, 480, 490]);
     assert.deepEqual(await said(), []);
+    // Voice choice is tucked away in Setup (one section for the computer), not on Live test.
+    assert.equal(await page.locator('[data-gauge="A"] .gauge-toolbar select, [data-gauge="A"] .gauge-toolbar input[type="range"]').count(), 0, 'no voice menu on the main screen');
+    await page.locator('[data-dashboard-tab="setup"]').click();
+    const voice = page.locator('#voiceSettings');
+    await voice.locator('summary').click();
+    assert.deepEqual(await voice.locator('.psi-voice-name option').allInnerTexts(), ['Computer default', 'Microsoft David - English (United States) (en-US)', 'Microsoft Zira - English (United States) (en-US)', 'Google Deutsch (de-DE)']);
+    await voice.locator('.psi-voice-name').selectOption('Microsoft Zira - English (United States)');
+    await voice.locator('.psi-voice-pitch').fill('1.4'); await voice.locator('.psi-voice-pitch').dispatchEvent('change');
+    await voice.locator('.psi-voice-rate').fill('1.2'); await voice.locator('.psi-voice-rate').dispatchEvent('change');
+    await page.evaluate(() => { window.__heard = []; });
+    await voice.locator('.psi-voice-test').click();
+    assert.deepEqual(await page.evaluate(() => window.__heard), [{ text: '1740 PSI', voice: 'Microsoft Zira - English (United States)', pitch: 1.4, rate: 1.2 }]);
+    // The read-out uses it too.
+    await page.locator('[data-dashboard-tab="pressure"]').click();
+    await box.locator('.psi-voice-step').fill('5'); await box.locator('.psi-voice-step').dispatchEvent('change');
+    await box.locator('.psi-voice-on').check();
+    await page.evaluate(() => { window.__heard = []; });
+    await feed([500, 506, 511]);
+    assert.deepEqual(await page.evaluate(() => window.__heard.map((h) => [h.text, h.voice, h.pitch])), [['505 PSI', 'Microsoft Zira - English (United States)', 1.4], ['510 PSI', 'Microsoft Zira - English (United States)', 1.4]]);
+    await page.reload();
+    assert.equal(await page.locator('#voiceSettings .psi-voice-name').inputValue(), 'Microsoft Zira - English (United States)', 'kept on this computer');
+    assert.equal(await page.locator('#voiceSettings .psi-voice-pitch').inputValue(), '1.4');
     assert.deepEqual(errors, []);
-    console.log('PSI readout: off by default, each step once rising or falling, jitter quiet, jumps say where they land, 1 and 0.5 psi steps, saved with the test, quiet when off passed.');
+    console.log('PSI readout: off by default, each step once rising or falling, jitter quiet, jumps say where they land, 1 and 0.5 psi steps, saved with the test, quiet when off, voice/pitch/speed with Test passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
