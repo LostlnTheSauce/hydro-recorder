@@ -86,11 +86,26 @@ async function main() {
     await page.evaluate(() => { window.__heard = []; });
     await feed([500, 506, 511]);
     assert.deepEqual(await page.evaluate(() => window.__heard.map((h) => [h.text, h.voice, h.pitch])), [['505 PSI', 'Microsoft Zira - English (United States)', 1.4], ['510 PSI', 'Microsoft Zira - English (United States)', 1.4]]);
+    // A custom word after the number, or none.
+    await page.locator('[data-dashboard-tab="setup"]').click();
+    await voice.locator('.psi-voice-word').fill('pounds');
+    await page.evaluate(() => { window.__heard = []; });
+    await voice.locator('.psi-voice-test').click();
+    await page.locator('[data-dashboard-tab="pressure"]').click();
+    await feed([515.2]);
+    assert.deepEqual(await page.evaluate(() => window.__heard.map((h) => h.text)), ['1740 pounds', '515 pounds']);
+    await page.locator('[data-dashboard-tab="setup"]').click();
+    await voice.locator('.psi-voice-word').fill('');
+    await page.evaluate(() => { window.__heard = []; });
+    await voice.locator('.psi-voice-test').click();
+    assert.deepEqual(await page.evaluate(() => window.__heard.map((h) => h.text)), ['1740']);
+    await voice.locator('.psi-voice-word').fill('pounds');
     await page.reload();
+    assert.equal(await page.locator('#voiceSettings .psi-voice-word').inputValue(), 'pounds', 'word kept on this computer');
     assert.equal(await page.locator('#voiceSettings .psi-voice-name').inputValue(), 'Microsoft Zira - English (United States)', 'kept on this computer');
     assert.equal(await page.locator('#voiceSettings .psi-voice-pitch').inputValue(), '1.4');
     assert.deepEqual(errors, []);
-    console.log('PSI readout: off by default, each step once rising or falling, jitter quiet, jumps say where they land, 1 and 0.5 psi steps, saved with the test, quiet when off, voice/pitch/speed with Test passed.');
+    console.log('PSI readout: off by default, each step once rising or falling, jitter quiet, jumps say where they land, 1 and 0.5 psi steps, saved with the test, quiet when off, voice/pitch/speed with Test, custom word after the number passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
