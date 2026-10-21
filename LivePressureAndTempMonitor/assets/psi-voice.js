@@ -6,6 +6,53 @@
 (function (root) {
   'use strict';
 
+  // Voice, pitch and speed belong to this computer (its installed voices), shared by both tests.
+  const VOICE_KEY = 'grantg-hydro-psi-voice';
+  const voiceSettings = () => {
+    try { const v = JSON.parse(root.localStorage.getItem(VOICE_KEY) || '{}'); return { name: String(v.name || ''), pitch: Number(v.pitch) || 1, rate: Number(v.rate) || 1 }; }
+    catch (_) { return { name: '', pitch: 1, rate: 1 }; }
+  };
+  const voices = () => { try { return root.speechSynthesis?.getVoices?.() || []; } catch (_) { return []; } };
+  // The one Read-out voice section in Setup: lists this computer's voices (English first).
+  function bindVoiceSettings(panel) {
+    if (!panel) return;
+    const nameSelect = panel.querySelector('.psi-voice-name'), pitch = panel.querySelector('.psi-voice-pitch'), rate = panel.querySelector('.psi-voice-rate');
+    const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const show = () => {
+      const saved = voiceSettings();
+      const list = voices().slice().sort((a, b) => (/^en/i.test(b.lang) - /^en/i.test(a.lang)) || a.name.localeCompare(b.name));
+      const options = ['<option value="">Computer default</option>', ...list.map((v) => `<option value="${esc(v.name)}">${esc(v.name)}${v.lang ? ` (${esc(v.lang)})` : ''}</option>`)];
+      if (saved.name && !list.some((v) => v.name === saved.name)) options.push(`<option value="${esc(saved.name)}">${esc(saved.name)} (not on this computer)</option>`);
+      const html = options.join('');
+      if (nameSelect.dataset.list !== html) { nameSelect.innerHTML = html; nameSelect.dataset.list = html; }
+      nameSelect.value = saved.name; pitch.value = String(saved.pitch); rate.value = String(saved.rate);
+    };
+    const save = () => {
+      try { root.localStorage.setItem(VOICE_KEY, JSON.stringify({ name: nameSelect.value, pitch: Number(pitch.value) || 1, rate: Number(rate.value) || 1 })); } catch (_) {}
+    };
+    [nameSelect, pitch, rate].forEach((input) => input.addEventListener('change', save));
+    panel.querySelector('.psi-voice-test')?.addEventListener('click', () => speak(`${format(1740, 1)} PSI`));
+    show();
+    // Voices often finish loading after the page does.
+    root.speechSynthesis?.addEventListener?.('voiceschanged', show);
+  }
+
+  // Says a line in the chosen voice. Returns false when the browser will not talk yet.
+  function speak(text) {
+    const synth = root.speechSynthesis;
+    if (!synth || typeof root.SpeechSynthesisUtterance !== 'function') return true;
+    if (root.navigator.userActivation && !root.navigator.userActivation.hasBeenActive) return false;
+    synth.cancel();
+    const utterance = new root.SpeechSynthesisUtterance(text);
+    const { name, pitch, rate } = voiceSettings();
+    const chosen = name && voices().find((v) => v.name === name);
+    try { if (chosen) { utterance.voice = chosen; utterance.lang = chosen.lang; } } catch (_) {}
+    utterance.pitch = pitch;
+    utterance.rate = rate;
+    synth.speak(utterance);
+    return utterance;
+  }
+
   const format = (level, step) => (Number.isInteger(step) ? String(Math.round(level)) : String(Number(level.toFixed(1))));
 
   class PsiVoice {
@@ -79,20 +126,14 @@
     }
 
     speak(text) {
-      const synth = root.speechSynthesis;
-      if (!synth || typeof root.SpeechSynthesisUtterance !== 'function') return;
-      if (root.navigator.userActivation && !root.navigator.userActivation.hasBeenActive) {
-        if (this.hint) this.hint.hidden = false;
-        return;
-      }
-      synth.cancel();
-      const utterance = new root.SpeechSynthesisUtterance(text);
-      utterance.onerror = (event) => { if (event.error === 'not-allowed' && this.hint) this.hint.hidden = false; };
-      synth.speak(utterance);
+      const utterance = speak(text);
+      if (utterance === false) { if (this.hint) this.hint.hidden = false; return; }
+      if (utterance && utterance !== true) utterance.onerror = (event) => { if (event.error === 'not-allowed' && this.hint) this.hint.hidden = false; };
     }
   }
 
   function attach(gauges) {
+    bindVoiceSettings(root.document.getElementById('voiceSettings'));
     return gauges.map((gauge) => (gauge.psiVoice = new PsiVoice(gauge, gauges)));
   }
 

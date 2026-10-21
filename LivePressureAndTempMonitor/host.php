@@ -332,6 +332,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       </article>
       <?php endforeach; ?>
     </section>
+    <details class="equipment-library voice-library" id="voiceSettings">
+      <summary class="library-summary"><span><b>Read-out voice</b><small>Voice, pitch and speed for Read out PSI on this computer</small></span></summary>
+      <div class="voice-settings-body"><label>Voice<select class="psi-voice-name"><option value="">Computer default</option></select></label><label>Pitch<input class="psi-voice-pitch" type="range" min="0.5" max="2" step="0.1" value="1"></label><label>Speed<input class="psi-voice-rate" type="range" min="0.5" max="1.8" step="0.1" value="1"></label><button type="button" class="psi-voice-test">Test voice</button></div>
+      <p class="library-intro">Voices come from this computer. Microsoft Edge adds natural-sounding ones (for example Aria and Jenny). Turn the read-out on and set its step on Live test.</p>
+    </details>
     <details class="equipment-library" id="equipmentLibrary">
       <summary class="library-summary"><span><b>Equipment library</b><small>Serial numbers, defaults and calibration dates</small></span></summary>
       <p class="library-intro">Defaults are selected automatically for new tests. Calibration warnings stay inside this program and do not alter Atmos paperwork.</p>
