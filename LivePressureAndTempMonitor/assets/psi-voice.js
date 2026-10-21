@@ -1,6 +1,6 @@
 /* Spoken pressure readout. With "Read out PSI" on, the browser says the pressure out loud each
    time it reaches the next step (every 1, 5, 10 psi, whatever is set), rising or falling:
-   "435 PSI", "440 PSI". A level is said once; the gauge has to move a full step before the next
+   "435 PSI", "440 PSI" (or "pounds", or any word set in Setup). A level is said once; the gauge has to move a full step before the next
    one, so jitter around a level stays quiet. A big jump says only where it landed. Uses the
    browser's built-in voice (works offline). Saved with each test. */
 (function (root) {
@@ -9,14 +9,18 @@
   // Voice, pitch and speed belong to this computer (its installed voices), shared by both tests.
   const VOICE_KEY = 'grantg-hydro-psi-voice';
   const voiceSettings = () => {
-    try { const v = JSON.parse(root.localStorage.getItem(VOICE_KEY) || '{}'); return { name: String(v.name || ''), pitch: Number(v.pitch) || 1, rate: Number(v.rate) || 1 }; }
-    catch (_) { return { name: '', pitch: 1, rate: 1 }; }
+    try {
+      const v = JSON.parse(root.localStorage.getItem(VOICE_KEY) || '{}');
+      return { name: String(v.name || ''), pitch: Number(v.pitch) || 1, rate: Number(v.rate) || 1, word: v.word === undefined ? 'PSI' : String(v.word).slice(0, 40) };
+    } catch (_) { return { name: '', pitch: 1, rate: 1, word: 'PSI' }; }
   };
+  // The number followed by the chosen word ("435 PSI", "435 pounds"), or just the number.
+  const withWord = (number) => { const word = voiceSettings().word.trim(); return word ? `${number} ${word}` : String(number); };
   const voices = () => { try { return root.speechSynthesis?.getVoices?.() || []; } catch (_) { return []; } };
   // The one Read-out voice section in Setup: lists this computer's voices (English first).
   function bindVoiceSettings(panel) {
     if (!panel) return;
-    const nameSelect = panel.querySelector('.psi-voice-name'), pitch = panel.querySelector('.psi-voice-pitch'), rate = panel.querySelector('.psi-voice-rate');
+    const nameSelect = panel.querySelector('.psi-voice-name'), pitch = panel.querySelector('.psi-voice-pitch'), rate = panel.querySelector('.psi-voice-rate'), word = panel.querySelector('.psi-voice-word');
     const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const show = () => {
       const saved = voiceSettings();
@@ -26,12 +30,14 @@
       const html = options.join('');
       if (nameSelect.dataset.list !== html) { nameSelect.innerHTML = html; nameSelect.dataset.list = html; }
       nameSelect.value = saved.name; pitch.value = String(saved.pitch); rate.value = String(saved.rate);
+      if (word && root.document.activeElement !== word) word.value = saved.word;
     };
     const save = () => {
-      try { root.localStorage.setItem(VOICE_KEY, JSON.stringify({ name: nameSelect.value, pitch: Number(pitch.value) || 1, rate: Number(rate.value) || 1 })); } catch (_) {}
+      try { root.localStorage.setItem(VOICE_KEY, JSON.stringify({ name: nameSelect.value, pitch: Number(pitch.value) || 1, rate: Number(rate.value) || 1, word: word ? word.value.slice(0, 40) : 'PSI' })); } catch (_) {}
     };
     [nameSelect, pitch, rate].forEach((input) => input.addEventListener('change', save));
-    panel.querySelector('.psi-voice-test')?.addEventListener('click', () => speak(`${format(1740, 1)} PSI`));
+    word?.addEventListener('input', save);
+    panel.querySelector('.psi-voice-test')?.addEventListener('click', () => speak(withWord(format(1740, 1))));
     show();
     // Voices often finish loading after the page does.
     root.speechSynthesis?.addEventListener?.('voiceschanged', show);
@@ -73,7 +79,7 @@
       this.toggle.addEventListener('change', () => {
         this.save();
         this.level = null;
-        if (this.on) this.speak(`Read out on, every ${format(this.step, this.step)} PSI`);
+        if (this.on) this.speak(`Read out on, every ${withWord(format(this.step, this.step))}`);
         else root.speechSynthesis?.cancel();
       });
       this.stepInput.addEventListener('change', () => {
@@ -122,7 +128,7 @@
       this.level = next;
       // With both tests reading out, say which one.
       const both = this.all.filter((g) => g.active && g.psiVoice?.on).length > 1;
-      this.speak(`${both ? `${this.g.settings?.().name || ''}, ` : ''}${format(next, step)} PSI`);
+      this.speak(`${both ? `${this.g.settings?.().name || ''}, ` : ''}${withWord(format(next, step))}`);
     }
 
     speak(text) {
