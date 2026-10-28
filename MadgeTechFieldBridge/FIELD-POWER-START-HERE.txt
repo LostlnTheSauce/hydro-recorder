@@ -34,6 +34,16 @@ FIELD MODE
   still interrupts recording. Use reliable continuous power; for long unattended
   runs, consider a properly sized UPS/backup supply and test its actual runtime.
 
+WINDOWS UPDATES (October 2026)
+- Each time Start-Field-Mode.cmd opens, it asks once for administrator (click Yes)
+  and pauses Windows updates for 7 days (each start extends the pause), sets active
+  hours to 5 AM - 11 PM, and asks Windows not to restart by itself while you are
+  signed in (Windows Pro honors this; Home may not).
+- If Windows is ALREADY waiting to restart for an update, the window says so in red.
+  Before a test: restart then. During a test: keep going and restart right after.
+- Between jobs, double-click Resume-Windows-Updates.cmd, let updates install, restart.
+- Run-Bridge.cmd does not pause updates; use Start-Field-Mode.cmd.
+
 BEFORE A 12–48+ HOUR RUN
 1. While you are present, complete any pending Windows update/restart. Verify none
    is pending. Restart early enough to reconnect and test the logger afterward.
