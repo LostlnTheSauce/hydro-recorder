@@ -391,6 +391,12 @@
         this.saveTestState();
         this.updateRate();
       });
+      this.root.querySelector('.eta-target')?.addEventListener('input', (event) => {
+        const value = Number(event.target.value);
+        this.testState.etaTarget = event.target.value !== '' && Number.isFinite(value) && value >= 0 ? value : null;
+        this.saveTestState();
+        this.updateRate();
+      });
       this.root.querySelector('.temp-smoothing')?.addEventListener('change', (event) => {
         this.testState.temperatureSmoothing = Number(event.target.value) || 0;
         this.saveTestState();
@@ -490,6 +496,8 @@
     restoreTestSetup() {
       const rateInput = this.root.querySelector('.rate-target');
       if (rateInput && document.activeElement !== rateInput) rateInput.value = this.rateTarget() ?? '';
+      const etaInput = this.root.querySelector('.eta-target');
+      if (etaInput && document.activeElement !== etaInput) etaInput.value = this.etaTarget() ?? '';
       this.psiVoice?.restore();
       const smoothing = this.root.querySelector('.temp-smoothing');
       if (smoothing) smoothing.value = String(this.smoothingSeconds());
@@ -1878,6 +1886,52 @@
       return seconds >= 10 ? (latest.pressure - first.pressure) / (seconds / 60) : null;
     }
 
+    // Time to a target pressure, at the pace of the last 2 minutes (steadier than the 30-second
+    // pace). Works rising (pressure-up) or falling (blow-down).
+    etaTarget() {
+      const value = Number(this.testState.etaTarget);
+      return this.testState.etaTarget !== null && this.testState.etaTarget !== undefined && this.testState.etaTarget !== '' && Number.isFinite(value) && value >= 0 ? value : null;
+    }
+
+    // Pace over the last 2 minutes, and where the pressure was at the start of that span.
+    etaRate() { return this.etaWindow()?.rate ?? null; }
+
+    etaWindow() {
+      const latest = this.readings.at(-1);
+      if (!latest) return null;
+      const from = latest.at - 120000;
+      let low = 0, high = this.readings.length - 1;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (this.readings[middle].at < from) low = middle + 1;
+        else high = middle;
+      }
+      const first = this.readings[low];
+      const seconds = (latest.at - first.at) / 1000;
+      return { rate: seconds >= 30 ? (latest.pressure - first.pressure) / (seconds / 60) : null, from: first.pressure };
+    }
+
+    etaStatus() {
+      const target = this.etaTarget(), latest = this.readings.at(-1);
+      if (target === null || !latest) return null;
+      const span = this.etaWindow(), rate = span?.rate ?? null;
+      const remaining = target - latest.pressure, psi = `${target.toLocaleString()} psi`;
+      const left = `${Math.abs(remaining).toFixed(Math.abs(remaining) < 10 ? 1 : 0)} psi to ${psi}`;
+      if (Math.abs(remaining) <= 0.5) return { tone: 'reached', text: `Reached ${psi}` };
+      // Went through the target in the last 2 minutes.
+      if (span && Math.sign(target - span.from) === -Math.sign(remaining) && span.from !== target) return { tone: 'reached', text: `Past ${psi}` };
+      if (rate === null) return { tone: 'neutral', text: left };
+      if (Math.abs(rate) < 0.2) return { tone: 'neutral', text: `${left} · holding` };
+      if (Math.sign(rate) !== Math.sign(remaining)) return { tone: 'neutral', text: `${left} · ${remaining > 0 ? 'falling' : 'rising'}` };
+      const minutes = remaining / rate;
+      // "10:13 AM ~ 13 minutes" (clock time first).
+      const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+      const whole = Math.round(minutes), hours = Math.floor(whole / 60), mins = whole % 60;
+      const time = minutes < 1 ? 'under 1 minute' : hours ? `${plural(hours, 'hour')}${mins ? ` ${plural(mins, 'minute')}` : ''}` : plural(whole, 'minute');
+      const at = new Date(latest.at + minutes * 60000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return { tone: 'eta', text: `${at} ~ ${time}`, title: `Reaching ${psi} at the pace of the last 2 minutes` };
+    }
+
     // Shared by the readout and the log book's latest row.
     paceStatus() {
       const target = this.rateTarget();
@@ -1892,6 +1946,7 @@
     }
 
     updateRate() {
+      this.updateEta();
       const element = this.root.querySelector('.pressure-rate');
       if (!element) return;
       const pace = this.paceStatus();
@@ -1899,6 +1954,17 @@
       if (!pace) return;
       element.textContent = `${pace.word} · ${pace.shown}${pace.tone === 'neutral' ? '' : ` (max ${pace.target})`}`;
       element.className = `pressure-rate ${pace.tone}`;
+    }
+
+    updateEta() {
+      const element = this.root.querySelector('.pressure-eta');
+      if (!element) return;
+      const eta = this.etaStatus();
+      element.hidden = !eta;
+      if (!eta) return;
+      element.textContent = eta.text;
+      element.title = eta.title || '';
+      element.className = `pressure-eta ${eta.tone}`;
     }
 
     updateWarning() {
