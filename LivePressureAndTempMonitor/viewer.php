@@ -22,7 +22,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
   <main id="viewerApp" data-api="api.php" data-session-id="<?= htmlspecialchars($sessionId) ?>">
     <section class="lock-shell" id="viewerLock">
       <form class="lock-card" id="viewerLogin">
-        <div class="brand-mark"><img src="assets/grant-g-logo.png" alt=""></div><p>Grant G Solutions</p><h1>Private live pressure test</h1><span>Enter the password provided by the test operator.</span>
+        <div class="brand-mark"><img src="assets/grant-g-logo.png" alt=""></div><p>Grant G Solutions</p><h1>Live pressure test</h1>
         <input id="viewerLoginPassword" type="password" placeholder="Viewer password" required autofocus>
         <button type="submit" class="primary">View live charts</button>
         <div class="error-box hidden" id="viewerLoginError"></div>

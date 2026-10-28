@@ -483,3 +483,5 @@ table td { background:#ffffff55; }
 #hostApp[data-dashboard-view="pressure"] .pressure-eta:not([hidden]) { display:inline-block; }
 .pressure-eta.reached { color:#fff; background:var(--good); border-color:transparent; }
 .pressure-eta.neutral { color:var(--muted); font-weight:600; }
+/* Viewer sign-in: logo, company and title centered. */
+#viewerLogin > .brand-mark, #viewerLogin > p, #viewerLogin > h1 { justify-self:center; text-align:center; }
