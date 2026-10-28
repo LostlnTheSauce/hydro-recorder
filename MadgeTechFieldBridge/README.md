@@ -24,6 +24,10 @@ MadgeTech program libraries are detected under both Program Files locations and 
 
 The four channel positions are 1 = pipe, 2 = soil, 3 = ambient, 4 = extra. Keep the field laptop's clock accurate. The website rejects readings more than 30 seconds in the future. Temperature readings do not auto-write the Google Sheet; **Sync to Sheet** remains a separate manual action.
 
+## Windows updates during a test
+
+`Start-Field-Mode.cmd` asks once for administrator (click **Yes**) and pauses Windows updates for 7 days (each start extends it), sets active hours to 5 AM–11 PM, and asks Windows not to restart on its own while you are signed in (`Field-Windows-Update-Hold.ps1`). If Windows is already waiting to restart for an update, the window says so in red: restart before a test, or right after one. Between jobs, run `Resume-Windows-Updates.cmd`, let updates install and restart. `Run-Bridge.cmd` does not pause updates. To add this to an existing field laptop, stop the field app with Ctrl+C and extract `updates/field-mode-pause-updates.zip` into the field app folder (keep `field-device.settings` and `Data`).
+
 ## Field laptop temperature
 
 The field app also reports the field laptop's own temperature from Windows' built-in thermal sensor (no admin rights or extra programs). The host shows it on the battery line, for example `92% · Plugged in · Charging · 142 °F`, and raises an alert at 185 °F or hotter. Some laptops have no usable sensor; then no temperature appears and nothing else changes.

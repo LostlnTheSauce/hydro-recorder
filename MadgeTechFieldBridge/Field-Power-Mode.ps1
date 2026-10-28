@@ -62,7 +62,23 @@ try {
         Write-Warning "Battery-friendly profile was not applied: $($_.Exception.Message)"
         Write-Host 'The bridge will still run with its own sleep protection.'
     }
-    Write-Host 'Before a long test: finish pending restarts, then pause updates in Windows Settings.'
+    # Keep Windows Update from restarting the laptop mid-test (asks for administrator once).
+    $hold = Join-Path $PSScriptRoot 'Field-Windows-Update-Hold.ps1'
+    if (Test-Path -LiteralPath $hold) {
+        Write-Host 'Pausing Windows updates for the test. Click Yes on the Windows prompt.'
+        & (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -NoProfile -ExecutionPolicy Bypass -File $hold
+        if ($LASTEXITCODE -eq 0) { Write-Host 'Windows updates are paused for 7 days (each start of field mode extends it). Active hours: 5 AM to 11 PM. Resume-Windows-Updates.cmd undoes it between jobs.' }
+        else { Write-Warning 'Windows updates were NOT paused. Pause them in Settings > Windows Update before a long test.' }
+    }
+    # A restart Windows is already waiting for can still happen; say so loudly.
+    $restartDue = (Test-Path -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') -or (Test-Path -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending')
+    if ($restartDue) {
+        Write-Host ''
+        Write-Host '*** WINDOWS IS WAITING TO RESTART TO FINISH AN UPDATE ***' -ForegroundColor Red
+        Write-Host 'Before a test: restart the laptop now, then open field mode again.' -ForegroundColor Red
+        Write-Host 'During a test: keep going, but restart right after the test ends.' -ForegroundColor Red
+        Write-Host ''
+    }
     Write-Host 'Keep MadgeTech in Real Time mode. Press Ctrl+C to stop the bridge; let this window finish restoring power settings.'
     & (Join-Path $PSScriptRoot 'MadgeTechFieldBridge.exe')
 } finally {
