@@ -24,6 +24,14 @@ async function main() {
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/host.php`);
     page.on('dialog', (dialog) => dialog.accept());
+    // A new test starts with "Full offset above 100" so a blow-down lands on 0.
+    assert.equal(await page.evaluate(() => window.testGauges[0].testState.offsetTaperPsi), 100, 'new tests default to 100');
+    assert.equal(await page.locator('[data-gauge="A"] .offset-taper').inputValue(), '100');
+    // A test saved before that default keeps the full offset (its readings were figured that way).
+    await page.evaluate(() => { const saved = JSON.parse(localStorage.getItem('grantg-hydro-test-v1-A')); delete saved.offsetTaperPsi; localStorage.setItem('grantg-hydro-test-v1-A', JSON.stringify(saved)); });
+    await page.reload();
+    assert.equal(await page.evaluate(() => window.testGauges[0].offsetTaper()), 0, 'older saved test stays on full offset');
+    assert.equal(await page.locator('[data-gauge="A"] .offset-taper').inputValue(), '');
     const rec = (raw, offset, taper) => page.evaluate(([r, o, t]) => window.testGauges[0].recordedPressure(r, o, t), [raw, offset, taper]);
     // Blank (0): full offset everywhere, unchanged near zero, never below 0.
     assert.deepEqual([await rec(1736, 9, 0), await rec(5, 9, 0), await rec(0.3, 9, 0), await rec(1, -2, 0), await rec(1.5, -2, 0)], [1745, 14, 0.3, 0, 0]);

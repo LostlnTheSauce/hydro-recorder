@@ -89,6 +89,8 @@
       jobNumber: '', poAfe: '', location: '', owner: 'Atmos Energy', contractor: 'Bobcat Contracting', ownerRep: '',
       displayName: testNameForSlot(slot), offset: 0, rampProfile: 'normal', equipment: {}, events: [], officialStart: '', officialEnd: '',
       chartMax: '1000', traceThickness: '1.0', windowBottom: '', windowTop: '', design: null, sheet: null, sheetStartRow: '', sheetColumns: { comments: false }, manualTemperatures: [], slot,
+      // New tests taper the offset below 100 psi so a blow-down lands on 0.
+      offsetTaperPsi: 100,
     };
   }
 
@@ -104,6 +106,8 @@
         manualTemperatures: Array.isArray(saved.manualTemperatures) ? saved.manualTemperatures.slice(-5000) : [],
         // Remarks start switched off only for new tests; a test saved before that keeps every column on.
         sheetColumns: 'sheetColumns' in saved ? saved.sheetColumns : null,
+        // A test saved before the 100 psi default keeps its readings' setting (full offset).
+        offsetTaperPsi: 'offsetTaperPsi' in saved ? saved.offsetTaperPsi : '',
       };
     } catch (_) {}
     return fallback;
@@ -1564,7 +1568,7 @@
           if (item?.id && !equipmentInventory.some((entry) => entry.id === item.id)) equipmentInventory.push(item);
         });
         saveEquipmentInventory();
-        this.testState = { ...defaultTestState(this.slot), ...payload.test, cloudJobId: crypto.randomUUID(), jobId: crypto.randomUUID(), temperatureSourceIds: [], slot: this.slot, equipment: { ...(payload.test.equipment || {}) }, events: Array.isArray(payload.test.events) ? payload.test.events : [] };
+        this.testState = { ...defaultTestState(this.slot), offsetTaperPsi: '', ...payload.test, cloudJobId: crypto.randomUUID(), jobId: crypto.randomUUID(), temperatureSourceIds: [], slot: this.slot, equipment: { ...(payload.test.equipment || {}) }, events: Array.isArray(payload.test.events) ? payload.test.events : [] };
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
         this.readings = payload.readings.filter((reading) => Number.isFinite(Number(reading?.at)) && Number.isFinite(Number(reading?.pressure))).map((reading) => ({ at: Number(reading.at), pressure: Number(reading.pressure), unit: String(reading.unit || 'PSI') })).sort((a, b) => a.at - b.at).slice(-500000);
         this.temperatureReadings = Array.isArray(payload.temperatureReadings) ? payload.temperatureReadings : [];
