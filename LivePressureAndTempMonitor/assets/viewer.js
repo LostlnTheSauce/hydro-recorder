@@ -83,8 +83,9 @@
       lastId = Math.max(lastId, Number(result.last_id) || 0);
       more = Boolean(result.has_more);
     } while (more);
-    state.A.readings = state.A.readings.slice(-100000);
-    state.B.readings = state.B.readings.slice(-100000);
+    // Keep each trace in time order with one reading per moment, however the pages arrived
+    // (a double sign-in, or the host catching up after a reconnect), so the chart never jumps back.
+    for (const slot of ['A', 'B']) state[slot].readings = inTimeOrder(state[slot].readings).slice(-100000);
     renderGauge('A');
     renderGauge('B');
     updateViewerTestControls();
@@ -93,6 +94,15 @@
     renderPressureLog(first);
     showFeedError('');
     updateFeedStatus();
+  }
+
+  function inTimeOrder(readings) {
+    let ordered = true;
+    for (let i = 1; i < readings.length; i++) if (readings[i].at <= readings[i - 1].at) { ordered = false; break; }
+    if (ordered) return readings;
+    const byTime = new Map();
+    readings.forEach((reading) => byTime.set(reading.at, reading));
+    return [...byTime.values()].sort((a, b) => a.at - b.at);
   }
 
   function renderGauge(slot, renderTemperature = true) {
@@ -294,8 +304,15 @@
     temperatureTimer = setInterval(loadTemperatures, 3000);
   }
 
+  let signingIn = false;
   loginForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    // A second tap (or a password manager submitting too) while the first sign-in is loading
+    // would start a second full load alongside it.
+    if (signingIn) return;
+    signingIn = true;
+    const submitButton = loginForm.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
     password = document.getElementById('viewerLoginPassword').value;
     viewerToken = '';
     showLoginError('');
@@ -312,6 +329,10 @@
       dashboard.classList.remove('hidden');
       startPolling();
     } catch (error) { showLoginError(error.message || String(error)); }
+    finally {
+      signingIn = false;
+      if (submitButton) submitButton.disabled = false;
+    }
   });
 
   setInterval(updateFeedStatus, 1000);
