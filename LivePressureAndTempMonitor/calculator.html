@@ -696,6 +696,23 @@
   .btn-update:hover { background: #17476a; }
   .breakdown-table tr:hover td, .wf-history-table tr:hover td { background: #f6f8fa; }
 </style>
+<style>
+  /* Cards 08 and 09: pump-up planner and leak estimate. */
+  input[type="time"] { background: #fff; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; padding: 8px 10px; width: 100%; min-height: 42px; }
+  .input-group label small { text-transform: none; letter-spacing: 0; }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: -4px 0 14px; }
+  .chip { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--text); cursor: pointer; }
+  .chip.on { border-color: var(--accent); color: var(--accent); background: #e8f1f8; }
+  .verdict { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--surface2); line-height: 1.5; }
+  .verdict strong { display: block; font-size: 1.02rem; margin-bottom: 2px; }
+  .verdict.good { border-color: #b9dcc7; background: #e6f4ec; }
+  .verdict.info { border-color: #bcd3e6; background: #e8f1f8; }
+  .verdict.warn { border-color: #ecd59f; background: #fdf4e1; }
+  .calc-note { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+  .breakdown-table td.num, .breakdown-table th.num { text-align: right; }
+  .breakdown-table td.best { color: var(--green); font-weight: 700; }
+  .overflow-x { overflow-x: auto; }
+</style>
 </head>
 <body>
 
@@ -1042,6 +1059,92 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- CARD 08: PUMP-UP PLANNER -->
+  <div class="card" id="pumpPlanner">
+    <div class="card-header">
+      <span class="card-title">Pump-Up Planner — Triplex vs Kill Truck</span>
+      <span class="card-num">08</span>
+    </div>
+    <div class="card-body">
+      <p class="section-label">Rise rate and time to test pressure — field constant 225,000</p>
+      <div class="input-row">
+        <div class="input-group"><label>Line Volume (gal)</label><input type="number" id="pp_volume" placeholder="e.g. 287900" step="any" oninput="calcPumpUp()"></div>
+        <div class="input-group"><label>Starting Pressure (PSI)</label><input type="number" id="pp_start" value="0" step="any" oninput="calcPumpUp()"></div>
+        <div class="input-group"><label>Target Pressure (PSI)</label><input type="number" id="pp_target" placeholder="e.g. 670" step="any" oninput="calcPumpUp()"></div>
+        <div class="input-group"><label>Max Rate (PSI/min) <small>— blank for no limit</small></label><input type="number" id="pp_limit" placeholder="e.g. 10" step="any" oninput="calcPumpUp()"></div>
+        <div class="input-group"><label>Water Allowance (× theory)</label><input type="number" id="pp_allowance" value="1" min="0.5" step="0.05" oninput="calcPumpUp()"></div>
+      </div>
+      <div class="chip-row" id="pp_chips">
+        <button type="button" class="chip" data-allowance="1" onclick="setPumpAllowance(1)">1.0× tight line</button>
+        <button type="button" class="chip" data-allowance="1.15" onclick="setPumpAllowance(1.15)">1.15× a little air</button>
+        <button type="button" class="chip" data-allowance="1.5" onclick="setPumpAllowance(1.5)">1.5× some air</button>
+        <button type="button" class="chip" data-allowance="2" onclick="setPumpAllowance(2)">2.0× a lot of air</button>
+      </div>
+      <p class="section-label">Triplex — bypass closed</p>
+      <div class="input-row">
+        <div class="input-group"><label>Gal per Stroke</label><input type="number" id="pp_gps" value="0.0068" step="any" oninput="calcPumpUp()"></div>
+        <div class="input-group"><label>Strokes per Minute</label><input type="number" id="pp_spm" value="1500" step="any" oninput="calcPumpUp()"></div>
+      </div>
+      <p class="section-label">Kill Truck — optional</p>
+      <div class="input-row">
+        <div class="input-group"><label>Rate (bbl/min)</label><input type="number" id="pp_truck" placeholder="e.g. 1" step="any" oninput="calcPumpUp()"></div>
+        <div class="input-group"><label>Lowest Steady Rate (bbl/min)</label><input type="number" id="pp_truck_min" placeholder="e.g. 0.25" step="any" oninput="calcPumpUp()"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-add" onclick="pushVolumeTo('pp_volume', calcPumpUp)">↓ Use Volume from Card 01</button>
+      </div>
+      <div class="results" id="ppResults">
+        <div class="verdict" id="ppVerdict"></div>
+        <div class="result-grid" id="ppResultGrid"></div>
+        <div class="overflow-x"><table class="breakdown-table" id="ppCompare"></table></div>
+        <p class="calc-note">Pumping time only; holds are not included. Gallons per psi = volume ÷ 225,000 × water allowance.</p>
+      </div>
+      <hr class="divider">
+      <p class="section-label">Check while pumping — how much air is the line holding?</p>
+      <div class="input-row">
+        <div class="input-group"><label>Rise Rate Seen (PSI/min) <small>— triplex at the strokes/min above</small></label><input type="number" id="pp_observed" placeholder="e.g. 7" step="any" oninput="calcPumpUp()"></div>
+      </div>
+      <div class="results" id="ppObservedResults">
+        <p id="ppObservedText"></p>
+        <div class="btn-row"><button class="btn btn-add" id="ppUseObserved" onclick="setPumpAllowance(Number(this.dataset.value))"></button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 09: LEAK ESTIMATE -->
+  <div class="card" id="leakEstimate">
+    <div class="card-header">
+      <span class="card-title">Leak Estimate from Pressure Drop</span>
+      <span class="card-num">09</span>
+    </div>
+    <div class="card-body">
+      <p class="section-label">Water lost for a pressure drop — field constant 225,000</p>
+      <div class="input-row">
+        <div class="input-group"><label>Line Volume (gal)</label><input type="number" id="lk_volume" placeholder="e.g. 287900" step="any" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Pressure at Start (PSI)</label><input type="number" id="lk_p1" placeholder="e.g. 670" step="any" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Pressure Now (PSI)</label><input type="number" id="lk_p2" placeholder="e.g. 664" step="any" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Start Time</label><input type="time" id="lk_t1" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Time Now</label><input type="time" id="lk_t2" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Water Allowance (× theory) <small>— from Card 08 check</small></label><input type="number" id="lk_allowance" value="1" min="0.5" step="0.05" oninput="calcLeak()"></div>
+      </div>
+      <p class="section-label">Pipe temperature — optional, takes the temperature effect out</p>
+      <div class="input-row">
+        <div class="input-group"><label>Pipe Temp at Start (°F)</label><input type="number" id="lk_temp1" placeholder="e.g. 61.2" step="any" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Pipe Temp Now (°F)</label><input type="number" id="lk_temp2" placeholder="e.g. 60.8" step="any" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Test Length (hours)</label><input type="number" id="lk_hours" value="8" step="any" oninput="calcLeak()"></div>
+        <div class="input-group"><label>Triplex Gal per Stroke</label><input type="number" id="lk_gps" value="0.0068" step="any" oninput="calcLeak()"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-add" onclick="pushVolumeTo('lk_volume', calcLeak)">↓ Use Volume from Card 01</button>
+      </div>
+      <div class="results" id="lkResults">
+        <div class="verdict" id="lkVerdict"></div>
+        <div class="result-grid" id="lkResultGrid"></div>
+        <p class="calc-note" id="lkNote"></p>
+      </div>
     </div>
   </div>
 
@@ -1732,6 +1835,209 @@
       </div>
     `;
     document.getElementById('n2Results').classList.add('visible');
+  }
+
+  // ── CARD 08: PUMP-UP PLANNER ──────────────────────────────
+  // Gallons per psi = volume / 225,000 (same constant as Card 02), times the water allowance for air.
+  function pushVolumeTo(id, recalc) {
+    if (lastTotalGal === null) { alert('Calculate volume in Card 01 first.'); return; }
+    document.getElementById(id).value = lastTotalGal.toFixed(1);
+    recalc();
+  }
+
+  function fmtMinutes(minutes) {
+    if (!Number.isFinite(minutes)) return '—';
+    const m = Math.round(minutes);
+    if (m < 60) return m + ' min';
+    const h = Math.floor(m / 60), r = m % 60;
+    return r ? `${h} h ${r} min` : `${h} h`;
+  }
+  const fmtPsiMin = (r) => (r >= 10 ? r.toFixed(0) : r.toFixed(1)) + ' psi/min';
+
+  function planPumpUp(input) {
+    const rise = input.target - input.start;
+    const allowance = input.allowance > 0 ? input.allowance : 1;
+    if (!(input.volume > 0) || !(rise > 0) || !(input.galPerStroke > 0) || !(input.spm > 0)) return null;
+    const galPerPsi = input.volume / 225000 * allowance;
+    const water = galPerPsi * rise;
+    const limit = input.limit > 0 ? input.limit : null;
+    const pump = (gpm, minGpm) => {
+      const openRate = gpm / galPerPsi;
+      const neededGpm = limit && openRate > limit ? limit * galPerPsi : null;
+      // A truck that can't run slower than the limit allows would go over it.
+      const cannotSlow = neededGpm !== null && minGpm > 0 && minGpm > neededGpm;
+      const runRate = cannotSlow ? minGpm / galPerPsi : limit ? Math.min(openRate, limit) : openRate;
+      return { gpm, openRate, runRate, neededGpm, cannotSlow, limited: neededGpm !== null && !cannotSlow, minutes: rise / runRate };
+    };
+    const triplex = pump(input.galPerStroke * input.spm, 0);
+    triplex.strokes = water / input.galPerStroke;
+    triplex.neededSpm = triplex.neededGpm ? triplex.neededGpm / input.galPerStroke : null;
+    const truck = input.truckBpm > 0 ? pump(input.truckBpm * 42, (input.truckMinBpm || 0) * 42) : null;
+    if (truck) { truck.neededBpm = truck.neededGpm ? truck.neededGpm / 42 : null; truck.minBpm = input.truckMinBpm || null; }
+
+    let verdict;
+    if (!truck) {
+      verdict = { kind: 'good', title: `Triplex: about ${fmtMinutes(triplex.minutes)} to ${Math.round(input.target)} psi`,
+        text: limit && triplex.openRate >= limit ? `It can hold the ${fmtPsiMin(limit)} limit with room to spare.`
+          : `It rises about ${fmtPsiMin(triplex.runRate)} wide open${limit ? `, under the ${fmtPsiMin(limit)} limit` : ''}. Enter a kill truck rate to compare.` };
+    } else if (truck.cannotSlow) {
+      verdict = { kind: 'warn', title: 'Use your triplex: the kill truck can’t run slow enough',
+        text: `Holding ${fmtPsiMin(limit)} needs ${truck.neededBpm.toFixed(2)} bbl/min, but its lowest steady rate would push about ${fmtPsiMin(truck.runRate)}. The triplex takes about ${fmtMinutes(triplex.minutes)}.` };
+    } else if (limit && triplex.openRate >= limit) {
+      verdict = { kind: 'good', title: 'Use your triplex',
+        text: `It can hold the ${fmtPsiMin(limit)} limit by itself (about ${fmtPsiMin(triplex.openRate)} wide open), so a kill truck saves no time. About ${fmtMinutes(triplex.minutes)} either way.` };
+    } else {
+      const saved = triplex.minutes - truck.minutes;
+      if (saved < 15) {
+        verdict = { kind: 'good', title: saved > 0 ? `Use your triplex: the kill truck saves only ${fmtMinutes(saved)}` : 'Use your triplex: it is as fast as the kill truck',
+          text: `Triplex about ${fmtMinutes(triplex.minutes)}, kill truck about ${fmtMinutes(truck.minutes)}.` };
+      } else {
+        verdict = { kind: 'info', title: `Kill truck saves about ${fmtMinutes(saved)}`,
+          text: `Kill truck about ${fmtMinutes(truck.minutes)}${truck.limited ? ` held to ${fmtPsiMin(limit)}` : ''}; triplex about ${fmtMinutes(triplex.minutes)}${limit ? ` (it tops out at ${fmtPsiMin(triplex.openRate)})` : ''}.` };
+      }
+    }
+    return { galPerPsi, water, rise, limit, triplex, truck, verdict };
+  }
+
+  // How many times theory the line is taking, from the rise rate seen with the triplex.
+  function pumpAirFactor(volume, triplexGpm, observedRate) {
+    if (!(volume > 0) || !(triplexGpm > 0) || !(observedRate > 0)) return null;
+    return (triplexGpm / (volume / 225000)) / observedRate;
+  }
+
+  function setPumpAllowance(value) {
+    document.getElementById('pp_allowance').value = value;
+    calcPumpUp();
+  }
+
+  function calcPumpUp() {
+    const val = (id) => parseFloat(document.getElementById(id).value);
+    const volume = val('pp_volume'), gps = val('pp_gps'), spm = val('pp_spm'), allowance = val('pp_allowance');
+    document.querySelectorAll('#pp_chips .chip').forEach((chip) => chip.classList.toggle('on', Number(chip.dataset.allowance) === allowance));
+    const r = planPumpUp({ volume, start: isNaN(val('pp_start')) ? 0 : val('pp_start'), target: val('pp_target'), limit: val('pp_limit'),
+      allowance, galPerStroke: gps, spm, truckBpm: val('pp_truck'), truckMinBpm: val('pp_truck_min') });
+    document.getElementById('ppResults').classList.toggle('visible', !!r);
+    if (r) {
+      const v = document.getElementById('ppVerdict');
+      v.className = 'verdict ' + r.verdict.kind;
+      v.innerHTML = `<strong>${r.verdict.title}</strong>${r.verdict.text}`;
+      document.getElementById('ppResultGrid').innerHTML = `
+        <div class="result-box highlight"><div class="result-label">Water to Pressure Up</div><div class="result-value">${r.water.toFixed(1)}<span class="result-unit">gal</span></div></div>
+        <div class="result-box green"><div class="result-label">Gallons per PSI</div><div class="result-value">${r.galPerPsi.toFixed(4)}<span class="result-unit">gal/psi</span></div></div>
+        <div class="result-box blue"><div class="result-label">Per 10 PSI</div><div class="result-value">${(r.galPerPsi * 10).toFixed(2)}<span class="result-unit">gal</span></div></div>
+        <div class="result-box"><div class="result-label">Pressure Rise</div><div class="result-value">${r.rise.toFixed(0)}<span class="result-unit">psi</span></div></div>`;
+      const t = r.triplex, k = r.truck;
+      const truckBest = k && !k.cannotSlow && k.minutes < t.minutes;
+      const runText = (p) => p.cannotSlow ? `${fmtPsiMin(p.runRate)} (over limit)` : `${fmtPsiMin(p.runRate)} (${p.limited ? 'held to limit' : 'pump-limited'})`;
+      const rows = [
+        ['Flow', `${t.gpm.toFixed(1)} gpm`, k && `${k.gpm.toFixed(1)} gpm`],
+        ['Rise rate wide open', fmtPsiMin(t.openRate), k && fmtPsiMin(k.openRate)],
+        ['Rate you’d run at', runText(t), k && runText(k), k && k.cannotSlow ? 'danger' : ''],
+        ['Run it at', t.neededSpm ? `about ${Math.round(t.neededSpm).toLocaleString()} strokes/min` : 'wide open',
+          k && (k.cannotSlow ? `needs ${k.neededBpm.toFixed(2)} bbl/min; slowest is ${k.minBpm.toFixed(2)}` : k.neededBpm ? `about ${k.neededBpm.toFixed(2)} bbl/min` : 'full rate'), k && k.cannotSlow ? 'danger' : ''],
+        ['Time to target', fmtMinutes(t.minutes), k && fmtMinutes(k.minutes), 'time'],
+        ['Pumped', `${Math.round(t.strokes).toLocaleString()} strokes`, k && `${(r.water / 42).toFixed(1)} bbl`],
+      ];
+      document.getElementById('ppCompare').innerHTML = `<thead><tr><th></th><th class="num">Triplex</th>${k ? '<th class="num">Kill truck</th>' : ''}</tr></thead><tbody>${rows.map(([label, tv, kv, flag]) =>
+        `<tr><td>${label}</td><td class="num${flag === 'time' && !truckBest ? ' best' : ''}">${tv}</td>${k ? `<td class="num${flag === 'time' && truckBest ? ' best' : ''}${flag === 'danger' ? ' danger' : ''}">${kv}</td>` : ''}</tr>`).join('')}</tbody>`;
+    }
+    const observed = val('pp_observed');
+    const factor = pumpAirFactor(volume, gps * spm, observed);
+    document.getElementById('ppObservedResults').classList.toggle('visible', factor !== null);
+    if (factor !== null) {
+      const rounded = Math.round(factor * 100) / 100;
+      const meaning = factor < 0.9 ? 'It is rising faster than theory. Check the strokes per minute and the line volume.'
+        : factor <= 1.2 ? 'That is a tight line with little or no air.'
+        : factor <= 1.6 ? 'The line is holding some air, or a little water is going out the bypass.'
+        : 'That is a lot of extra water: air in the line, the bypass open, or water going somewhere else.';
+      document.getElementById('ppObservedText').innerHTML = `At ${fmtPsiMin(observed)}, the line is taking about <strong>${rounded.toFixed(2)}×</strong> the theoretical water. ${meaning}`;
+      const use = document.getElementById('ppUseObserved');
+      use.textContent = `Use ${rounded.toFixed(2)}× as the water allowance`;
+      use.dataset.value = String(rounded);
+    }
+  }
+
+  // ── CARD 09: LEAK ESTIMATE ────────────────────────────────
+  // Water's volume expansion per °C (standard table), for the pressure a temperature change makes.
+  const WATER_EXPANSION_C = [[0, -0.068e-3], [5, 0.016e-3], [10, 0.088e-3], [15, 0.151e-3], [20, 0.207e-3], [25, 0.257e-3], [30, 0.303e-3], [35, 0.346e-3], [40, 0.385e-3], [50, 0.458e-3]];
+  const STEEL_VOLUME_EXPANSION_F = 3 * 6.5e-6;   // carbon steel, per °F
+
+  // Psi change per °F of water temperature in a full, closed steel line (about 14 at 60°F).
+  function psiPerDegreeF(tempF) {
+    const c = Math.min(50, Math.max(0, (tempF - 32) / 1.8));
+    let i = 0;
+    while (i < WATER_EXPANSION_C.length - 2 && c > WATER_EXPANSION_C[i + 1][0]) i++;
+    const [c0, b0] = WATER_EXPANSION_C[i], [c1, b1] = WATER_EXPANSION_C[i + 1];
+    const perC = b0 + (b1 - b0) * (c - c0) / (c1 - c0);
+    return (perC / 1.8 - STEEL_VOLUME_EXPANSION_F) * 225000;
+  }
+
+  function minutesBetween(t1, t2) {
+    const toMin = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+    const a = toMin(t1), b = toMin(t2);
+    if (a === null || b === null) return null;
+    const d = b - a;
+    return d > 0 ? d : d + 1440;   // past midnight
+  }
+
+  function estimateLeak(input) {
+    if (!(input.volume > 0) || isNaN(input.p1) || isNaN(input.p2)) return null;
+    const allowance = input.allowance > 0 ? input.allowance : 1;
+    const galPerPsi = input.volume / 225000 * allowance;
+    const drop = input.p1 - input.p2;                 // positive = pressure fell
+    const minutes = input.minutes > 0 ? input.minutes : null;
+    let tempDrop = null, perDegree = null;
+    if (!isNaN(input.temp1) && !isNaN(input.temp2)) {
+      perDegree = psiPerDegreeF((input.temp1 + input.temp2) / 2);
+      tempDrop = (input.temp1 - input.temp2) * perDegree;   // cooling drops the pressure
+    }
+    const unexplained = tempDrop === null ? drop : drop - tempDrop;
+    const leakGal = Math.max(unexplained, 0) * galPerPsi;
+    const perHour = minutes ? drop / minutes * 60 : null;
+    const projected = perHour !== null && input.hours > 0 ? input.p1 - perHour * input.hours : null;
+    return { galPerPsi, drop, minutes, perHour, projected, tempDrop, perDegree, unexplained,
+      allIfLeak: Math.max(drop, 0) * galPerPsi, leakGal, leakPerHour: minutes ? leakGal / minutes * 60 : null,
+      strokes: input.galPerStroke > 0 ? leakGal / input.galPerStroke : null };
+  }
+
+  function calcLeak() {
+    const val = (id) => parseFloat(document.getElementById(id).value);
+    const r = estimateLeak({ volume: val('lk_volume'), p1: val('lk_p1'), p2: val('lk_p2'), allowance: val('lk_allowance'),
+      minutes: minutesBetween(document.getElementById('lk_t1').value, document.getElementById('lk_t2').value),
+      temp1: val('lk_temp1'), temp2: val('lk_temp2'), hours: val('lk_hours'), galPerStroke: val('lk_gps') });
+    document.getElementById('lkResults').classList.toggle('visible', !!r);
+    if (!r) return;
+    const v = document.getElementById('lkVerdict');
+    const fmt = (n, d = 1) => n.toFixed(d);
+    if (r.drop <= 0) {
+      v.className = 'verdict good';
+      v.innerHTML = `<strong>No water lost</strong>The pressure ${r.drop < 0 ? `went up ${fmt(-r.drop)} psi` : 'held'}.`;
+    } else if (r.tempDrop !== null && r.unexplained <= 0) {
+      v.className = 'verdict good';
+      v.innerHTML = `<strong>Temperature explains the whole drop</strong>The pipe cooling accounts for about ${fmt(r.tempDrop)} psi of the ${fmt(r.drop)} psi drop.`;
+    } else if (r.tempDrop !== null) {
+      v.className = 'verdict warn';
+      v.innerHTML = `<strong>About ${fmt(r.leakGal)} gal not explained by temperature</strong>Temperature accounts for about ${fmt(Math.max(r.tempDrop, 0))} psi of the ${fmt(r.drop)} psi drop; the other ${fmt(r.unexplained)} psi is about ${fmt(r.leakGal)} gal.`;
+    } else {
+      v.className = 'verdict warn';
+      v.innerHTML = `<strong>Up to about ${fmt(r.allIfLeak)} gal if it is all leak</strong>Enter the pipe temperatures to take out the part the water cooling explains.`;
+    }
+    const box = (cls, label, value, unit) => `<div class="result-box ${cls}"><div class="result-label">${label}</div><div class="result-value">${value}<span class="result-unit">${unit}</span></div></div>`;
+    document.getElementById('lkResultGrid').innerHTML = [
+      box('highlight', 'Pressure Drop', fmt(r.drop), 'psi'),
+      r.minutes ? box('', 'Elapsed', fmtMinutes(r.minutes), '') : '',
+      r.perHour !== null ? box('', 'Drop Rate', fmt(r.perHour), 'psi/hr') : '',
+      box('green', 'Gallons per PSI', r.galPerPsi.toFixed(4), 'gal/psi'),
+      box('', 'If It Is All Leak', fmt(r.allIfLeak), 'gal'),
+      r.tempDrop !== null ? box('blue', 'Temperature Effect', fmt(r.tempDrop), 'psi') : '',
+      r.tempDrop !== null ? box('red', 'Leak Estimate', fmt(r.leakGal), 'gal') : '',
+      r.leakPerHour !== null && r.drop > 0 ? box('', 'Leak Rate', fmt(r.leakPerHour, 2), 'gal/hr') : '',
+      r.strokes !== null && r.leakGal > 0 ? box('', 'Strokes to Put Back', Math.round(r.strokes).toLocaleString(), 'strokes') : '',
+      r.projected !== null && r.drop > 0 ? box('yellow', `At This Rate, ${document.getElementById("lk_hours").value} h From Start`, fmt(r.projected, 0), 'psi') : '',
+    ].join('');
+    document.getElementById('lkNote').textContent = (r.perDegree !== null
+      ? `Water in a full line changes about ${fmt(r.perDegree)} psi per °F at ${fmt((val('lk_temp1') + val('lk_temp2')) / 2)}°F (more when warm, less when cold). `
+      : '') + 'Estimates only: water ÷ 225,000 per psi times the allowance. A drop that slows down and levels off is usually temperature; a steady drop that doesn’t follow the temperature points to a leak.';
   }
 
   // Init
