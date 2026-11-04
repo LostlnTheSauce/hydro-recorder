@@ -31,7 +31,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
 
     <div class="monitor-shell hidden" id="viewerDashboard" data-dashboard-view="pressure">
       <header class="app-header">
-        <div class="brand-lockup"><div class="brand-mark"><img src="assets/grant-g-logo.png" alt=""></div><div><p>Grant G Solutions · Live field feed</p><h1 id="viewerTitle">Live pressure tests</h1></div></div>
+        <div class="brand-lockup"><div class="brand-mark"><img src="assets/grant-g-logo.png" alt=""></div><div><p>Grant G Solutions</p><h1 id="viewerTitle">Live pressure tests</h1></div></div>
         <div class="header-actions"><span class="pill" id="feedStatus">Connecting…</span><span class="pill">Read-only viewer</span></div>
       </header>
       <div class="error-box hidden" id="viewerFeedError"></div>
@@ -95,7 +95,7 @@ $validId = preg_match('/^[a-f0-9]{16}$/', $sessionId) === 1;
         <summary><span>Test notes</span><small>Updates entered by the test operator</small></summary>
         <div class="event-note-list" id="viewerNotesList"><p class="note-empty">No notes have been added.</p></div>
       </details>
-      <section class="pressure-log viewer-logbooks">
+      <section class="pressure-log viewer-logbooks" data-view-mode="A">
         <div class="logbook-card" data-viewer-logbook="A"></div>
         <div class="logbook-card second-test-control hidden" data-viewer-logbook="B"></div>
       </section>

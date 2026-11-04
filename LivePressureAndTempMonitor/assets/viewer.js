@@ -321,6 +321,9 @@
   function setViewerLayout(mode) {
     const allowedMode = !secondTestIsActive() && mode !== 'A' ? 'A' : mode;
     viewerGrid.dataset.viewMode = allowedMode;
+    // The logbooks follow the same Test 1 / Test 2 / Both choice.
+    const logbooks = document.querySelector('.viewer-logbooks');
+    if (logbooks) logbooks.dataset.viewMode = allowedMode;
     document.querySelectorAll('[data-layout-mode]').forEach((item) => item.classList.toggle('active', item.dataset.layoutMode === allowedMode));
     requestAnimationFrame(() => {
       renderGauge('A');
