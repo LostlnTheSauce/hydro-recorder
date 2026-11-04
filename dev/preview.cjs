@@ -40,7 +40,7 @@ http.createServer(async(req,res)=>{
     if(action==='chunk')return json({ok:true,data:chunks.get(url.searchParams.get('hash'))});
     return json({error:'Unknown action'},400);
   }
-  if(/^\/assets\/[\w.-]+$/.test(url.pathname) || ['/calculator.html','/recorder-report.html'].includes(url.pathname)) {
+  if(/^\/assets\/[\w.-]+$/.test(url.pathname) || ['/calculator.html','/recorder-report.html','/pump-planner.html'].includes(url.pathname)) {
     const file=path.join(app,url.pathname);if(!fs.existsSync(file)){res.writeHead(404);return res.end();}
     res.setHeader('Content-Type',file.endsWith('.css')?'text/css':/\.m?js$/.test(file)?'text/javascript':file.endsWith('.html')?'text/html':'image/png');return res.end(fs.readFileSync(file));
   }

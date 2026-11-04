@@ -9,7 +9,7 @@ http.createServer((req,res)=>{
     res.setHeader('content-type','text/html');return res.end(fixture().replace('href="?logout=1"','href="/host.php?demo=1"'));
   }
   const name=url.pathname;
-  if(!/^\/assets\/[\w.-]+$/.test(name)&&!['/calculator.html','/recorder-report.html'].includes(name)) {res.writeHead(404);return res.end('Practice preview only.');}
+  if(!/^\/assets\/[\w.-]+$/.test(name)&&!['/calculator.html','/recorder-report.html','/pump-planner.html'].includes(name)) {res.writeHead(404);return res.end('Practice preview only.');}
   const file=path.join(root,name);if(!fs.existsSync(file)){res.writeHead(404);return res.end();}
   res.setHeader('content-type',name.endsWith('.css')?'text/css':/\.m?js$/.test(name)?'text/javascript':name.endsWith('.html')?'text/html':'image/png');res.end(fs.readFileSync(file));
 }).listen(49328,'127.0.0.1',()=>console.log('Practice preview: http://127.0.0.1:49328/host.php?demo=1'));

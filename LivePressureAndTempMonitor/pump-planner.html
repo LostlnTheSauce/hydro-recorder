@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pump Planner</title>
+<style>
+  /* Same light field theme as calculator.html. */
+  :root {
+    --bg: #eef2f5; --surface: #ffffff; --surface2: #f3f6f9; --border: #d5dee6;
+    --accent: #1f5b85; --text: #14283a; --muted: #56697a;
+    --green: #1d7a4f; --green-soft: #e6f4ec; --red: #a8321f; --red-soft: #fbeceb;
+    --yellow: #8a5d0a; --yellow-soft: #fdf4e1; --blue-soft: #e8f1f8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; padding-bottom: 48px; }
+  header { padding: 16px 22px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  header h1 { font-size: 1.4rem; font-weight: 650; letter-spacing: -.02em; }
+  header span { color: var(--muted); font-size: .85rem; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .card-header { padding: 14px 18px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .card-title { font-weight: 650; }
+  .card-note { color: var(--muted); font-size: .82rem; }
+  .card-body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .section-label { font-size: .75rem; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: .82rem; color: var(--muted); }
+  label small { font-size: .72rem; }
+  input { min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: .95rem; color: var(--text); background: #fff; width: 100%; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button { font: inherit; cursor: pointer; }
+  .btn { min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text); }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { min-height: 30px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--text); font-size: .8rem; }
+  .chip.on { background: var(--blue-soft); border-color: var(--accent); color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th { text-align: left; font-size: .75rem; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+  td { padding: 4px 6px; vertical-align: middle; }
+  .pipe-table td:last-child { width: 1%; white-space: nowrap; }
+  .pipe-table .remove { border: 0; background: none; color: var(--muted); font-size: 1.1rem; padding: 4px 8px; }
+  .pipe-table .remove:hover { color: var(--red); }
+  .muted { color: var(--muted); font-size: .85rem; }
+  .volume-line { font-size: .95rem; }
+  .volume-line b { font-variant-numeric: tabular-nums; }
+  .verdict { border-radius: 10px; padding: 14px 16px; border: 1px solid var(--border); background: var(--surface2); }
+  .verdict strong { display: block; font-size: 1.05rem; margin-bottom: 4px; }
+  .verdict.triplex { background: var(--green-soft); border-color: #b9dcc7; }
+  .verdict.truck { background: var(--blue-soft); border-color: #bcd3e6; }
+  .verdict.warn { background: var(--yellow-soft); border-color: #ecd59f; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; background: var(--surface); }
+  .stat span { display: block; font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .stat b { display: block; margin-top: 3px; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .compare { width: 100%; }
+  .compare th, .compare td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .compare th:not(:first-child), .compare td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+  .compare thead th { font-size: .8rem; color: var(--text); }
+  .compare tbody th { font-weight: 400; color: var(--muted); }
+  .compare .best { color: var(--green); font-weight: 650; }
+  .note { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+  .flag { color: var(--yellow); }
+  .bad { color: var(--red); }
+  .hidden { display: none !important; }
+  .scroll { overflow-x: auto; }
+  @media (max-width: 560px) {
+    header { padding: 14px 16px; }
+    .card-body { padding: 14px; }
+    .compare th, .compare td { padding: 7px 6px; font-size: .85rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pump Planner</h1>
+  <span>Triplex or kill truck: rise rate and time to test pressure</span>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Line</span><span class="card-note">One row per pipe size in the test section</span></div>
+    <div class="card-body">
+      <div class="scroll">
+        <table class="pipe-table">
+          <thead><tr><th>O.D. (in)</th><th>Wall (in)</th><th>Length (ft)</th><th></th></tr></thead>
+          <tbody id="pipeRows"></tbody>
+        </table>
+      </div>
+      <div><button type="button" class="btn" id="addPipe">+ Add pipe size</button></div>
+      <div class="row">
+        <label>Or line volume (gal)<small>Overrides the pipe rows when filled in</small><input type="number" id="volumeOverride" min="0" step="any" inputmode="decimal" placeholder="e.g. 287900"></label>
+      </div>
+      <p class="volume-line" id="volumeLine">Enter pipe sizes or a line volume.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Test</span></div>
+    <div class="card-body">
+      <div class="row">
+        <label>Start pressure (psi)<input type="number" id="start" step="any" inputmode="decimal" value="0"></label>
+        <label>Target pressure (psi)<input type="number" id="target" step="any" inputmode="decimal" placeholder="e.g. 670"></label>
+        <label>Max rate (psi/min)<small>Leave blank for no limit</small><input type="number" id="limit" min="0" step="any" inputmode="decimal" placeholder="e.g. 10"></label>
+      </div>
+      <div class="row">
+        <label>Water allowance (× theory)<small>Air in the line makes each psi take more water</small><input type="number" id="allowance" min="0.5" step="0.05" inputmode="decimal" value="1"></label>
+      </div>
+      <div class="chips" id="allowanceChips">
+        <button type="button" class="chip" data-allowance="1">1.0× tight line</button>
+        <button type="button" class="chip" data-allowance="1.15">1.15× a little air</button>
+        <button type="button" class="chip" data-allowance="1.5">1.5× some air</button>
+        <button type="button" class="chip" data-allowance="2">2.0× a lot of air</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Pumps</span><span class="card-note">Net rate into the line, with the bypass closed</span></div>
+    <div class="card-body">
+      <p class="section-label">Triplex</p>
+      <div class="row">
+        <label>Gallons per stroke<input type="number" id="galPerStroke" min="0" step="any" inputmode="decimal" value="0.0068"></label>
+        <label>Strokes per minute<small>Count the counter for one minute</small><input type="number" id="spm" min="0" step="any" inputmode="decimal" value="1500"></label>
+      </div>
+      <p class="muted" id="triplexFlow"></p>
+      <p class="section-label">Kill truck</p>
+      <div class="row">
+        <label>Rate (bbl/min)<small>Leave blank to plan the triplex only</small><input type="number" id="truckBpm" min="0" step="any" inputmode="decimal" placeholder="e.g. 1"></label>
+        <label>Lowest steady rate (bbl/min)<small>Optional: how slow it can run</small><input type="number" id="truckMinBpm" min="0" step="any" inputmode="decimal" placeholder="e.g. 0.25"></label>
+      </div>
+      <p class="muted" id="truckFlow"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Plan</span><span class="card-note">Pumping time only; holds are not included</span></div>
+    <div class="card-body" id="results">
+      <p class="muted" id="resultsEmpty">Fill in the line, the target pressure and the triplex to see the plan.</p>
+      <div id="resultsBody" class="hidden">
+        <div class="verdict" id="verdict"><strong id="verdictTitle"></strong><span id="verdictText"></span></div>
+        <div class="stats" style="margin-top:14px">
+          <div class="stat"><span>Water to pressure up</span><b id="statWater"></b></div>
+          <div class="stat"><span>Gallons per psi</span><b id="statGalPsi"></b></div>
+          <div class="stat"><span>Per 10 psi</span><b id="statPer10"></b></div>
+          <div class="stat"><span>Pressure rise</span><b id="statRise"></b></div>
+        </div>
+        <div class="scroll" style="margin-top:14px">
+          <table class="compare">
+            <thead><tr><th></th><th>Triplex</th><th id="truckHead">Kill truck</th></tr></thead>
+            <tbody id="compareBody"></tbody>
+          </table>
+        </div>
+        <p class="note" style="margin-top:10px">Gallons per psi = line volume ÷ 225,000 (the calculator's field constant) × the water allowance. Times assume a steady rate with the bypass closed.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Check while pumping</span><span class="card-note">How much air is the line holding?</span></div>
+    <div class="card-body">
+      <div class="row">
+        <label>Rise rate you're seeing (psi/min)<small>Triplex at the strokes per minute above</small><input type="number" id="observed" min="0" step="any" inputmode="decimal" placeholder="e.g. 7"></label>
+      </div>
+      <div id="observedResult" class="hidden">
+        <p id="observedText"></p>
+        <div style="margin-top:10px"><button type="button" class="btn" id="useObserved"></button></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const FIELD_CONSTANT = 225000;   // gal per psi = volume / 225,000, same as the calculator
+  const GAL_PER_BBL = 42;
+  const STORE = 'pumpPlanner.v1';
+  const $ = (id) => document.getElementById(id);
+  const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+
+  function pipeGallons(od, wall, lengthFt) {
+    const id = od - 2 * wall;
+    if (!(id > 0) || !(lengthFt > 0)) return null;
+    return Math.PI * (id / 2) ** 2 * lengthFt * 12 / 231;
+  }
+
+  // Pure planning math. Exposed for tests and for the "Check while pumping" card.
+  function plan(input) {
+    const volume = input.volume;
+    const allowance = input.allowance > 0 ? input.allowance : 1;
+    const rise = input.target - input.start;
+    if (!(volume > 0) || !(rise > 0) || !(input.galPerStroke > 0) || !(input.spm > 0)) return null;
+    const galPerPsi = volume / FIELD_CONSTANT * allowance;
+    const water = galPerPsi * rise;
+    const limit = input.limit > 0 ? input.limit : null;
+    const pump = (gpm, minGpm) => {
+      const openRate = gpm / galPerPsi;
+      let runRate = limit ? Math.min(openRate, limit) : openRate;
+      const neededGpm = limit && openRate > limit ? limit * galPerPsi : null;
+      // A truck that can't run slower than the limit allows would overshoot it.
+      const cannotSlow = neededGpm !== null && minGpm > 0 && minGpm > neededGpm;
+      if (cannotSlow) runRate = minGpm / galPerPsi;
+      return { gpm, openRate, runRate, limited: neededGpm !== null && !cannotSlow, neededGpm, cannotSlow,
+        minRate: minGpm > 0 ? minGpm / galPerPsi : null, minutes: rise / runRate };
+    };
+    const triplexGpm = input.galPerStroke * input.spm;
+    const triplex = pump(triplexGpm, 0);
+    triplex.strokes = water / input.galPerStroke;
+    triplex.neededSpm = triplex.neededGpm ? triplex.neededGpm / input.galPerStroke : null;
+    const truck = input.truckBpm > 0 ? pump(input.truckBpm * GAL_PER_BBL, (input.truckMinBpm || 0) * GAL_PER_BBL) : null;
+    if (truck) truck.neededBpm = truck.neededGpm ? truck.neededGpm / GAL_PER_BBL : null;
+
+    let verdict;
+    if (!truck) {
+      verdict = { pick: 'triplex', title: `Triplex: about ${fmtTime(triplex.minutes)} to ${fmtPsi(input.target)}`,
+        text: limit && triplex.openRate >= limit
+          ? `It can hold the ${fmtRate(limit)} limit with room to spare.`
+          : `It rises about ${fmtRate(triplex.runRate)} wide open${limit ? `, under the ${fmtRate(limit)} limit` : ''}. Enter a kill truck rate to compare.` };
+    } else if (truck.cannotSlow && limit) {
+      verdict = { pick: 'triplex', warn: true, title: 'Use your triplex: the kill truck can’t run slow enough',
+        text: `Holding ${fmtRate(limit)} needs ${fmtBpm(truck.neededBpm)}, but its lowest steady rate would push about ${fmtRate(truck.runRate)}. The triplex takes about ${fmtTime(triplex.minutes)}.` };
+    } else if (limit && triplex.openRate >= limit) {
+      verdict = { pick: 'triplex', title: 'Use your triplex',
+        text: `It can hold the ${fmtRate(limit)} limit by itself (about ${fmtRate(triplex.openRate)} wide open), so a kill truck saves no time. About ${fmtTime(triplex.minutes)} either way.` };
+    } else {
+      const saved = triplex.minutes - truck.minutes;
+      if (saved <= 0) {
+        verdict = { pick: 'triplex', title: 'Use your triplex: it is as fast as the kill truck',
+          text: `Triplex about ${fmtTime(triplex.minutes)}, kill truck about ${fmtTime(truck.minutes)}.` };
+      } else if (saved < 15) {
+        verdict = { pick: 'triplex', title: `Use your triplex: the kill truck saves only ${fmtTime(Math.max(saved, 0))}`,
+          text: `Triplex about ${fmtTime(triplex.minutes)}, kill truck about ${fmtTime(truck.minutes)}.` };
+      } else {
+        verdict = { pick: 'truck', title: `Kill truck saves about ${fmtTime(saved)}`,
+          text: `Kill truck about ${fmtTime(truck.minutes)}${truck.limited ? ` held to ${fmtRate(limit)}` : ''}; triplex about ${fmtTime(triplex.minutes)}${limit ? ` (it tops out at ${fmtRate(triplex.openRate)})` : ''}.` };
+      }
+    }
+    return { volume, galPerPsi, water, rise, limit, triplex, truck, verdict };
+  }
+
+  // How many times theory the line is taking, from the rise rate seen with the triplex.
+  function airFactor(volume, triplexGpm, observedRate) {
+    if (!(volume > 0) || !(triplexGpm > 0) || !(observedRate > 0)) return null;
+    return (triplexGpm / (volume / FIELD_CONSTANT)) / observedRate;
+  }
+
+  function fmtTime(minutes) {
+    if (!Number.isFinite(minutes)) return '—';
+    const m = Math.round(minutes);
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60), r = m % 60;
+    return r ? `${h} h ${r} min` : `${h} h`;
+  }
+  const fmtRate = (r) => `${r >= 10 ? r.toFixed(0) : r.toFixed(1)} psi/min`;
+  const fmtPsi = (p) => `${Math.round(p).toLocaleString()} psi`;
+  const fmtBpm = (b) => `${b.toFixed(2)} bbl/min`;
+  const fmtGal = (g) => g >= 100 ? Math.round(g).toLocaleString() : g.toFixed(g >= 10 ? 1 : 2);
+
+  // ── Page ──────────────────────────────────────────────
+  const ids = ['volumeOverride', 'start', 'target', 'limit', 'allowance', 'galPerStroke', 'spm', 'truckBpm', 'truckMinBpm', 'observed'];
+
+  function addPipeRow(values = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="number" min="0" step="any" inputmode="decimal" data-pipe="od" placeholder="e.g. 8.625"></td>
+      <td><input type="number" min="0" step="any" inputmode="decimal" data-pipe="wall" placeholder="e.g. 0.250"></td>
+      <td><input type="number" min="0" step="any" inputmode="decimal" data-pipe="length" placeholder="e.g. 29990"></td>
+      <td><button type="button" class="remove" aria-label="Remove this pipe size">×</button></td>`;
+    for (const key of ['od', 'wall', 'length']) if (values[key] != null) tr.querySelector(`[data-pipe="${key}"]`).value = values[key];
+    tr.querySelector('.remove').addEventListener('click', () => { tr.remove(); if (!$('pipeRows').children.length) addPipeRow(); update(); });
+    tr.querySelectorAll('input').forEach((input) => input.addEventListener('input', update));
+    $('pipeRows').appendChild(tr);
+  }
+
+  function pipeRows() {
+    return [...$('pipeRows').children].map((tr) => ({
+      od: num(tr.querySelector('[data-pipe="od"]').value),
+      wall: num(tr.querySelector('[data-pipe="wall"]').value),
+      length: num(tr.querySelector('[data-pipe="length"]').value),
+    }));
+  }
+
+  function lineVolume() {
+    const override = num($('volumeOverride').value);
+    if (override > 0) return { volume: override, from: 'typed' };
+    let total = 0, feet = 0, bad = 0;
+    for (const row of pipeRows()) {
+      if (row.od === null && row.wall === null && row.length === null) continue;
+      const gal = row.od !== null && row.wall !== null && row.length !== null ? pipeGallons(row.od, row.wall, row.length) : null;
+      if (gal === null) { bad++; continue; }
+      total += gal; feet += row.length;
+    }
+    return { volume: total > 0 ? total : null, from: 'pipe', feet, bad };
+  }
+
+  function save() {
+    try {
+      const data = { pipes: pipeRows() };
+      for (const id of ids) data[id] = $(id).value;
+      localStorage.setItem(STORE, JSON.stringify(data));
+    } catch (e) { /* storage unavailable: the page still works */ }
+  }
+
+  function load() {
+    let data = null;
+    try { data = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { data = null; }
+    if (data) for (const id of ids) if (typeof data[id] === 'string') $(id).value = data[id];
+    const pipes = data && Array.isArray(data.pipes) && data.pipes.length ? data.pipes : [{}];
+    pipes.forEach(addPipeRow);
+  }
+
+  function update() {
+    const line = lineVolume();
+    $('volumeLine').innerHTML = line.volume
+      ? `Line volume <b>${Math.round(line.volume).toLocaleString()} gal</b> (${Math.round(line.volume / GAL_PER_BBL).toLocaleString()} bbl)${line.from === 'pipe' ? ` over ${Math.round(line.feet).toLocaleString()} ft` : ', as typed'}${line.bad ? ` <span class="flag">· ${line.bad} incomplete row${line.bad > 1 ? 's' : ''} left out</span>` : ''}`
+      : 'Enter pipe sizes or a line volume.';
+
+    const allowance = num($('allowance').value);
+    document.querySelectorAll('[data-allowance]').forEach((chip) => chip.classList.toggle('on', Number(chip.dataset.allowance) === allowance));
+
+    const gps = num($('galPerStroke').value), spm = num($('spm').value);
+    $('triplexFlow').textContent = gps > 0 && spm > 0 ? `${(gps * spm).toFixed(1)} gpm (${(gps * spm / GAL_PER_BBL).toFixed(2)} bbl/min)` : '';
+    const bpm = num($('truckBpm').value);
+    $('truckFlow').textContent = bpm > 0 ? `${(bpm * GAL_PER_BBL).toFixed(1)} gpm` : '';
+
+    const result = plan({ volume: line.volume, start: num($('start').value) ?? 0, target: num($('target').value),
+      limit: num($('limit').value), allowance, galPerStroke: gps, spm, truckBpm: bpm, truckMinBpm: num($('truckMinBpm').value) });
+    $('resultsEmpty').classList.toggle('hidden', !!result);
+    $('resultsBody').classList.toggle('hidden', !result);
+    if (result) renderPlan(result);
+    renderObserved(line.volume, gps > 0 && spm > 0 ? gps * spm : null);
+    save();
+  }
+
+  function renderPlan(r) {
+    const v = r.verdict;
+    $('verdict').className = `verdict ${v.warn ? 'warn' : v.pick}`;
+    $('verdictTitle').textContent = v.title;
+    $('verdictText').textContent = v.text;
+    $('statWater').textContent = `${fmtGal(r.water)} gal`;
+    $('statGalPsi').textContent = r.galPerPsi.toFixed(r.galPerPsi >= 1 ? 2 : 3);
+    $('statPer10').textContent = `${fmtGal(r.galPerPsi * 10)} gal`;
+    $('statRise').textContent = fmtPsi(r.rise);
+
+    const t = r.triplex, k = r.truck;
+    $('truckHead').classList.toggle('hidden', !k);
+    // A truck that would run over the limit is never shown as the better time.
+    const best = k && !k.cannotSlow && k.minutes < t.minutes ? 1 : 0;
+    const cell = (value, isBest) => `<td${isBest ? ' class="best"' : ''}>${value}</td>`;
+    const row = (label, tv, kv, highlight) => `<tr><th>${label}</th>${cell(tv, highlight && best === 0)}${k ? cell(kv, highlight && best === 1) : ''}</tr>`;
+    const runText = (p) => p.cannotSlow ? `<span class="bad">${fmtRate(p.runRate)} (over limit)</span>`
+      : p.limited ? `${fmtRate(p.runRate)} (held to limit)` : `${fmtRate(p.runRate)} (pump-limited)`;
+    const throttleTriplex = t.neededSpm ? `about ${Math.round(t.neededSpm).toLocaleString()} strokes/min` : 'wide open';
+    const throttleTruck = k ? (k.cannotSlow ? `<span class="bad">needs ${fmtBpm(k.neededBpm)}; slowest is ${fmtBpm(k.minRate * r.galPerPsi / GAL_PER_BBL)}</span>`
+      : k.neededBpm ? `about ${fmtBpm(k.neededBpm)}` : 'full rate') : '';
+    $('compareBody').innerHTML = [
+      row('Flow', `${t.gpm.toFixed(1)} gpm`, k ? `${k.gpm.toFixed(1)} gpm` : ''),
+      row('Rise rate wide open', fmtRate(t.openRate), k ? fmtRate(k.openRate) : ''),
+      row('Rate you’d run at', runText(t), k ? runText(k) : ''),
+      row('Run it at', throttleTriplex, throttleTruck),
+      row('Time to target', fmtTime(t.minutes), k ? fmtTime(k.minutes) : '', true),
+      row('Pumped', `${Math.round(t.strokes).toLocaleString()} strokes`, k ? `${(r.water / GAL_PER_BBL).toFixed(1)} bbl` : ''),
+    ].join('');
+  }
+
+  function renderObserved(volume, triplexGpm) {
+    const observed = num($('observed').value);
+    const factor = airFactor(volume, triplexGpm, observed);
+    $('observedResult').classList.toggle('hidden', factor === null);
+    if (factor === null) return;
+    const rounded = Math.round(factor * 100) / 100;
+    let meaning;
+    if (factor < 0.9) meaning = 'It is rising faster than theory. Check the strokes per minute and the line volume entered.';
+    else if (factor <= 1.2) meaning = 'That is a tight line with little or no air.';
+    else if (factor <= 1.6) meaning = 'The line is holding some air, or a little water is going out the bypass.';
+    else meaning = 'That is a lot of extra water: air in the line, the bypass open, or water going somewhere else.';
+    $('observedText').innerHTML = `At ${fmtRate(observed)}, the line is taking about <b>${rounded.toFixed(2)}×</b> the theoretical water. ${meaning}`;
+    $('useObserved').textContent = `Use ${rounded.toFixed(2)}× as the water allowance`;
+    $('useObserved').dataset.value = String(rounded);
+  }
+
+  window.pumpPlanner = { plan, airFactor, pipeGallons, fmtTime };
+
+  load();
+  $('addPipe').addEventListener('click', () => { addPipeRow(); update(); });
+  for (const id of ids) $(id).addEventListener('input', update);
+  document.querySelectorAll('[data-allowance]').forEach((chip) => chip.addEventListener('click', () => { $('allowance').value = chip.dataset.allowance; update(); }));
+  $('useObserved').addEventListener('click', (e) => { $('allowance').value = e.currentTarget.dataset.value; update(); });
+  update();
+})();
+</script>
+</body>
+</html>

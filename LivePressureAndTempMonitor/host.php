@@ -372,9 +372,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       <nav class="tool-tabs" aria-label="Hydrotest tools">
         <button class="active" type="button" data-tool-tab="calculator">Calculator</button>
         <button type="button" data-tool-tab="reports">Recorder report</button>
+        <button type="button" data-tool-tab="pumps">Pump planner</button>
       </nav>
       <div class="tool-frame-section" data-tool-frame="calculator"><iframe src="calculator.html" title="Hydrotest calculator"></iframe></div>
       <div class="tool-frame-section hidden" data-tool-frame="reports"><iframe src="recorder-report.html" title="Pressure recorder report"></iframe></div>
+      <div class="tool-frame-section hidden" data-tool-frame="pumps"><iframe src="pump-planner.html" title="Pump planner"></iframe></div>
     </section>
     <footer><span>XP2i / XP3i compatible • 9600 baud • one-second local and remote chart readings</span><span>The selected pressure offset is applied before display, logging and export.</span></footer>
     </section>

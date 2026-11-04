@@ -14,7 +14,8 @@ The physical charts stay the primary paperwork. The site records and helps fill 
 - **Temperatures**: start and stop the website's temperature recording, choose which probes viewers see, the combined pressure and temperature chart, and manual temperature entry.
 - **Setup**: job details, Atmos design PDF import, equipment, pressure offset, chart scale and window, probe names, then **Start new test** at the bottom. The equipment library is folded away at the end.
 - **Records**: official start and end times (a date box, today until set, and a time box left blank; nothing is saved until a time is typed), the 15-minute official record, Google Sheet buttons, downloads and the field log. Stroke counts and local backups are folded away below.
-- **Tools**: the hydrotest calculator and the recorder report. The calculator's formulas are not to be changed.
+- **Tools**: the hydrotest calculator, the recorder report and the pump planner. The calculator's formulas are not to be changed.
+- **Pump planner** (Tools): pipe sizes or a line volume, the start and target pressure, an optional max rate (psi/min) and a water allowance for air (1.0× for a tight line). It figures the water to pressure up (volume ÷ 225,000, the calculator's constant), then for the triplex (gal/stroke × strokes/min) and an optional kill truck (bbl/min, and the slowest rate it can hold) the rise rate wide open, the rate you'd run at, how far to throttle back to hold the limit, the time to target and the strokes or barrels. It says which pump to use: the triplex when it can hold the limit itself, when the truck saves under 15 minutes, or when the truck can't run slow enough. **Check while pumping** turns the rise rate you're seeing with the triplex into how many times theory the line is taking (about 1.0–1.2× is a tight line) and can use it as the allowance. Inputs are remembered on that browser only.
 - **Sharing**: create the viewer link and password. Sharing is optional; recording never depends on it.
 
 Use **Add second test** to run a second, fully independent test on its own gauge.
@@ -169,7 +170,7 @@ Requirements: PHP 8.0+ with PDO MySQL and cURL, MySQL or MariaDB, HTTPS, and des
 | `assets/test-design.js`, `test-design-parser.js`, `pdf*.mjs` | Atmos PDF import (PDF.js, license in `PDFJS-LICENSE.txt`). |
 | `assets/demo.js` | Practice demo. |
 | `assets/*.css` | `workspace.css` is the base design; the others add to it. |
-| `calculator.html`, `recorder-report.html` | Tools tab. |
+| `calculator.html`, `recorder-report.html`, `pump-planner.html` | Tools tab. |
 | `google-apps-script/` | The Sheet bridge and its setup steps. |
 | `templates/Atmos_Hydrotest_Template.xlsx` | Copy of the Atmos template. |
 | `tests/` | Automated tests. |
