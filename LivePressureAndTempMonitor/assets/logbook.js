@@ -68,7 +68,42 @@
     return td;
   }
 
-  function render(table, data, intervalMs, maxRows) {
+  // A selection is two row times; the newest row is 'latest' (its time moves with each reading).
+  const rowKey = (row) => (row.latest ? 'latest' : String(row.at));
+
+  function plural(n, word) { return `${n} ${word}${n === 1 ? '' : 's'}`; }
+  function spanText(ms) {
+    const seconds = Math.round(Math.abs(ms) / 1000);
+    if (seconds < 60) return plural(seconds, 'second');
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return plural(minutes, 'minute');
+    const hours = Math.floor(minutes / 60), rest = minutes % 60;
+    return rest ? `${plural(hours, 'hour')} ${plural(rest, 'minute')}` : plural(hours, 'hour');
+  }
+
+  // "12:00 AM → 4:00 AM · 4 hours · ▼ 0.4 psi (270.5 → 270.1) · Ambient ▲ 3.0°"
+  function selectionText(rows, channels, selection, decimals) {
+    if (!selection) return '';
+    const find = (key) => rows.find((row) => rowKey(row) === key);
+    const a = find(selection.start), b = selection.end ? find(selection.end) : null;
+    const clock = (row) => new Date(row.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (!a) return '';
+    if (!b || a === b) return `From ${clock(a)}: shift-click (or tap) another row to see the change.`;
+    const [older, newer] = a.at <= b.at ? [a, b] : [b, a];
+    const sign = (d, digits) => (Math.abs(d) < 0.5 * 10 ** -digits ? `${(0).toFixed(digits)}` : `${d > 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(digits)}`);
+    const parts = [`${clock(older)} → ${clock(newer)}`, spanText(newer.at - older.at)];
+    if (older.pressure && newer.pressure) {
+      const d = newer.pressure.value - older.pressure.value;
+      parts.push(`${sign(d, 1)} psi${Math.abs(d) >= 0.05 ? (d > 0 ? ' gained' : ' lost') : ''} (${older.pressure.value.toFixed(1)} → ${newer.pressure.value.toFixed(1)})`);
+    } else parts.push('pressure: no reading at one end');
+    for (const channel of channels) {
+      const o = older.temps[channel.key], n = newer.temps[channel.key];
+      if (o && n) parts.push(`${channel.name} ${sign(n.value - o.value, decimals)}°`);
+    }
+    return parts.join(' · ');
+  }
+
+  function render(table, data, intervalMs, maxRows, selection = null) {
     const channels = data.channels || [];
     const { rows, more } = buildRows({ ...data, intervalMs, maxRows });
     const head = document.createElement('tr');
@@ -92,6 +127,8 @@
       }
       const tr = document.createElement('tr');
       if (row.latest) tr.className = 'logbook-latest';
+      tr.dataset.rowKey = rowKey(row);
+      tr.classList.add('logbook-row');
       const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', ...(withSeconds || row.latest ? { second: '2-digit' } : {}) });
       tr.append(cell(time, null, row.at, 'logbook-time', row.latest ? ' · latest' : ''));
       tr.append(cell(row.pressure ? row.pressure.value.toFixed(1) : '—', row.pressure?.at, row.at, 'logbook-pressure', row.pressure ? ' psi' : ''));
@@ -117,7 +154,19 @@
       tr.append(td); body.append(tr);
     }
     table.tBodies[0].replaceChildren(body);
-    return more;
+    // Mark the selected stretch.
+    if (selection) {
+      const keys = rows.map(rowKey), i = keys.indexOf(selection.start), j = selection.end ? keys.indexOf(selection.end) : i;
+      if (i >= 0 && j >= 0) {
+        const [from, to] = i <= j ? [i, j] : [j, i];
+        table.tBodies[0].querySelectorAll('tr.logbook-row').forEach((tr) => {
+          const k = keys.indexOf(tr.dataset.rowKey);
+          tr.classList.toggle('logbook-selected', k >= from && k <= to);
+          tr.classList.toggle('logbook-selected-end', k === i || k === j);
+        });
+      }
+    }
+    return { more, rows, channels, decimals };
   }
 
   // Builds the interval buttons, table and "show older" button inside `container`.
@@ -127,7 +176,8 @@
     try { const saved = Number(root.localStorage?.getItem(storageKey)); if (INTERVALS.some(([ms]) => ms === saved)) intervalMs = saved; } catch (_) {}
     let maxRows = PAGE, signature = '';
     container.classList.add('logbook');
-    container.innerHTML = `<header class="logbook-header"><h3></h3><div class="logbook-intervals" role="group" aria-label="Log book interval">${INTERVALS.map(([ms, label]) => `<button type="button" data-logbook-interval="${ms}">${label}</button>`).join('')}</div></header><p class="logbook-help">Actual readings nearest each time, newest first. Hover a value to see exactly when it was recorded. Missing readings stay blank.</p><div class="log-table-wrap"><table class="logbook-table"><thead></thead><tbody></tbody></table></div><button type="button" class="logbook-more" hidden>Show older rows</button>`;
+    let selection = null;
+    container.innerHTML = `<header class="logbook-header"><h3></h3><div class="logbook-intervals" role="group" aria-label="Log book interval">${INTERVALS.map(([ms, label]) => `<button type="button" data-logbook-interval="${ms}">${label}</button>`).join('')}</div></header><p class="logbook-help">Actual readings nearest each time, newest first. Hover a value to see exactly when it was recorded. Missing readings stay blank. Click a row, then shift-click another, to see the change between them.</p><div class="logbook-selection" hidden><span></span><button type="button" class="logbook-selection-clear">Clear</button></div><div class="log-table-wrap"><table class="logbook-table"><thead></thead><tbody></tbody></table></div><button type="button" class="logbook-more" hidden>Show older rows</button>`;
     container.querySelector('h3').textContent = title;
     const table = container.querySelector('table');
     const moreButton = container.querySelector('.logbook-more');
@@ -138,13 +188,33 @@
       const next = JSON.stringify([intervalMs, maxRows, latest, data.temperatures?.length || 0, (data.channels || []).map((c) => c.key + c.name), data.wholeDegrees, data.pace && data.pace.word + data.pace.shown]);
       if (!force && next === signature) return;
       signature = next;
-      moreButton.hidden = !render(table, data, intervalMs, maxRows);
+      const result = render(table, data, intervalMs, maxRows, selection);
+      moreButton.hidden = !result.more;
+      const text = selectionText(result.rows, result.channels, selection, result.decimals);
+      const box = container.querySelector('.logbook-selection');
+      box.hidden = !text;
+      box.querySelector('span').textContent = text;
     }
+    // Click a row to start; shift-click (or, on a touch screen, tap) another to finish. Clicking
+    // the single selected row again clears it.
+    table.tBodies[0].addEventListener('mousedown', (event) => { if (event.shiftKey) event.preventDefault(); });
+    table.tBodies[0].addEventListener('click', (event) => {
+      const tr = event.target.closest('tr.logbook-row');
+      if (!tr) return;
+      const key = tr.dataset.rowKey;
+      const extend = selection && (event.shiftKey || (event.pointerType === 'touch' && !selection.end));
+      if (extend) selection = { start: selection.start, end: key };
+      else if (selection && !selection.end && selection.start === key) selection = null;
+      else selection = { start: key, end: null };
+      refresh(true);
+    });
+    container.querySelector('.logbook-selection-clear').addEventListener('click', () => { selection = null; refresh(true); });
     container.querySelector('.logbook-intervals').addEventListener('click', (event) => {
       const button = event.target.closest('[data-logbook-interval]');
       if (!button) return;
       intervalMs = Number(button.dataset.logbookInterval);
       maxRows = PAGE;
+      selection = null;
       try { root.localStorage?.setItem(storageKey, String(intervalMs)); } catch (_) {}
       markActive();
       refresh(true);

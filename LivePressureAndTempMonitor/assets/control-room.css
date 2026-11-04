@@ -487,3 +487,10 @@ table td { background:#ffffff55; }
 #viewerLogin > .brand-mark, #viewerLogin > p, #viewerLogin > h1 { justify-self:center; text-align:center; }
 #viewerLogin > .viewer-lock-title { justify-self:center; text-align:center; margin:-8px 0 4px; font-size:1.15rem; font-weight:700; color:var(--accent, #1f5b85); overflow-wrap:anywhere; }
 .viewer-logbooks[data-view-mode="A"] [data-viewer-logbook="B"], .viewer-logbooks[data-view-mode="B"] [data-viewer-logbook="A"] { display:none; }
+/* Log book: select rows to see the change between them. */
+.logbook-table tr.logbook-row { cursor:pointer; }
+.logbook-table tr.logbook-selected td { background:#eaf2fb; }
+.logbook-table tr.logbook-selected-end td { background:#d6e6f8; font-weight:700; }
+.logbook-selection { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin:8px 0 10px; padding:9px 12px; border:1px solid #b9d3ee; border-radius:8px; background:#f2f7fd; font-weight:600; font-size:.88rem; }
+.logbook-selection[hidden] { display:none; }
+.logbook-selection button { min-height:30px; padding:3px 12px; font-size:.8rem; margin-left:auto; }
