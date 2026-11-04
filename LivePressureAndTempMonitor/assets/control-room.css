@@ -486,3 +486,4 @@ table td { background:#ffffff55; }
 /* Viewer sign-in: logo, company and title centered. */
 #viewerLogin > .brand-mark, #viewerLogin > p, #viewerLogin > h1 { justify-self:center; text-align:center; }
 #viewerLogin > .viewer-lock-title { justify-self:center; text-align:center; margin:-8px 0 4px; font-size:1.15rem; font-weight:700; color:var(--accent, #1f5b85); overflow-wrap:anywhere; }
+.viewer-logbooks[data-view-mode="A"] [data-viewer-logbook="B"], .viewer-logbooks[data-view-mode="B"] [data-viewer-logbook="A"] { display:none; }

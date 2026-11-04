@@ -328,6 +328,14 @@ async function main() {
     await view.waitForFunction(()=>!/pipe/i.test(document.querySelector('[data-viewer-logbook="A"] thead').textContent));
     assert.doesNotMatch(await logA.innerText(),/73\.0°/,'Probes the host hides are omitted from the viewer log book');
     assert.match(await logB.locator('thead').innerText(),/pipe/i,'Second test permissions independent');
+    // The logbooks follow the Test 1 / Test 2 / Both buttons: one at a time unless Both.
+    await view.locator('[data-layout-mode="A"]').click();
+    assert.deepEqual([await logA.isVisible(), await logB.isVisible()], [true, false], 'Test 1: only its logbook');
+    await view.locator('[data-layout-mode="B"]').click();
+    assert.deepEqual([await logA.isVisible(), await logB.isVisible()], [false, true], 'Test 2: only its logbook');
+    await view.locator('[data-layout-mode="both"]').click();
+    assert.deepEqual([await logA.isVisible(), await logB.isVisible()], [true, true], 'Both: both logbooks');
+    assert.equal(await view.locator('.brand-lockup p').first().innerText(), 'Grant G Solutions', 'no "Live field feed" wording');
     assert.deepEqual(viewerErrors,[]);
     console.log('Viewer passed: existing open viewer drops old-job pressure and temperatures while retaining the other test.');
     console.log(`Screenshots: ${out}`);
