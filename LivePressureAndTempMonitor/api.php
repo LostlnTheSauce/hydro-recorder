@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/inc/bootstrap.php';
+require __DIR__ . '/inc/viewer-title.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'POST requests only.'], 405);
@@ -8,6 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $action = (string) ($_GET['action'] ?? '');
 $payload = json_input();
+
+// The viewer sign-in page shows the shared test's title before the password is entered.
+if ($action === 'viewer_title') {
+    json_response(['title' => viewer_title_get(db(), (string) ($payload['session_id'] ?? ''))]);
+}
 
 function require_live_session_publisher(array $payload): array
 {
@@ -86,7 +92,10 @@ if ($action === 'create' || $action === 'create_private') {
         'publish_token' => $publishToken,
         'viewer_enabled' => !$private,
     ];
-    if (!$private) $response['viewer_url'] = base_url() . '/viewer.php?id=' . rawurlencode($sessionId);
+    if (!$private) {
+        $response['viewer_url'] = base_url() . '/viewer.php?id=' . rawurlencode($sessionId);
+        viewer_title_set(db(), $sessionId, $title, $now);
+    }
     json_response($response, 201);
 }
 
@@ -103,6 +112,7 @@ if ($action === 'enable_viewer' || $action === 'disable_viewer') {
         $update = db()->prepare('UPDATE live_sessions SET title = :title, viewer_password_hash = :viewer_hash, updated_at = :updated WHERE id = :id');
         $update->execute(['title' => $title, 'viewer_hash' => password_hash($viewerPassword, PASSWORD_DEFAULT),
             'updated' => $now, 'id' => $session['id']]);
+        viewer_title_set(db(), (string) $session['id'], $title, $now);
         json_response(['ok' => true, 'viewer_enabled' => true,
             'viewer_url' => base_url() . '/viewer.php?id=' . rawurlencode((string) $session['id'])]);
     }
@@ -111,6 +121,7 @@ if ($action === 'enable_viewer' || $action === 'disable_viewer') {
     $update = db()->prepare('UPDATE live_sessions SET viewer_password_hash = :viewer_hash, updated_at = :updated WHERE id = :id');
     $update->execute(['viewer_hash' => password_hash(random_hex(32), PASSWORD_DEFAULT),
         'updated' => $now, 'id' => $session['id']]);
+    viewer_title_clear(db(), (string) $session['id']);
     json_response(['ok' => true, 'viewer_enabled' => false]);
 }
 

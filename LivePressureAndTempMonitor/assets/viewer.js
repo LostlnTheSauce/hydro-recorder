@@ -23,6 +23,17 @@
   let temperatureCursor = 0;
   const state = { A: { readings: [], liveTemperatures: [], config: {} }, B: { readings: [], liveTemperatures: [], config: {} }, notes: [] };
 
+  // Show which test this is on the sign-in page (the host's viewer title), before the password.
+  fetch(`${apiUrl}?action=viewer_title`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }) })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((result) => {
+      const box = document.getElementById('viewerLockTitle');
+      if (!box || !result || !result.title) return;
+      box.textContent = result.title;
+      box.hidden = false;
+    })
+    .catch(() => {});
+
   const defaults = {
     name: 'Pressure test', chartMax: 1000, traceColor: '#d43b3b', traceThickness: 1, windowThickness: 1,
     windowBottom: '', windowTop: '', warningMargin: 10, testStart: '', testEnd: '', showWindow: true,
