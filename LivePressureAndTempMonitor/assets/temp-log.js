@@ -6,6 +6,7 @@
 (function (root) {
   'use strict';
   const API = 'calibration-api.php';
+  const STYLE_KEY = 'grantg-hydro-temp-log-style';
   const KEYS = ['ambient', 'pipe', 'soil', 'aux'];
   const NAMES = { ambient: 'Ambient', pipe: 'Pipe', soil: 'Soil', aux: 'Auxiliary' };
   const COLORS = { ambient: '#3f7fbe', pipe: '#e07832', soil: '#77624c', aux: '#8a55ae' };
@@ -170,7 +171,11 @@
     if (opts.logoBytes) { try { logo = await doc.embedPng(opts.logoBytes); } catch (_) { logo = null; } }
 
     // Letterhead on every page of the log (certificate pages get a small footer only).
+    // Plain layout: just the data and the calibration details, no letterhead, job section,
+    // summary, chart or sign-off.
+    const plain = opts.style === 'plain';
     const letterhead = (page, title) => {
+      if (plain) return H - M - 6;
       let x = M;
       if (logo) { const s = 26 / logo.height; page.drawImage(logo, { x, y: H - M - 20, width: logo.width * s, height: 26 }); x += logo.width * s + 8; }
       text(page, opts.company || 'Grant G Solutions', x, H - M - 4, { size: 11, f: bold, color: navy });
@@ -199,16 +204,15 @@
     // ---- Cover page
     let page = doc.addPage([W, H]);
     let y = letterhead(page, 'TEMPERATURE LOG');
-    text(page, 'Hydrostatic Test Temperature Log', M, y - 6, { size: 18, f: bold });
+    text(page, plain ? 'Temperature Log' : 'Hydrostatic Test Temperature Log', M, y - 6, { size: plain ? 16 : 18, f: bold });
     const periodText = `${stamp(data.from)} to ${stamp(data.to)}`;
     text(page, `${data.period === 'official' ? 'Official test' : 'Entire recording'} · ${periodText}`, M, y - 22, { size: 9.5, color: muted });
     y -= 46;
-    y = section(page, 'Job', y);
     const hours = (data.to - data.from) / 3600000;
-    y = facts(page, [['Job number', job], ['PO / AFE', test.poAfe], ['Owner', test.owner], ['Contractor', test.contractor], ['Location', test.location || design.projectLocation],
+    if (!plain) y = facts(page, [['Job number', job], ['PO / AFE', test.poAfe], ['Owner', test.owner], ['Contractor', test.contractor], ['Location', test.location || design.projectLocation],
       ['Line', design.lineName || design.projectName], ["Owner's rep", test.ownerRep], ['Test medium', design.testMedium],
       ['Official start', data.official.start ? stamp(data.official.start) : ''], ['Official end', data.official.end ? stamp(data.official.end) : ''],
-      ['Log period', `${hours.toFixed(hours < 10 ? 2 : 1)} hours`], ['Log interval', `Every ${data.intervalMin} minute${data.intervalMin === 1 ? '' : 's'}`]], y);
+      ['Log period', `${hours.toFixed(hours < 10 ? 2 : 1)} hours`], ['Log interval', `Every ${data.intervalMin} minute${data.intervalMin === 1 ? '' : 's'}`]], section(page, 'Job', y));
 
     y = section(page, 'Temperature data logger', y - 4);
     const pastDue = cal.due && cal.due.getTime() < data.from;
@@ -218,7 +222,8 @@
       ['Probes logged', data.keys.map((k) => NAMES[k]).join(', ')], ['Readings in period', data.readingCount.toLocaleString()]], y);
     if (pastDue) { text(page, 'The logger\'s calibration was past due when this log began.', M, y + 2, { size: 8.5, f: bold, color: red }); y -= 12; }
 
-    // Summary table.
+    // Summary table and chart (full layout only).
+    if (!plain) {
     y = section(page, 'Summary (°F)', y - 4);
     const sumCols = [['Probe', M, 'left'], ['Start', M + 150, 'right'], ['End', M + 215, 'right'], ['Change', M + 285, 'right'], ['Low', M + 350, 'right'], ['High', M + 415, 'right'], ['Average', W - M, 'right']];
     page.drawRectangle({ x: M, y: y - 4, width: CW, height: 15, color: band });
@@ -275,6 +280,7 @@
       }
       y = B - 44;
     }
+    }
 
     // ---- Log pages
     const statement = `Readings were recorded by the temperature data logger above${serial ? ` (S/N ${serial})` : ''}. Each row shows the logger reading nearest the row time, within ${data.within >= 60000 ? `${Math.round(data.within / 60000)} minute${data.within >= 120000 ? 's' : ''}` : `${Math.round(data.within / 1000)} seconds`}. Values are shown as recorded: no averaging, corrections or adjustments. A dash means no reading in that window. Times are local${tz ? ` (${tz})` : ''}.`;
@@ -293,11 +299,17 @@
       for (const [label, w, align] of cols) { text(p, label, align === 'right' ? x + w - 6 : x + 6, top, { size: 8, f: bold, color: rgb(1, 1, 1), align }); x += w; }
       return top - 17;
     };
-    page = doc.addPage([W, H]);
-    y = letterhead(page, 'TEMPERATURE LOG');
-    text(page, `Temperature log · every ${data.intervalMin} minute${data.intervalMin === 1 ? '' : 's'}`, M, y, { size: 12, f: bold });
-    text(page, periodText, W - M, y, { size: 8.5, color: muted, align: 'right' });
-    y = tableHeader(page, y - 22);
+    if (plain) {
+      // The readings follow the calibration details on the first page.
+      y = section(page, `Readings · every ${data.intervalMin} minute${data.intervalMin === 1 ? '' : 's'}`, y - 4) + 2;
+      y = tableHeader(page, y);
+    } else {
+      page = doc.addPage([W, H]);
+      y = letterhead(page, 'TEMPERATURE LOG');
+      text(page, `Temperature log · every ${data.intervalMin} minute${data.intervalMin === 1 ? '' : 's'}`, M, y, { size: 12, f: bold });
+      text(page, periodText, W - M, y, { size: 8.5, color: muted, align: 'right' });
+      y = tableHeader(page, y - 22);
+    }
     const withSeconds = data.rows.some((r) => new Date(r.at).getSeconds() !== 0);
     data.rows.forEach((row, i) => {
       if (y < M + 40) { page = doc.addPage([W, H]); y = letterhead(page, 'TEMPERATURE LOG'); y = tableHeader(page, y - 4); }
@@ -315,16 +327,16 @@
 
     // Statement and sign-off, on a new page if they do not fit.
     const lines = wrap(statement, 8, font, CW);
-    if (y - (lines.length * 11 + 110) < M + 20) { page = doc.addPage([W, H]); y = letterhead(page, 'TEMPERATURE LOG'); }
+    if (y - (lines.length * 11 + (plain ? 10 : 110)) < M + 20) { page = doc.addPage([W, H]); y = letterhead(page, 'TEMPERATURE LOG'); }
     y -= 12;
     lines.forEach((line) => { text(page, line, M, y, { size: 8, color: muted }); y -= 11; });
     y -= 30;
-    const sign = (x, label) => {
+    function sign(x, label) {
       page.drawLine({ start: { x, y }, end: { x: x + 250, y }, thickness: 0.7, color: ink });
       page.drawLine({ start: { x: x + 274, y }, end: { x: x + 384, y }, thickness: 0.7, color: ink });
       text(page, label, x, y - 11, { size: 8, color: muted, max: 250 }); text(page, 'Date', x + 274, y - 11, { size: 8, color: muted });
     };
-    sign(M, 'Recorded by'); y -= 42; sign(M, "Reviewed by (owner's representative / inspector)");
+    if (!plain) { sign(M, 'Recorded by'); y -= 42; sign(M, "Reviewed by (owner's representative / inspector)"); }
 
     const logPages = doc.getPageCount();
     // ---- Calibration certificate
@@ -363,7 +375,7 @@
     const pages = doc.getPages(), total = pages.length, made = new Date().toLocaleDateString([], { month: '2-digit', day: '2-digit', year: 'numeric' });
     pages.forEach((p, i) => {
       const { width: pw } = p.getSize();
-      const left = i < logPages ? `Temperature log${job ? ` · Job ${job}` : ''}${serial ? ` · Logger S/N ${serial}` : ''} · Prepared ${made}` : `Attachment: calibration certificate${serial ? ` · S/N ${serial}` : ''}`;
+      const left = i < logPages ? `Temperature log${job && !plain ? ` · Job ${job}` : ''}${serial ? ` · Logger S/N ${serial}` : ''} · Prepared ${made}` : `Attachment: calibration certificate${serial ? ` · S/N ${serial}` : ''}`;
       if (i < logPages) p.drawLine({ start: { x: M, y: M - 8 }, end: { x: pw - M, y: M - 8 }, thickness: 0.5, color: rule });
       text(p, left, M, i < logPages ? M - 20 : 14, { size: 7.5, color: muted, max: pw - M * 2 - 70 });
       text(p, `Page ${i + 1} of ${total}`, pw - M, i < logPages ? M - 20 : 14, { size: 7.5, color: muted, align: 'right' });
@@ -391,6 +403,9 @@
     const periodSelect = dialog.querySelector('.temp-log-period');
     periodSelect.value = official.start ? 'official' : 'all';
     periodSelect.querySelector('option[value="official"]').disabled = !official.start;
+    // Layout: the last one used on this browser (Full the first time).
+    const styleSelect = dialog.querySelector('.temp-log-style');
+    try { styleSelect.value = root.localStorage.getItem(STYLE_KEY) === 'plain' ? 'plain' : 'full'; } catch (_) { styleSelect.value = 'full'; }
     const decimals = Number(test.temperatureDecimals);
     dialog.querySelector('.temp-log-decimals').value = String([1, 2, 3].includes(decimals) ? decimals : 1);
     const loggerSelect = dialog.querySelector('.temp-log-logger');
@@ -432,7 +447,8 @@
         }
         let logoBytes = null;
         try { const r = await fetch('assets/grant-g-logo.png'); if (r.ok) logoBytes = new Uint8Array(await r.arrayBuffer()); } catch (_) {}
-        const bytes = await build(record, { period: periodSelect.value, intervalMin: Number(dialog.querySelector('.temp-log-interval').value), probes,
+        try { root.localStorage.setItem(STYLE_KEY, styleSelect.value); } catch (_) {}
+        const bytes = await build(record, { style: styleSelect.value, period: periodSelect.value, intervalMin: Number(dialog.querySelector('.temp-log-interval').value), probes,
           decimals: Number(dialog.querySelector('.temp-log-decimals').value), logger, paper, paperBytes, logoBytes });
         const name = `Temperature log${test.jobNumber ? ` - ${test.jobNumber}` : ''}.pdf`.replace(/[\\/:*?"<>|]+/g, '-');
         const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));

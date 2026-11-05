@@ -102,8 +102,24 @@ async function main() {
       return dark / (d.length / 4);
     }, fs.readFileSync(path.join(outDir, certPng)).toString('base64'));
     if (!certificate) assert.ok(darkTop < 0.05, `black bands cropped off the certificate photo (dark share ${darkTop.toFixed(3)})`);
+    // Plain layout: just the logger data and calibration, pipe only, two decimals.
+    await page.locator('.temp-log-style').selectOption('plain');
+    await page.locator('.temp-log-probes input[value="ambient"]').uncheck();
+    await page.locator('.temp-log-probes input[value="soil"]').uncheck();
+    await page.evaluate(() => { document.querySelector('.temp-log-download').hidden = true; });
+    await page.locator('#tempLogDialog [value="build"]').click();
+    await page.waitForFunction(() => !document.querySelector('.temp-log-download').hidden, null, { timeout: 30000 });
+    const plainPdf = Buffer.from(await page.evaluate(async () => [...new Uint8Array(await (await fetch(document.querySelector('.temp-log-download').href)).arrayBuffer())]));
+    const plainPath = path.join(outDir, 'temperature-log-plain.pdf');
+    fs.writeFileSync(plainPath, plainPdf);
+    const plainText = execFileSync('pdftotext', ['-layout', plainPath, '-']).toString();
+    for (const expected of ['Temperature Log', 'MadgeTech RTDTempX4', 'T88206', '08/28/2026', '02/28/2027', 'Pipe °F', '57.20', 'Begin test', 'Calibration certificate']) assert.ok(plainText.includes(expected), `plain PDF has ${expected}`);
+    for (const absent of ['Grant G Solutions', 'Hydrostatic Test', 'ATM 4502', 'Bobcat', 'Reviewed by', 'SUMMARY', 'Ambient °F']) assert.ok(!plainText.includes(absent), `plain PDF leaves out ${absent}`);
+    const plainPages = Number(/Pages:\s+(\d+)/.exec(execFileSync('pdfinfo', [plainPath]).toString())[1]);
+    assert.equal(plainPages, 2, 'one page of data, one certificate page');
+    assert.equal(await page.evaluate(() => localStorage.getItem('grantg-hydro-temp-log-style')), 'plain', 'layout remembered');
     assert.deepEqual(errors, []);
-    console.log(`Temperature log PDF: 15-minute official log with raw nearest readings, gaps as dashes, unplugged probe ignored, dialog defaults, ${pages} numbered pages with sign-off and the cropped calibration certificate passed.`);
+    console.log(`Temperature log PDF (plain layout: data and calibration only, ${plainPages} pages) and`, `Temperature log PDF: 15-minute official log with raw nearest readings, gaps as dashes, unplugged probe ignored, dialog defaults, ${pages} numbered pages with sign-off and the cropped calibration certificate passed.`);
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
