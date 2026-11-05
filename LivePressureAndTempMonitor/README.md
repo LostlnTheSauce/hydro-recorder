@@ -66,6 +66,10 @@ On the Live test page (one per test) and on the viewer's Logbook tab. Each row i
 
 **Change between two rows:** click a row, then shift-click another (on a phone, tap one and then the other). A line above the table shows the span and the change, e.g. "9:00 AM → 12:00 PM · 3 hours · ▼ 1.8 psi lost (269.4 → 267.6)", plus each probe's temperature change; the rows between are highlighted. It stays while new readings arrive; **Clear** or a different interval removes it. Works on the host and the viewer.
 
+## What viewers see of the temperatures
+
+Viewers see a probe only when it is both checked under **Probes used for this test** (Connect & record panel) and ticked on the host's own temperature chart (Ambient, Pipe, Soil, Auxiliary). Untick a probe on the host chart and it disappears from the viewer's readout, chart and log book; the ticks are saved with the test. By default the chart shows Ambient, Pipe and Soil, so Auxiliary is not shared. The Auxiliary probe usually sits in the weatherproof box, so the host shows it on the field laptop battery line as **Box temperature (Auxiliary probe): 85.2 °F** (the latest reading from the last 10 minutes).
+
 ## Temperature smoothing
 
 A laptop charger running off a generator can make the logger readings jitter. **Smoothing** on the Temperatures page (per test) shows each probe as the average of its last 2 minutes of readings (the default), ignoring readings more than 5°F from the window's middle reading (so a loose-connection burst like −330° or +500° shorter than half the window never shows) and then dropping the highest and lowest fifth; 20 seconds, 1 minute and 5 minutes are also available, or Off. Longer settings are smoother but show real changes later (2 min: about 0.3° of leftover wiggle from half-degree noise, a real change shows within about 1½ minutes). It changes what the charts, readouts and log book show, on the host and for viewers (log book columns say "avg"). The saved readings, CSV and backup downloads, history log table and Google Sheet all keep the real readings. History replay has the same switch.

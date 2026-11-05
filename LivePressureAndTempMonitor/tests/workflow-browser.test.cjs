@@ -328,6 +328,13 @@ async function main() {
     await view.waitForFunction(()=>!/pipe/i.test(document.querySelector('[data-viewer-logbook="A"] thead').textContent));
     assert.doesNotMatch(await logA.innerText(),/73\.0°/,'Probes the host hides are omitted from the viewer log book');
     assert.match(await logB.locator('thead').innerText(),/pipe/i,'Second test permissions independent');
+    // Viewers see only the probes ticked on the host's chart, even when the test uses more.
+    mockViewerConfig.A.temperature.enabledProbes=['ambient','pipe','soil','aux'];
+    mockViewerConfig.A.temperature.viewerProbes=['pipe'];
+    await view.clock.runFor(3000);
+    await view.waitForFunction(()=>document.querySelector('[data-view-gauge="A"] .temp-toggle input[value="ambient"]').disabled && !document.querySelector('[data-view-gauge="A"] .temp-toggle input[value="pipe"]').disabled);
+    for (const key of ['ambient','soil','aux']) assert.equal(await view.locator(`[data-view-gauge="A"] .temp-toggle input[value="${key}"]`).isDisabled(),true,`${key} hidden from viewers`);
+    await view.waitForFunction(()=>/pipe/i.test(document.querySelector('[data-viewer-logbook="A"] thead').textContent)&&!/ambient|soil|aux/i.test(document.querySelector('[data-viewer-logbook="A"] thead').textContent));
     // The logbooks follow the Test 1 / Test 2 / Both buttons: one at a time unless Both.
     await view.locator('[data-layout-mode="A"]').click();
     assert.deepEqual([await logA.isVisible(), await logB.isVisible()], [true, false], 'Test 1: only its logbook');

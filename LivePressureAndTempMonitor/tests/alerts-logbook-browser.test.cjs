@@ -103,6 +103,13 @@ async function main() {
     assert.ok(await page.locator('#hostAlerts').isHidden(), '134.9 °F does not alert');
     await page.evaluate(() => window.testGauges[0].temperatureReadings.push({ at: Date.now(), source: 'live', sourceId: 's'.repeat(16), pipe: 70.4, aux: 136.2 }));
     await waitFor(async () => /Auxiliary is at 136\.2 °F/.test(await alerts()), 'aux heat alert');
+    // The Auxiliary probe shows as the box temperature on the field laptop battery line.
+    await waitFor(async () => /Box temperature \(Auxiliary probe\): 136\.2 °F/.test(await page.locator('.temperature-laptop-power').first().textContent()), 'box temperature on the battery line');
+    // Probes unticked on the host's temperature chart are hidden from viewers; the ticks are saved.
+    const chartBox = (key) => page.locator(`[data-gauge="A"] [data-temperature-panel] .temp-toggle input[value="${key}"]`);
+    if (await chartBox('ambient').isChecked()) await chartBox('ambient').evaluate((el) => el.click());
+    assert.deepEqual(await page.evaluate(() => window.testGauges[0].testState.chartProbes), ['pipe', 'soil']);
+    assert.deepEqual(await page.evaluate(() => window.testGauges[0].settings().temperature.viewerProbes), ['pipe', 'soil']);
     const toggle = page.locator('.aux-heat-alert-toggle').first();
     assert.equal(await toggle.isChecked(), true);
     await toggle.evaluate((input) => { input.checked = false; input.dispatchEvent(new Event('change')); });
