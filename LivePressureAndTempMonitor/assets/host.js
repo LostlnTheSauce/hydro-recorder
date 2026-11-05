@@ -522,7 +522,12 @@
           label.append(input, document.createTextNode(name)); probes.append(label);
           input.addEventListener('change', () => {
             this.testState.enabledProbes = [...probes.querySelectorAll('input[data-enabled-probe]:checked')].map(el => el.dataset.enabledProbe);
-            this.saveTestState(); publish();
+            // A probe switched back on starts ticked on the chart.
+            const box = this.temperaturePanel?.querySelector(`.temp-toggle input[value="${input.dataset.enabledProbe}"]`);
+            if (box && input.checked) box.checked = true;
+            this.applyProbeVisibility();
+            this.testState.chartProbes = this.chartProbes();
+            this.saveTestState(); publish(); this.drawTemperature();
           });
         }
         // Auxiliary often sits under the field laptop to watch its heat; switch off when it's used for something else.
@@ -2025,8 +2030,25 @@
       if (!this.lastTemperatureDrawAt || Date.now() - this.lastTemperatureDrawAt >= 3000) this.drawTemperature();
     }
 
+    // Probes not used for this test (Connect & record → Probes used for this test) are hidden on
+    // the host too: their readout tile and chart checkbox. Their readings are still kept, and the
+    // Auxiliary probe still feeds the box temperature and the laptop heat alert.
+    applyProbeVisibility() {
+      const used = this.testState.enabledProbes || ['ambient', 'pipe', 'soil', 'aux'];
+      for (const key of ['ambient', 'pipe', 'soil', 'aux']) {
+        const on = used.includes(key);
+        this.temperaturePanel?.querySelectorAll(`[data-temp-current="${key}"]`).forEach((tile) => { tile.hidden = !on; });
+        const box = this.temperaturePanel?.querySelector(`.temp-toggle input[value="${key}"]`);
+        if (!box) continue;
+        box.disabled = !on;
+        box.closest('label').hidden = !on;
+        if (!on) box.checked = false;
+      }
+    }
+
     drawTemperature() {
       this.lastTemperatureDrawAt = Date.now();
+      this.applyProbeVisibility();
       window.TemperatureChartRenderer.renderPanel(this.temperaturePanel, {
         pressureReadings: this.readings,
         temperatureReadings: this.temperatureReadings,

@@ -68,7 +68,7 @@ On the Live test page (one per test) and on the viewer's Logbook tab. Each row i
 
 ## What viewers see of the temperatures
 
-Viewers see a probe only when it is both checked under **Probes used for this test** (Connect & record panel) and ticked on the host's own temperature chart (Ambient, Pipe, Soil, Auxiliary). Untick a probe on the host chart and it disappears from the viewer's readout, chart and log book; the ticks are saved with the test. By default the chart shows Ambient, Pipe and Soil, so Auxiliary is not shared. The Auxiliary probe usually sits in the weatherproof box, so the host shows it on the field laptop battery line as **Box temperature (Auxiliary probe): 85.2 °F** (the latest reading from the last 10 minutes).
+Viewers see a probe only when it is both checked under **Probes used for this test** (Connect & record panel) and ticked on the host's own temperature chart (Ambient, Pipe, Soil, Auxiliary). Untick a probe on the host chart and it disappears from the viewer's readout, chart and log book; the ticks are saved with the test. By default the chart shows Ambient, Pipe and Soil, so Auxiliary is not shared. A probe unchecked under **Probes used for this test** is hidden on the host as well (its readout tile and chart checkbox); its readings are still kept, and the Auxiliary probe still feeds the box temperature and the laptop heat alert. Checking it again brings it back, ticked on the chart. The Auxiliary probe usually sits in the weatherproof box, so the host shows it on the field laptop battery line as **Box temperature (Auxiliary probe): 85.2 °F** (the latest reading from the last 10 minutes).
 
 ## Temperature smoothing
 
