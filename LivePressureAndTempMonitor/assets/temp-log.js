@@ -6,7 +6,10 @@
 (function (root) {
   'use strict';
   const API = 'calibration-api.php';
-  const STYLE_KEY = 'grantg-hydro-temp-log-style', CHART_KEY = 'grantg-hydro-temp-log-chart';
+  const STYLE_KEY = 'grantg-hydro-temp-log-style', CHART_KEY = 'grantg-hydro-temp-log-chart-v2', DECIMALS_KEY = 'grantg-hydro-temp-log-decimals';
+  // The field logger in use (MadgeTech certificate NC-26-09-01-060), offered when the equipment
+  // library has no temperature data logger yet. Every field can be changed before adding it.
+  const LOGGER_PRESET = { manufacturer: 'MadgeTech', name: 'RTDTempX4', serial: 'T88206', range: '4-channel RTD', calibrationDate: '2026-08-28', due: '2027-02-28' };
   const KEYS = ['ambient', 'pipe', 'soil', 'aux'];
   const NAMES = { ambient: 'Ambient', pipe: 'Pipe', soil: 'Soil', aux: 'Auxiliary' };
   const COLORS = { ambient: '#3f7fbe', pipe: '#e07832', soil: '#77624c', aux: '#8a55ae' };
@@ -103,6 +106,26 @@
     const slice = (list.at(-1).at - list[0].at) / maxPoints, kept = [];
     list.forEach((item) => { if (!kept.length || item.at - kept.at(-1).at >= slice) kept.push(item); });
     return kept;
+  }
+
+  // The round temperature recorder chart (0-150 °F, one turn = 24 hours), drawn by the site's
+  // own chart and returned as PNG bytes. Null where it cannot be drawn.
+  function roundChartPng(data) {
+    const renderer = root.PressureChartRenderer, doc = root.document;
+    if (!renderer || !doc?.body) return null;
+    const canvas = doc.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;left:-20000px;top:0;width:700px;display:block;';
+    doc.body.append(canvas);
+    try {
+      const channels = data.keys.map((key) => ({ key, name: NAMES[key], color: COLORS[key] }));
+      const last = data.to - 86400000 + 60000;
+      renderer.draw(canvas, [], { chartMax: 150, gridStep: 10, title: 'TEMPERATURE RECORDER', scaleLabel: '0–150 °F', traceThickness: 1.6, legend: channels,
+        traces: channels.map((c) => ({ color: c.color, readings: data.series[c.key].filter((p) => p.at >= last).map((p) => ({ at: p.at, value: p.value })) })) });
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
+      const binary = root.atob(base64), bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    } catch (_) { return null; } finally { canvas.remove(); }
   }
 
   function dueDate(item) {
@@ -242,21 +265,37 @@
     y -= 22;
     }
 
-    // Chart of the logger's temperatures (both layouts, unless switched off).
-    let chartH = opts.chart === false ? 0 : Math.min(190, y - 19 - (M + 70));
+    // Chart of the logger's temperatures: the round recorder chart (like the paper temperature
+    // recorder), a line graph, or none.
+    const chartMode = opts.chart === false || opts.chart === 'none' ? 'none' : opts.chart === 'line' || opts.chart === true ? 'line' : 'round';
+    const tableNeed = 17 + 17 + data.rows.length * rowH + 70;
+    // Plain layout: the round chart gets its own page after the readings (drawn further down).
+    if (chartMode === 'round' && !plain) {
+      const png = roundChartPng(data);
+      if (png) {
+        const image = await doc.embedPng(png);
+        const size = Math.min(230, y - 23 - 16 - (M + 20));
+        if (size >= 150) {
+          y = section(page, 'Temperature recorder chart', y);
+          page.drawImage(image, { x: M + (CW - size) / 2, y: y + 8 - size, width: size, height: size });
+          y = y + 8 - size - 16;
+        }
+      }
+    }
+    let chartH = chartMode === 'line' ? Math.min(190, y - 19 - (M + 70)) : 0;
     if (plain && chartH > 90) {
       // Shrink the chart a little when that keeps the whole table (and its note) on this page.
-      const need = 17 + 17 + data.rows.length * rowH + 70, room = (y - 23 - 44) - (M + 20);
-      if (chartH > room - need && room - need >= 110) chartH = room - need;
+      const room = (y - 23 - 44) - (M + 20);
+      if (chartH > room - tableNeed && room - tableNeed >= 110) chartH = room - tableNeed;
     }
     if (chartH > 90) {
       y = section(page, plain ? 'Temperature chart' : 'Temperatures over the period', plain ? y - 4 : y);
       const L = M + 34, R = W - M - 6, T = y - 4, B = y - chartH;
       const values = data.keys.flatMap((k) => data.series[k].map((p) => p.value));
       if (values.length) {
-        // Scale fitted to the readings (at least 1 °F tall), so a few tenths of change are visible.
+        // Scale fitted to the readings, at least 4 °F tall so the logger's tenth-of-a-degree flicker stays small.
         const vMin = values.reduce((a, b) => Math.min(a, b)), vMax = values.reduce((a, b) => Math.max(a, b));
-        const mid = (vMin + vMax) / 2, half = Math.max(0.5, (vMax - vMin) / 2 * 1.15);
+        const mid = (vMin + vMax) / 2, half = Math.max(2, (vMax - vMin) / 2 * 1.15);
         const stepY = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 25, 50].find((s) => (half * 2) / s <= 6) || 50;
         const low = Math.floor((mid - half) / stepY) * stepY;
         let high = Math.ceil((mid + half) / stepY - 1e-9) * stepY; if (high <= low) high = low + stepY;
@@ -337,9 +376,12 @@
 
     // Statement and sign-off, on a new page if they do not fit.
     const lines = wrap(statement, 8, font, CW);
-    if (y - (lines.length * 11 + (plain ? 10 : 110)) < M + 20) { page = doc.addPage([W, H]); y = letterhead(page, 'TEMPERATURE LOG'); }
+    // Plain layout with the round chart: a note that does not fit under the table goes under the chart instead.
+    const noteFits = y - (lines.length * 11 + (plain ? 10 : 110)) >= M + 20;
+    const noteOnChart = !noteFits && plain && chartMode === 'round';
+    if (!noteFits && !noteOnChart) { page = doc.addPage([W, H]); y = letterhead(page, 'TEMPERATURE LOG'); }
     y -= 12;
-    lines.forEach((line) => { text(page, line, M, y, { size: 8, color: muted }); y -= 11; });
+    if (!noteOnChart) lines.forEach((line) => { text(page, line, M, y, { size: 8, color: muted }); y -= 11; });
     y -= 30;
     function sign(x, label) {
       page.drawLine({ start: { x, y }, end: { x: x + 250, y }, thickness: 0.7, color: ink });
@@ -348,6 +390,20 @@
     };
     if (!plain) { sign(M, 'Recorded by'); y -= 42; sign(M, "Reviewed by (owner's representative / inspector)"); }
 
+    if (chartMode === 'round' && plain) {
+      const png = roundChartPng(data);
+      if (png) {
+        const image = await doc.embedPng(png);
+        page = doc.addPage([W, H]);
+        y = letterhead(page, 'TEMPERATURE LOG');
+        text(page, 'Temperature chart', M, y - 6, { size: 14, f: bold });
+        text(page, `${data.keys.map((k) => NAMES[k]).join(', ')} · ${periodText} · 0–150 °F, one turn = 24 hours`, M, y - 22, { size: 9, color: muted, max: CW });
+        const noteRoom = noteOnChart ? lines.length * 11 + 16 : 0;
+        const size = Math.min(CW, y - 40 - (M + 20) - noteRoom);
+        page.drawImage(image, { x: M + (CW - size) / 2, y: y - 40 - size, width: size, height: size });
+        if (noteOnChart) { let ny = y - 40 - size - 18; lines.forEach((line) => { text(page, line, M, ny, { size: 8, color: muted }); ny -= 11; }); }
+      }
+    }
     const logPages = doc.getPageCount();
     // ---- Calibration certificate
     if (opts.paperBytes && opts.paper) {
@@ -398,8 +454,10 @@
     const response = await fetch(`${API}?action=list`, { headers: { Accept: 'application/json' } });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'Calibration papers are unavailable.');
-    return { papers: new Map((result.papers || []).map((p) => [p.equipment_id, p])), items: result.equipment?.items || [] };
+    return { papers: new Map((result.papers || []).map((p) => [p.equipment_id, p])), items: result.equipment?.items || [], updatedAt: Number(result.equipment?.updatedAt) || 0 };
   }
+
+  const csrfToken = () => root.document.getElementById('historyApp')?.dataset.csrf || '';
 
   async function openDialog(record) {
     const dialog = document.getElementById('tempLogDialog');
@@ -416,30 +474,97 @@
     // Layout: the last one used on this browser (Full the first time).
     const styleSelect = dialog.querySelector('.temp-log-style');
     try { styleSelect.value = root.localStorage.getItem(STYLE_KEY) === 'plain' ? 'plain' : 'full'; } catch (_) { styleSelect.value = 'full'; }
-    const chartBox = dialog.querySelector('.temp-log-chart');
-    try { chartBox.checked = root.localStorage.getItem(CHART_KEY) !== '0'; } catch (_) { chartBox.checked = true; }
-    const decimals = Number(test.temperatureDecimals);
-    dialog.querySelector('.temp-log-decimals').value = String([1, 2, 3].includes(decimals) ? decimals : 1);
+    const chartSelect = dialog.querySelector('.temp-log-chart');
+    try { const saved = root.localStorage.getItem(CHART_KEY); chartSelect.value = ['round', 'line', 'none'].includes(saved) ? saved : 'round'; } catch (_) { chartSelect.value = 'round'; }
+    // Decimals: the last choice on this browser, else the test's own setting.
+    const decimalsSelect = dialog.querySelector('.temp-log-decimals');
+    let decimals = Number(test.temperatureDecimals);
+    try { const saved = Number(root.localStorage.getItem(DECIMALS_KEY)); if ([1, 2, 3].includes(saved)) decimals = saved; } catch (_) {}
+    decimalsSelect.value = String([1, 2, 3].includes(decimals) ? decimals : 1);
     const loggerSelect = dialog.querySelector('.temp-log-logger');
     loggerSelect.innerHTML = '<option value="">Loading equipment…</option>';
     message.textContent = '';
     dialog.querySelector('.temp-log-download').hidden = true;
+    const addBox = dialog.querySelector('.temp-log-add'), certBox = dialog.querySelector('.temp-log-cert');
+    addBox.hidden = true; certBox.hidden = true;
     dialog.showModal();
-    let papers = new Map(), items = [];
-    try { ({ papers, items } = await fetchPapers()); } catch (error) { message.textContent = `Calibration papers could not be loaded: ${error.message}`; }
-    // The equipment saved with this test, plus the current library (newer entries win).
+    let papers = new Map(), items = [], updatedAt = 0, loaded = false;
     const byId = new Map();
-    for (const item of [...(record.equipment || []), ...items]) if (item?.id) byId.set(item.id, item);
-    const all = [...byId.values()];
-    const loggers = all.filter((item) => item.type === 'temperature_logger');
-    const others = all.filter((item) => item.type !== 'temperature_logger' && item.type !== 'pump' && papers.has(item.id));
+    const load = async () => {
+      try { ({ papers, items, updatedAt } = await fetchPapers()); loaded = true; } catch (error) { message.textContent = `Calibration papers could not be loaded: ${error.message}`; }
+      // The equipment saved with this test, plus the current library (newer entries win).
+      byId.clear();
+      for (const item of [...(record.equipment || []), ...items]) if (item?.id) byId.set(item.id, item);
+    };
     const label = (item) => `${[item.manufacturer, item.name].filter(Boolean).join(' ')}${item.serial ? ` · S/N ${item.serial}` : ''}${papers.has(item.id) ? '' : ' (no certificate on file)'}`;
-    loggerSelect.innerHTML = ['<option value="">No logger / no certificate</option>',
-      loggers.length ? `<optgroup label="Temperature data loggers">${loggers.map((i) => `<option value="${esc(i.id)}">${esc(label(i))}</option>`).join('')}</optgroup>` : '',
-      others.length ? `<optgroup label="Other equipment with a certificate">${others.map((i) => `<option value="${esc(i.id)}">${esc(label(i))}</option>`).join('')}</optgroup>` : ''].join('');
-    const chosen = (test.equipment || {}).temperature_logger;
-    loggerSelect.value = loggers.some((i) => i.id === chosen) ? chosen : (loggers.find((i) => papers.has(i.id)) || loggers.find((i) => i.isDefault) || loggers[0])?.id || '';
-    dialog.querySelector('.temp-log-help').hidden = loggers.length > 0;
+    const showLoggers = (prefer) => {
+      const all = [...byId.values()];
+      const loggers = all.filter((item) => item.type === 'temperature_logger');
+      const others = all.filter((item) => item.type !== 'temperature_logger' && item.type !== 'pump' && papers.has(item.id));
+      loggerSelect.innerHTML = ['<option value="">No logger / no certificate</option>',
+        loggers.length ? `<optgroup label="Temperature data loggers">${loggers.map((i) => `<option value="${esc(i.id)}">${esc(label(i))}</option>`).join('')}</optgroup>` : '',
+        others.length ? `<optgroup label="Other equipment with a certificate">${others.map((i) => `<option value="${esc(i.id)}">${esc(label(i))}</option>`).join('')}</optgroup>` : ''].join('');
+      const chosen = prefer || (test.equipment || {}).temperature_logger;
+      loggerSelect.value = all.some((i) => i.id === chosen) ? chosen : (loggers.find((i) => papers.has(i.id)) || loggers.find((i) => i.isDefault) || loggers[0])?.id || '';
+      // No logger yet: offer to add it, filled in from its certificate.
+      addBox.hidden = loggers.length > 0 || !loaded;
+      if (!addBox.hidden) {
+        const fill = (cls, value) => { const input = addBox.querySelector(cls); if (!input.value) input.value = value; };
+        fill('.temp-log-add-make', LOGGER_PRESET.manufacturer); fill('.temp-log-add-model', LOGGER_PRESET.name); fill('.temp-log-add-serial', LOGGER_PRESET.serial);
+        fill('.temp-log-add-range', LOGGER_PRESET.range); fill('.temp-log-add-cal', LOGGER_PRESET.calibrationDate); fill('.temp-log-add-due', LOGGER_PRESET.due);
+      }
+      showCertificate();
+    };
+    const showCertificate = () => {
+      const logger = byId.get(loggerSelect.value);
+      certBox.hidden = !logger;
+      if (!logger) return;
+      const status = certBox.querySelector('.temp-log-cert-status'), on = papers.get(logger.id);
+      status.textContent = on ? `Certificate on file: ${on.file_name}` : 'No certificate on file for this logger.';
+      status.classList.toggle('missing', !on);
+      certBox.querySelector('.temp-log-cert-attach').textContent = on ? 'Replace certificate' : 'Attach certificate (PDF or photo)';
+    };
+    loggerSelect.onchange = showCertificate;
+    addBox.querySelector('.temp-log-add-save').onclick = async () => {
+      const value = (cls) => addBox.querySelector(cls).value.trim();
+      const name = value('.temp-log-add-model'), serial = value('.temp-log-add-serial'), cal = value('.temp-log-add-cal'), due = value('.temp-log-add-due');
+      if (!name || !serial) { message.textContent = 'Enter the logger model and serial number.'; return; }
+      // The website's list is the laptop's last shared list. Adding to an empty one from here would
+      // replace the laptop's own library, so that case goes through the Equipment library.
+      if (!updatedAt || !items.length) { message.textContent = 'Add the logger on Live recorder (Equipment library, type Temperature data logger), then reopen this.'; return; }
+      let months = 6;
+      if (cal && due) { const [cy, cm] = cal.split('-').map(Number), [dy, dm] = due.split('-').map(Number); months = Math.max(1, Math.min(60, (dy - cy) * 12 + (dm - cm))); }
+      const item = { id: `temperature-logger-${serial.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30)}-${Date.now().toString(36)}`, type: 'temperature_logger', name, serial,
+        manufacturer: value('.temp-log-add-make'), range: value('.temp-log-add-range'), calibrationDate: cal, intervalMonths: months, capacity: '', isDefault: true };
+      message.textContent = 'Adding the logger…';
+      try {
+        const response = await fetch(`${API}?action=equipment`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() }, body: JSON.stringify({ items: [...items, item], savedAt: Math.max(Date.now(), updatedAt + 1) }) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'The logger could not be added.');
+        await load();
+        showLoggers(item.id);
+        message.textContent = 'Logger added to the equipment library. Now attach its certificate.';
+      } catch (error) { message.textContent = error.message || String(error); }
+    };
+    const fileInput = certBox.querySelector('.temp-log-cert-file');
+    certBox.querySelector('.temp-log-cert-attach').onclick = () => fileInput.click();
+    fileInput.onchange = async () => {
+      const file = fileInput.files[0]; fileInput.value = '';
+      const logger = byId.get(loggerSelect.value);
+      if (!file || !logger) return;
+      message.textContent = 'Saving the certificate…';
+      try {
+        const calibration = root.HydroCalibration;
+        if (!calibration) throw new Error('The calibration tool did not load. Reload the page.');
+        if (!calibration.ready) { calibration.init({ csrf: csrfToken(), inventory: () => [...byId.values()] }); calibration.ready = true; }
+        await calibration.upload(logger, file);
+        await load();
+        showLoggers(logger.id);
+        message.textContent = 'Certificate saved. It goes in at the end of the PDF.';
+      } catch (error) { message.textContent = error.message || String(error); }
+    };
+    await load();
+    showLoggers();
 
     dialog.onsubmit = async (event) => {
       event.preventDefault();
@@ -460,9 +585,9 @@
         let logoBytes = null;
         try { const r = await fetch('assets/grant-g-logo.png'); if (r.ok) logoBytes = new Uint8Array(await r.arrayBuffer()); } catch (_) {}
         try { root.localStorage.setItem(STYLE_KEY, styleSelect.value); } catch (_) {}
-        try { root.localStorage.setItem(CHART_KEY, chartBox.checked ? '1' : '0'); } catch (_) {}
-        const bytes = await build(record, { style: styleSelect.value, chart: chartBox.checked, period: periodSelect.value, intervalMin: Number(dialog.querySelector('.temp-log-interval').value), probes,
-          decimals: Number(dialog.querySelector('.temp-log-decimals').value), logger, paper, paperBytes, logoBytes });
+        try { root.localStorage.setItem(CHART_KEY, chartSelect.value); root.localStorage.setItem(DECIMALS_KEY, decimalsSelect.value); } catch (_) {}
+        const bytes = await build(record, { style: styleSelect.value, chart: chartSelect.value, period: periodSelect.value, intervalMin: Number(dialog.querySelector('.temp-log-interval').value), probes,
+          decimals: Number(decimalsSelect.value), logger, paper, paperBytes, logoBytes });
         const name = `Temperature log${test.jobNumber ? ` - ${test.jobNumber}` : ''}.pdf`.replace(/[\\/:*?"<>|]+/g, '-');
         const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
         const link = dialog.querySelector('.temp-log-download');

@@ -26,6 +26,7 @@ function record() {
     events: [{ at: START, type: 'official-start', label: 'Official test started' }, { at: END, type: 'official-end', label: 'Official test ended' }], equipment: {} },
     readings: [{ at: START, pressure: 1740 }], temperatureReadings, equipment: [] };
 }
+const lib = { updatedAt: 1, items: [], papers: new Map() };
 const logger = { id: 'logger-t88206', type: 'temperature_logger', name: 'RTDTempX4', manufacturer: 'MadgeTech', serial: 'T88206', range: '4-channel RTD', calibrationDate: '2026-08-28', intervalMonths: 6, capacity: '', isDefault: true };
 
 async function main() {
@@ -35,8 +36,18 @@ async function main() {
     if (url.pathname === '/history-api.php') { res.setHeader('content-type', 'application/json'); return res.end('{"jobs":[]}'); }
     if (url.pathname === '/calibration-api.php') {
       res.setHeader('content-type', 'application/json');
-      if (url.searchParams.get('action') === 'list') return res.end(JSON.stringify({ ok: true, papers: [{ equipment_id: logger.id, file_name: 'cert.jpg', mime: 'image/jpeg' }], equipment: { updatedAt: 1, items: [logger, { id: 'dw', type: 'deadweight', name: 'Deadweight', serial: '5496' }] } }));
-      if (url.searchParams.get('action') === 'file') { res.setHeader('content-type', 'image/jpeg'); return res.end(global.certBytes); }
+      const action = url.searchParams.get('action');
+      if (req.method === 'POST') {
+        const body = []; req.on('data', (c) => body.push(c)); req.on('end', () => {
+          const raw = Buffer.concat(body);
+          assert.equal(req.headers['x-csrf-token'], 'fixture', 'writes carry the page token');
+          if (action === 'equipment') { const p = JSON.parse(raw); assert.ok(p.savedAt > lib.updatedAt); lib.items = p.items; lib.updatedAt = p.savedAt; return res.end(JSON.stringify({ ok: true, ...lib })); }
+          if (action === 'upload') { const id = req.headers['x-equipment-id']; lib.papers.set(id, { equipment_id: id, file_name: decodeURIComponent(req.headers['x-file-name']), mime: 'image/jpeg', bytes: raw }); return res.end(JSON.stringify({ ok: true, paper: { equipment_id: id, file_name: 'cert.jpg', mime: 'image/jpeg' } })); }
+        });
+        return;
+      }
+      if (action === 'list') return res.end(JSON.stringify({ ok: true, papers: [...lib.papers.values()].map(({ bytes, ...p }) => p), maxBytes: 8000000, equipment: { updatedAt: lib.updatedAt, items: lib.items } }));
+      if (action === 'file') { const paper = lib.papers.get(url.searchParams.get('equipment')); res.setHeader('content-type', 'image/jpeg'); return res.end(paper.bytes || global.certBytes); }
     }
     const file = path.join(root, url.pathname);
     if (url.pathname.startsWith('/assets/') && fs.existsSync(file)) { res.setHeader('content-type', file.endsWith('.css') ? 'text/css' : file.endsWith('.png') ? 'image/png' : 'text/javascript'); return res.end(fs.readFileSync(file)); }
@@ -57,6 +68,9 @@ async function main() {
       return [...new Uint8Array(await blob.arrayBuffer())];
     }));
     const rec = record();
+    await page.evaluate(() => { document.getElementById('historyApp').dataset.csrf = 'fixture'; });
+    lib.items = [logger, { id: 'dw', type: 'deadweight', name: 'Deadweight', serial: '5496' }];
+    lib.papers.set(logger.id, { equipment_id: logger.id, file_name: 'cert.jpg', mime: 'image/jpeg' });
     // Rows: 15-minute official log, nearest readings, unplugged Auxiliary ignored, gap shows as a dash.
     const data = await page.evaluate((r) => HydroTempLog.logData(r, { period: 'official', intervalMin: 15, probes: ['ambient', 'pipe', 'soil', 'aux'] }), rec);
     assert.equal(data.rows.length, 17, '4 hours every 15 minutes, start and end included');
@@ -75,6 +89,9 @@ async function main() {
     await page.waitForFunction(() => document.querySelector('.temp-log-logger option[value="logger-t88206"]'));
     assert.equal(await page.locator('.temp-log-logger').inputValue(), 'logger-t88206');
     assert.equal(await page.locator('.temp-log-decimals').inputValue(), '2');
+    assert.equal(await page.locator('.temp-log-chart').inputValue(), 'round', 'round recorder chart by default');
+    assert.equal(await page.locator('.temp-log-add').isHidden(), true, 'logger already in the library');
+    assert.match(await page.locator('.temp-log-cert-status').innerText(), /Certificate on file/);
     assert.deepEqual(await page.locator('.temp-log-probes input:checked').evaluateAll((b) => b.map((x) => x.value)), ['ambient', 'pipe', 'soil']);
     assert.equal(await page.locator('.temp-log-probes input[value="aux"]').isChecked(), false, 'Auxiliary present but off for this test');
     await page.evaluate(() => { window.open = () => null; });
@@ -113,11 +130,36 @@ async function main() {
     const plainPath = path.join(outDir, 'temperature-log-plain.pdf');
     fs.writeFileSync(plainPath, plainPdf);
     const plainText = execFileSync('pdftotext', ['-layout', plainPath, '-']).toString();
-    for (const expected of ['Temperature Log', 'MadgeTech RTDTempX4', 'T88206', '08/28/2026', '02/28/2027', 'Pipe °F', '57.20', 'Begin test', 'TEMPERATURE CHART', 'Calibration certificate']) assert.ok(plainText.includes(expected), `plain PDF has ${expected}`);
+    for (const expected of ['Temperature Log', 'MadgeTech RTDTempX4', 'T88206', '08/28/2026', '02/28/2027', 'Pipe °F', '57.20', 'Begin test', 'Temperature chart', 'one turn = 24 hours', 'Calibration certificate']) assert.ok(plainText.includes(expected), `plain PDF has ${expected}`);
     for (const absent of ['Grant G Solutions', 'Hydrostatic Test', 'ATM 4502', 'Bobcat', 'Reviewed by', 'SUMMARY', 'Ambient °F']) assert.ok(!plainText.includes(absent), `plain PDF leaves out ${absent}`);
+    const images = execFileSync('pdfimages', ['-list', plainPath]).toString().trim().split('\n').slice(2);
+    assert.equal(images.length, 2, 'round chart picture on page 1 and the certificate picture');
     const plainPages = Number(/Pages:\s+(\d+)/.exec(execFileSync('pdfinfo', [plainPath]).toString())[1]);
-    assert.ok(plainPages >= 2 && plainPages <= 3, `data pages then the certificate (${plainPages})`);
+    assert.equal(plainPages, 3, 'readings, the round chart, then the certificate');
     assert.equal(await page.evaluate(() => localStorage.getItem('grantg-hydro-temp-log-style')), 'plain', 'layout remembered');
+
+    // A library with no logger yet: add it from the certificate (filled in), attach the photo, make the PDF.
+    lib.items = [{ id: 'dw', type: 'deadweight', name: 'Deadweight', serial: '5496' }]; lib.papers.clear();
+    await page.locator('#tempLogDialog [value="cancel"]').click();
+    await page.evaluate(() => HydroTempLog.openDialog(window.rec));
+    await page.waitForFunction(() => !document.querySelector('.temp-log-add').hidden);
+    assert.equal(await page.locator('.temp-log-add-serial').inputValue(), 'T88206', 'filled in from the certificate');
+    assert.equal(await page.locator('.temp-log-add-due').inputValue(), '2027-02-28');
+    assert.equal(await page.locator('.temp-log-decimals').inputValue(), '2', 'decimals remembered');
+    await page.locator('.temp-log-add-save').click();
+    await page.waitForFunction(() => /Logger added/.test(document.querySelector('.temp-log-message').textContent));
+    const added = lib.items.find((i) => i.type === 'temperature_logger');
+    assert.equal(added.serial, 'T88206'); assert.equal(added.intervalMonths, 6); assert.equal(added.calibrationDate, '2026-08-28');
+    assert.equal(lib.items.length, 2, 'the rest of the library kept');
+    assert.equal(await page.locator('.temp-log-logger').inputValue(), added.id);
+    assert.match(await page.locator('.temp-log-cert-status').innerText(), /No certificate/);
+    await page.locator('.temp-log-cert-file').setInputFiles({ name: 'cert.jpg', mimeType: 'image/jpeg', buffer: global.certBytes });
+    await page.waitForFunction(() => /Certificate saved/.test(document.querySelector('.temp-log-message').textContent));
+    assert.ok(lib.papers.has(added.id), 'certificate stored for the new logger');
+    await page.evaluate(() => { document.querySelector('.temp-log-download').hidden = true; });
+    await page.locator('#tempLogDialog [value="build"]').click();
+    await page.waitForFunction(() => !document.querySelector('.temp-log-download').hidden, null, { timeout: 30000 });
+    assert.match(await page.locator('.temp-log-message').innerText(), /certificate attached/);
     assert.deepEqual(errors, []);
     console.log(`Temperature log PDF (plain layout: data and calibration only, ${plainPages} pages) and`, `Temperature log PDF: 15-minute official log with raw nearest readings, gaps as dashes, unplugged probe ignored, dialog defaults, ${pages} numbered pages with sign-off and the cropped calibration certificate passed.`);
   } finally { await browser.close(); server.close(); }

@@ -509,6 +509,8 @@ table td { background:#ffffff55; }
 .temp-log-fields label, .temp-log-logger-field, .temp-log-style-field { display:grid; gap:4px; font-size:.85rem; font-weight:600; }
 .temp-log-probes-set { border:1px solid var(--line); border-radius:6px; padding:8px 12px; margin:0; } .temp-log-probes-set legend { font-size:.85rem; font-weight:600; padding:0 4px; }
 .temp-log-probes { display:flex; flex-wrap:wrap; gap:6px 18px; } .temp-log-probes label { display:flex; align-items:center; gap:6px; font-size:.9rem; }
-.temp-log-check { display:flex; align-items:center; gap:8px; font-size:.9rem; }
+.temp-log-chart-field { display:grid; gap:4px; font-size:.85rem; font-weight:600; }
+.temp-log-add { display:grid; gap:10px; border:1px solid var(--line); border-radius:6px; padding:12px; background:#f6f9fb; } .temp-log-add-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 10px; } .temp-log-add-fields label { display:grid; gap:3px; font-size:.8rem; font-weight:600; } .temp-log-add-save { justify-self:start; }
+.temp-log-cert { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:.9rem; } .temp-log-cert-status.missing { color:#b5441a; font-weight:600; }
 .temp-log-help { color:var(--muted, #526675); } .temp-log-message:empty { display:none; } .temp-log-download { justify-self:start; }
 @media (max-width:520px) { .temp-log-fields { grid-template-columns:1fr 1fr; } #tempLogDialog { padding:20px; } }
