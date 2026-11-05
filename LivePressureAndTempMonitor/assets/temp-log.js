@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   const API = 'calibration-api.php';
-  const STYLE_KEY = 'grantg-hydro-temp-log-style';
+  const STYLE_KEY = 'grantg-hydro-temp-log-style', CHART_KEY = 'grantg-hydro-temp-log-chart';
   const KEYS = ['ambient', 'pipe', 'soil', 'aux'];
   const NAMES = { ambient: 'Ambient', pipe: 'Pipe', soil: 'Soil', aux: 'Auxiliary' };
   const COLORS = { ambient: '#3f7fbe', pipe: '#e07832', soil: '#77624c', aux: '#8a55ae' };
@@ -201,6 +201,7 @@
       return y - Math.ceil(list.length / 2) * rowH - 6;
     };
 
+    const rowH = 13.2;
     // ---- Cover page
     let page = doc.addPage([W, H]);
     let y = letterhead(page, 'TEMPERATURE LOG');
@@ -222,7 +223,7 @@
       ['Probes logged', data.keys.map((k) => NAMES[k]).join(', ')], ['Readings in period', data.readingCount.toLocaleString()]], y);
     if (pastDue) { text(page, 'The logger\'s calibration was past due when this log began.', M, y + 2, { size: 8.5, f: bold, color: red }); y -= 12; }
 
-    // Summary table and chart (full layout only).
+    // Summary table (full layout only).
     if (!plain) {
     y = section(page, 'Summary (°F)', y - 4);
     const sumCols = [['Probe', M, 'left'], ['Start', M + 150, 'right'], ['End', M + 215, 'right'], ['Change', M + 285, 'right'], ['Low', M + 350, 'right'], ['High', M + 415, 'right'], ['Average', W - M, 'right']];
@@ -239,22 +240,33 @@
     }
     text(page, 'Start and end are the first and last log rows. Low, high and average use every logger reading in the period.', M, y - 2, { size: 7.5, color: muted });
     y -= 22;
+    }
 
-    // Chart.
-    y = section(page, 'Temperatures over the period', y);
-    const chartH = Math.min(190, y - (M + 70));
+    // Chart of the logger's temperatures (both layouts, unless switched off).
+    let chartH = opts.chart === false ? 0 : Math.min(190, y - 19 - (M + 70));
+    if (plain && chartH > 90) {
+      // Shrink the chart a little when that keeps the whole table (and its note) on this page.
+      const need = 17 + 17 + data.rows.length * rowH + 70, room = (y - 23 - 44) - (M + 20);
+      if (chartH > room - need && room - need >= 110) chartH = room - need;
+    }
     if (chartH > 90) {
+      y = section(page, plain ? 'Temperature chart' : 'Temperatures over the period', plain ? y - 4 : y);
       const L = M + 34, R = W - M - 6, T = y - 4, B = y - chartH;
       const values = data.keys.flatMap((k) => data.series[k].map((p) => p.value));
       if (values.length) {
-        let low = Math.floor(values.reduce((a, b) => Math.min(a, b)) - 1), high = Math.ceil(values.reduce((a, b) => Math.max(a, b)) + 1);
-        const span = Math.max(2, high - low), stepY = [1, 2, 5, 10, 20, 25, 50].find((s) => span / s <= 6) || 50;
-        low = Math.floor(low / stepY) * stepY; high = Math.ceil(high / stepY) * stepY; if (high === low) high = low + stepY;
+        // Scale fitted to the readings (at least 1 °F tall), so a few tenths of change are visible.
+        const vMin = values.reduce((a, b) => Math.min(a, b)), vMax = values.reduce((a, b) => Math.max(a, b));
+        const mid = (vMin + vMax) / 2, half = Math.max(0.5, (vMax - vMin) / 2 * 1.15);
+        const stepY = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 25, 50].find((s) => (half * 2) / s <= 6) || 50;
+        const low = Math.floor((mid - half) / stepY) * stepY;
+        let high = Math.ceil((mid + half) / stepY - 1e-9) * stepY; if (high <= low) high = low + stepY;
+        const places = stepY >= 1 ? 0 : Number.isInteger(Math.round(stepY * 1000) / 100) ? 1 : 2;
         const px = (at) => L + (at - data.from) / Math.max(1, data.to - data.from) * (R - L);
         const py = (v) => B + (v - low) / (high - low) * (T - B);
-        for (let v = low; v <= high + 1e-9; v += stepY) {
+        for (let i = 0; low + i * stepY <= high + 1e-9; i++) {
+          const v = low + i * stepY;
           page.drawLine({ start: { x: L, y: py(v) }, end: { x: R, y: py(v) }, thickness: 0.4, color: faint });
-          text(page, `${v}°`, L - 5, py(v) - 3, { size: 7.5, color: muted, align: 'right' });
+          text(page, `${v.toFixed(places)}°`, L - 5, py(v) - 3, { size: 7.5, color: muted, align: 'right' });
         }
         page.drawLine({ start: { x: L, y: B }, end: { x: R, y: B }, thickness: 0.7, color: rule });
         for (let i = 0; i <= 4; i++) {
@@ -280,7 +292,6 @@
       }
       y = B - 44;
     }
-    }
 
     // ---- Log pages
     const statement = `Readings were recorded by the temperature data logger above${serial ? ` (S/N ${serial})` : ''}. Each row shows the logger reading nearest the row time, within ${data.within >= 60000 ? `${Math.round(data.within / 60000)} minute${data.within >= 120000 ? 's' : ''}` : `${Math.round(data.within / 1000)} seconds`}. Values are shown as recorded: no averaging, corrections or adjustments. A dash means no reading in that window. Times are local${tz ? ` (${tz})` : ''}.`;
@@ -292,7 +303,6 @@
     };
     const cols = [['Date', 70, 'left'], ['Time', 62, 'left'], ...data.keys.map((k) => [`${NAMES[k]} °F`, 70, 'right']), ['Remarks', 0, 'left']];
     const fixed = cols.reduce((s, c) => s + c[1], 0); cols[cols.length - 1][1] = Math.max(60, CW - fixed);
-    const rowH = 13.2;
     const tableHeader = (p, top) => {
       p.drawRectangle({ x: M, y: top - 5, width: CW, height: 17, color: navy });
       let x = M;
@@ -406,6 +416,8 @@
     // Layout: the last one used on this browser (Full the first time).
     const styleSelect = dialog.querySelector('.temp-log-style');
     try { styleSelect.value = root.localStorage.getItem(STYLE_KEY) === 'plain' ? 'plain' : 'full'; } catch (_) { styleSelect.value = 'full'; }
+    const chartBox = dialog.querySelector('.temp-log-chart');
+    try { chartBox.checked = root.localStorage.getItem(CHART_KEY) !== '0'; } catch (_) { chartBox.checked = true; }
     const decimals = Number(test.temperatureDecimals);
     dialog.querySelector('.temp-log-decimals').value = String([1, 2, 3].includes(decimals) ? decimals : 1);
     const loggerSelect = dialog.querySelector('.temp-log-logger');
@@ -448,7 +460,8 @@
         let logoBytes = null;
         try { const r = await fetch('assets/grant-g-logo.png'); if (r.ok) logoBytes = new Uint8Array(await r.arrayBuffer()); } catch (_) {}
         try { root.localStorage.setItem(STYLE_KEY, styleSelect.value); } catch (_) {}
-        const bytes = await build(record, { style: styleSelect.value, period: periodSelect.value, intervalMin: Number(dialog.querySelector('.temp-log-interval').value), probes,
+        try { root.localStorage.setItem(CHART_KEY, chartBox.checked ? '1' : '0'); } catch (_) {}
+        const bytes = await build(record, { style: styleSelect.value, chart: chartBox.checked, period: periodSelect.value, intervalMin: Number(dialog.querySelector('.temp-log-interval').value), probes,
           decimals: Number(dialog.querySelector('.temp-log-decimals').value), logger, paper, paperBytes, logoBytes });
         const name = `Temperature log${test.jobNumber ? ` - ${test.jobNumber}` : ''}.pdf`.replace(/[\\/:*?"<>|]+/g, '-');
         const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));

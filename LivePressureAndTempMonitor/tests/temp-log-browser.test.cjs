@@ -113,10 +113,10 @@ async function main() {
     const plainPath = path.join(outDir, 'temperature-log-plain.pdf');
     fs.writeFileSync(plainPath, plainPdf);
     const plainText = execFileSync('pdftotext', ['-layout', plainPath, '-']).toString();
-    for (const expected of ['Temperature Log', 'MadgeTech RTDTempX4', 'T88206', '08/28/2026', '02/28/2027', 'Pipe °F', '57.20', 'Begin test', 'Calibration certificate']) assert.ok(plainText.includes(expected), `plain PDF has ${expected}`);
+    for (const expected of ['Temperature Log', 'MadgeTech RTDTempX4', 'T88206', '08/28/2026', '02/28/2027', 'Pipe °F', '57.20', 'Begin test', 'TEMPERATURE CHART', 'Calibration certificate']) assert.ok(plainText.includes(expected), `plain PDF has ${expected}`);
     for (const absent of ['Grant G Solutions', 'Hydrostatic Test', 'ATM 4502', 'Bobcat', 'Reviewed by', 'SUMMARY', 'Ambient °F']) assert.ok(!plainText.includes(absent), `plain PDF leaves out ${absent}`);
     const plainPages = Number(/Pages:\s+(\d+)/.exec(execFileSync('pdfinfo', [plainPath]).toString())[1]);
-    assert.equal(plainPages, 2, 'one page of data, one certificate page');
+    assert.ok(plainPages >= 2 && plainPages <= 3, `data pages then the certificate (${plainPages})`);
     assert.equal(await page.evaluate(() => localStorage.getItem('grantg-hydro-temp-log-style')), 'plain', 'layout remembered');
     assert.deepEqual(errors, []);
     console.log(`Temperature log PDF (plain layout: data and calibration only, ${plainPages} pages) and`, `Temperature log PDF: 15-minute official log with raw nearest readings, gaps as dashes, unplugged probe ignored, dialog defaults, ${pages} numbered pages with sign-off and the cropped calibration certificate passed.`);
