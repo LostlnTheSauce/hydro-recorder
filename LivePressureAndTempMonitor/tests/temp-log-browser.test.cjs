@@ -138,9 +138,17 @@ async function main() {
     assert.equal(plainPages, 3, 'readings, the round chart, then the certificate');
     assert.equal(await page.evaluate(() => localStorage.getItem('grantg-hydro-temp-log-style')), 'plain', 'layout remembered');
 
+    // Both charts: the line graph with the readings, the round chart on its own page.
+    await page.locator('#tempLogDialog [value="cancel"]').click();
+    const bothPdf = Buffer.from(await page.evaluate(async (r) => [...await HydroTempLog.build(r, { style: 'plain', chart: 'both', period: 'official', intervalMin: 15, probes: ['pipe'], decimals: 1 })], rec));
+    const bothPath = path.join(outDir, 'temperature-log-both.pdf'); fs.writeFileSync(bothPath, bothPdf);
+    const bothText = execFileSync('pdftotext', ['-layout', bothPath, '-']).toString();
+    assert.ok(bothText.includes('TEMPERATURE GRAPH') && bothText.includes('one turn = 24 hours'), 'line graph section and the round chart page');
+    assert.equal(execFileSync('pdfimages', ['-list', bothPath]).toString().trim().split('\n').slice(2).length, 1, 'one picture: the round chart (the line graph is drawn)');
+    await page.evaluate(() => { document.getElementById('tempLogDialog').close(); });
+
     // A library with no logger yet: add it from the certificate (filled in), attach the photo, make the PDF.
     lib.items = [{ id: 'dw', type: 'deadweight', name: 'Deadweight', serial: '5496' }]; lib.papers.clear();
-    await page.locator('#tempLogDialog [value="cancel"]').click();
     await page.evaluate(() => HydroTempLog.openDialog(window.rec));
     await page.waitForFunction(() => !document.querySelector('.temp-log-add').hidden);
     assert.equal(await page.locator('.temp-log-add-serial').inputValue(), 'T88206', 'filled in from the certificate');
