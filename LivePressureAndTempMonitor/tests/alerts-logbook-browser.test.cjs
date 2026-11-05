@@ -110,6 +110,22 @@ async function main() {
     if (await chartBox('ambient').isChecked()) await chartBox('ambient').evaluate((el) => el.click());
     assert.deepEqual(await page.evaluate(() => window.testGauges[0].testState.chartProbes), ['pipe', 'soil']);
     assert.deepEqual(await page.evaluate(() => window.testGauges[0].settings().temperature.viewerProbes), ['pipe', 'soil']);
+    // Probes switched off under "Probes used for this test" are hidden on the host too.
+    for (const key of ['ambient', 'soil', 'aux']) {
+      const used = page.locator(`[data-gauge="A"] input[data-enabled-probe="${key}"]`);
+      if (await used.isChecked()) await used.evaluate((el) => el.click());
+    }
+    const tile = (key) => page.locator(`[data-gauge="A"] [data-temp-current="${key}"]`);
+    const off = (key) => tile(key).evaluate((el) => el.hidden);
+    assert.deepEqual([await off('ambient'), await off('pipe'), await off('soil'), await off('aux')], [true, false, true, true], 'only Pipe tile shows');
+    assert.equal(await chartBox('soil').isDisabled(), true, 'unused probe has no chart checkbox');
+    assert.deepEqual(await page.evaluate(() => window.testGauges[0].settings().temperature.viewerProbes), ['pipe']);
+    // Switching one back on brings its tile back and ticks it on the chart.
+    await page.locator('[data-gauge="A"] input[data-enabled-probe="soil"]').evaluate((el) => el.click());
+    assert.equal(await off('soil'), false);
+    assert.equal(await chartBox('soil').isChecked(), true);
+    // The box temperature line still uses the Auxiliary probe while it is switched off.
+    await waitFor(async () => /Box temperature/.test(await page.locator('.temperature-laptop-power').first().textContent()), 'box temperature kept');
     const toggle = page.locator('.aux-heat-alert-toggle').first();
     assert.equal(await toggle.isChecked(), true);
     await toggle.evaluate((input) => { input.checked = false; input.dispatchEvent(new Event('change')); });
