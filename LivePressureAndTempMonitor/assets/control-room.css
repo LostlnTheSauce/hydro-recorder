@@ -494,3 +494,4 @@ table td { background:#ffffff55; }
 .logbook-selection { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin:8px 0 10px; padding:9px 12px; border:1px solid #b9d3ee; border-radius:8px; background:#f2f7fd; font-weight:600; font-size:.88rem; }
 .logbook-selection[hidden] { display:none; }
 .logbook-selection button { min-height:30px; padding:3px 12px; font-size:.8rem; margin-left:auto; }
+.temperature-box-temp { display:block; margin-top:2px; font-weight:600; }

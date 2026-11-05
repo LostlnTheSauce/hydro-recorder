@@ -465,6 +465,8 @@
         temperature: {
           channels: this.temperatureChannels(),
           enabledProbes: this.testState.enabledProbes || ['ambient', 'pipe', 'soil', 'aux'],
+          // Viewers also see only the probes ticked on the host's temperature chart.
+          viewerProbes: this.chartProbes(),
           readings: shareTemperatures ? this.testState.manualTemperatures.slice(-2000) : [],
           preview: true,
           viewerVisible: shareTemperatures,
@@ -473,6 +475,12 @@
           smoothingSeconds: this.smoothingSeconds(),
         },
       };
+    }
+
+    // Probes ticked on this test's temperature chart (saved with the test).
+    chartProbes() {
+      const boxes = ['ambient', 'pipe', 'soil', 'aux'].map((key) => this.temperaturePanel?.querySelector(`.temp-toggle input[value="${key}"]`)).filter(Boolean);
+      return boxes.length ? boxes.filter((box) => box.checked).map((box) => box.value) : (this.testState.chartProbes || ['ambient', 'pipe', 'soil']);
     }
 
     temperatureRecordingOptions() {
@@ -525,6 +533,16 @@
         this.temperaturePanel.querySelector('.temperature-controls').before(probes);
       }
       this.root.querySelector('.aux-heat-alert-toggle').checked = this.testState.auxHeatAlert !== false;
+      // Chart probe ticks: restore the saved choice; changing one is saved and sent to viewers.
+      for (const key of ['ambient', 'pipe', 'soil', 'aux']) {
+        const box = this.temperaturePanel?.querySelector(`.temp-toggle input[value="${key}"]`);
+        if (!box) continue;
+        if (Array.isArray(this.testState.chartProbes)) box.checked = this.testState.chartProbes.includes(key);
+        if (!box.dataset.viewerBound) {
+          box.dataset.viewerBound = '1';
+          box.addEventListener('change', () => { this.testState.chartProbes = this.chartProbes(); this.saveTestState(); publish(); });
+        }
+      }
       this.root.querySelectorAll('[data-enabled-probe]').forEach(input => {
         input.checked = (this.testState.enabledProbes || ['ambient','pipe','soil','aux']).includes(input.dataset.enabledProbe);
       });
@@ -2621,6 +2639,16 @@
         const power = window.HydroFieldPower.describe(chosen);
         powerStatus.textContent = power.text;
         powerStatus.dataset.state = power.state;
+        // The Auxiliary probe usually sits in the weatherproof box: show it as the box temperature.
+        const gauge = gauges.find((item) => item.slot === root.dataset.gauge);
+        const aux = gauge?.temperatureReadings?.slice(-400).reverse().find((row) => row.source === 'live' && Number.isFinite(Number(row.aux)) && row.aux !== null && row.aux !== '');
+        if (aux && Date.now() - Number(aux.at) < 10 * 60000) {
+          const name = gauge.temperatureChannels().find((channel) => channel.key === 'aux')?.name || 'Auxiliary';
+          const box = document.createElement('small');
+          box.className = 'temperature-box-temp';
+          box.textContent = `Box temperature (${name} probe): ${Number(aux.aux).toFixed(1)} °F`;
+          powerStatus.append(box);
+        }
         const run = window.HydroFieldPower.batteryRun?.(chosen?.power);
         if (run) {
           const line = document.createElement('small');

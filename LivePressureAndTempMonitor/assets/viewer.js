@@ -96,6 +96,12 @@
     updateFeedStatus();
   }
 
+  // Probes the host uses for the test and has ticked on its own temperature chart.
+  function shownProbes(temperature) {
+    const used = temperature.enabledProbes || ['ambient','pipe','soil','aux'];
+    return Array.isArray(temperature.viewerProbes) ? used.filter((key) => temperature.viewerProbes.includes(key)) : used;
+  }
+
   function inTimeOrder(readings) {
     let ordered = true;
     for (let i = 1; i < readings.length; i++) if (readings[i].at <= readings[i - 1].at) { ordered = false; break; }
@@ -127,7 +133,7 @@
     root.querySelector('.stat-count').textContent = readings.length.toLocaleString();
     window.PressureChartRenderer.draw(root.querySelector('.pressure-chart'), readings, config);
     const temperature = config.temperature && typeof config.temperature === 'object' ? config.temperature : defaults.temperature;
-    const enabled = temperature.enabledProbes || ['ambient','pipe','soil','aux'];
+    const enabled = shownProbes(temperature);
     for (const key of ['ambient','pipe','soil','aux']) {
       const toggle = root.querySelector(`.temp-toggle input[value="${key}"]`);
       if (toggle) {
@@ -211,7 +217,7 @@
   const viewerLogbooks = {};
   function viewerLogbookData(slot) {
     const config = configFor(slot), temperature = config.temperature || {};
-    const enabled = temperature.viewerVisible === true ? temperature.enabledProbes || ['ambient','pipe','soil','aux'] : [];
+    const enabled = temperature.viewerVisible === true ? shownProbes(temperature) : [];
     const manual = enabled.length && Array.isArray(temperature.readings) ? temperature.readings : [];
     const live = state[slot].liveTemperatures;
     const key = `${live.length}:${live.at(-1)?.at}:${manual.length}:${manual.at(-1)?.at}`;
