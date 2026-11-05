@@ -127,6 +127,36 @@
   // Standard PDF fonts only cover Latin-1 and a few symbols.
   const pdfText = (value) => String(value ?? '').replace(/[^\x20-\x7E -ÿ–—‘’“”•…]/g, '?');
 
+  // A photo or phone screenshot of a page often has black bands around it: crop them off so the
+  // printed paper looks like the paper. Returns the picture unchanged when there is nothing to crop.
+  async function trimDark(bytes, mime) {
+    try {
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: mime }));
+      const w = bitmap.width, h = bitmap.height, s = Math.min(1, 500 / Math.max(w, h));
+      const sw = Math.max(1, Math.round(w * s)), sh = Math.max(1, Math.round(h * s));
+      const probe = document.createElement('canvas'); probe.width = sw; probe.height = sh;
+      const pc = probe.getContext('2d', { willReadFrequently: true }); pc.drawImage(bitmap, 0, 0, sw, sh);
+      const px = pc.getImageData(0, 0, sw, sh).data;
+      const dark = (x, y) => { const i = (y * sw + x) * 4; return px[i] * 0.3 + px[i + 1] * 0.59 + px[i + 2] * 0.11 < 45; };
+      const rowDark = (y) => { let n = 0; for (let x = 0; x < sw; x++) if (dark(x, y)) n++; return n >= sw * 0.97; };
+      let top = 0, bottom = sh - 1;
+      while (top < sh - 1 && rowDark(top)) top++;
+      while (bottom > top && rowDark(bottom)) bottom--;
+      const colDark = (x) => { let n = 0; for (let y = top; y <= bottom; y++) if (dark(x, y)) n++; return n >= (bottom - top + 1) * 0.97; };
+      let left = 0, right = sw - 1;
+      while (left < sw - 1 && colDark(left)) left++;
+      while (right > left && colDark(right)) right--;
+      if (!top && !left && bottom === sh - 1 && right === sw - 1) return { bytes, mime };
+      if (bottom - top < sh * 0.2 || right - left < sw * 0.2) return { bytes, mime };
+      const x0 = Math.floor(left / s), y0 = Math.floor(top / s), x1 = Math.min(w, Math.ceil((right + 1) / s)), y1 = Math.min(h, Math.ceil((bottom + 1) / s));
+      const out = document.createElement('canvas'); out.width = x1 - x0; out.height = y1 - y0;
+      const oc = out.getContext('2d'); oc.fillStyle = '#fff'; oc.fillRect(0, 0, out.width, out.height);
+      oc.drawImage(bitmap, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+      const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/jpeg', 0.9));
+      return blob ? { bytes: new Uint8Array(await blob.arrayBuffer()), mime: 'image/jpeg' } : { bytes, mime };
+    } catch (_) { return { bytes, mime }; }
+  }
+
   async function buildSet(items, job) {
     const { PDFDocument, StandardFonts, rgb } = await loadPdfLib();
     const doc = await PDFDocument.create();
@@ -185,7 +215,8 @@
           continue;
         }
       }
-      const image = paper.mime === 'image/png' ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+      const cleaned = await trimDark(bytes, paper.mime);
+      const image = cleaned.mime === 'image/png' ? await doc.embedPng(cleaned.bytes) : await doc.embedJpg(cleaned.bytes);
       const landscape = image.width > image.height * 1.15;
       const [pw, ph] = landscape ? [H, W] : [W, H];
       const p = doc.addPage([pw, ph]);
@@ -211,7 +242,7 @@
     select.onchange = () => { gauge = tests[Number(select.value)].gauge; tick(); };
     let gauge = tests[0].gauge;
     const items = inventory();
-    const order = ['deadweight', 'digital_gauge', 'pressure_recorder', 'ambient_chart', 'pipe_chart', 'ground_chart', 'pump'];
+    const order = ['deadweight', 'digital_gauge', 'pressure_recorder', 'ambient_chart', 'pipe_chart', 'ground_chart', 'temperature_logger', 'pump'];
     const sorted = [...items].sort((a, b) => (order.indexOf(a.type) - order.indexOf(b.type)) || String(a.name).localeCompare(String(b.name)));
     const tick = () => {
       const chosen = new Set(Object.values(gauge.testState.equipment || {}).filter(Boolean));
@@ -260,5 +291,5 @@
     refresh();
   }
 
-  root.HydroCalibration = { init, refresh, cell, due, openSet, buildSet, upload, loadPdfLib, title: (item) => title(item), papers: () => papers, maxBytes: () => maxBytes, loadError: () => loadError };
+  root.HydroCalibration = { init, refresh, cell, due, openSet, buildSet, upload, loadPdfLib, trimDark, title: (item) => title(item), papers: () => papers, maxBytes: () => maxBytes, loadError: () => loadError };
 })(window);

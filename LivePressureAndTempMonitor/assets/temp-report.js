@@ -309,7 +309,7 @@
     const start = data.officialStart, end = data.officialEnd || data.chartTo;
     const inventory = Array.isArray(record.equipment) ? record.equipment : [];
     const roles = [['deadweight', 'Deadweight tester'], ['pressure_recorder', 'Pressure recorder'], ['digital_gauge', 'Digital gauge'], ['ambient_chart', 'Ambient temperature chart'],
-      ['pipe_chart', 'Pipe temperature chart'], ['ground_chart', 'Ground temperature chart'], ['pump', 'Pump']];
+      ['pipe_chart', 'Pipe temperature chart'], ['ground_chart', 'Ground temperature chart'], ['temperature_logger', 'Temperature data logger'], ['pump', 'Pump']];
     const equipment = roles.map(([role, label]) => {
       const item = inventory.find((entry) => entry.id === (test.equipment || {})[role]);
       if (!item) return null;

@@ -30,6 +30,7 @@
     ambient_chart: 'Ambient temperature chart',
     pipe_chart: 'Pipe temperature chart',
     ground_chart: 'Ground temperature chart',
+    temperature_logger: 'Temperature data logger',
     pump: 'Pump',
   };
 

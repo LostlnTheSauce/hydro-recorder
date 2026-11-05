@@ -212,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
             <label>Ambient temperature chart<select class="equipment-select" data-equipment-role="ambient_chart"></select></label>
             <label>Pipe temperature chart<select class="equipment-select" data-equipment-role="pipe_chart"></select></label>
             <label>Ground temperature chart<select class="equipment-select" data-equipment-role="ground_chart"></select></label>
+            <label>Temperature data logger<select class="equipment-select" data-equipment-role="temperature_logger"></select></label>
             <label>Pump<select class="equipment-select pump-select" data-equipment-role="pump"></select></label>
             <label>Pressure offset (psi)<input class="pressure-offset" type="number" step="0.1" value="0" inputmode="decimal"><small>One recorded pressure series; applied before display, logging and export.</small></label>
             <label>Full offset above (psi)<input class="offset-taper" type="number" min="0" step="1" inputmode="decimal" placeholder="Blank = always full"><small>Optional. Blank: the full offset everywhere. E.g. 50: full offset above 50 psi, fading evenly to 0 at 0 psi so a blow-down lands cleanly on 0. Never below 0.</small></label>
@@ -351,6 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
           <option value="ambient_chart">Ambient temperature chart</option>
           <option value="pipe_chart">Pipe temperature chart</option>
           <option value="ground_chart">Ground temperature chart</option>
+          <option value="temperature_logger">Temperature data logger</option>
           <option value="pump">Pump</option>
         </select></label>
         <label>Name<input id="equipmentName" required autocomplete="off" placeholder="Example: PDQ Pump"></label>

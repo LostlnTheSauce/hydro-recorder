@@ -310,6 +310,11 @@
       dialog.showModal();
     } catch (e) { status.textContent = e.message || String(e); }
   });
+  // The logger's temperatures as a clean log with its calibration certificate, for the owner or inspector.
+  $('#replayTempLog').addEventListener('click', () => {
+    if (!record) return;
+    HydroTempLog.openDialog(record).catch((e) => { status.textContent = e.message || String(e); });
+  });
   $('#closeReplay').addEventListener('click', closeReplay);
   $('#refreshHistory').addEventListener('click', refresh); $('#historySearch').addEventListener('input', list);
   $('#historyFolder').addEventListener('change', list); refresh();
