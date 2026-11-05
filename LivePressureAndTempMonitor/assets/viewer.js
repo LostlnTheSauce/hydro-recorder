@@ -157,6 +157,7 @@
       testEnd: config.testEnd,
       notes: state.notes,
       wholeDegrees: temperature.wholeDegrees === true,
+      decimals: temperature.decimals,
     });
     const temperatureStatus = root.querySelector('.temperature-status');
     if (temperatureStatus) {
@@ -233,7 +234,7 @@
       .filter(channel => enabled.includes(channel.key) && state[slot].logbookCache.present.has(channel.key))
       .map(channel => ({ key: channel.key, name: (names.find(item => item.key === channel.key)?.name || channel.name) + suffix }));
     const temperatures = enabled.length ? TemperatureChartRenderer.smoothReadings(state[slot].logbookCache.temperatures, smoothing) : [];
-    return { pressure: state[slot].readings, temperatures, channels, wholeDegrees: temperature.wholeDegrees === true };
+    return { pressure: state[slot].readings, temperatures, channels, wholeDegrees: temperature.wholeDegrees === true, decimals: temperature.decimals };
   }
 
   function renderPressureLog(force = false) {

@@ -114,7 +114,7 @@
     table.tHead.replaceChildren(head);
     const body = document.createDocumentFragment();
     const withSeconds = intervalMs < 60000;
-    const decimals = data.wholeDegrees ? 0 : 1;
+    const decimals = data.wholeDegrees ? 0 : ([1, 2, 3].includes(Number(data.decimals)) ? Number(data.decimals) : 1);
     let day = '';
     for (const row of rows) {
       const date = new Date(row.at);
@@ -170,7 +170,7 @@
   }
 
   // Builds the interval buttons, table and "show older" button inside `container`.
-  // getData() returns { pressure, temperatures, channels: [{key,name}], wholeDegrees }.
+  // getData() returns { pressure, temperatures, channels: [{key,name}], wholeDegrees, decimals }.
   function mount(container, { getData, storageKey = 'grantg-logbook-interval', title = 'Log book' }) {
     let intervalMs = 60000;
     try { const saved = Number(root.localStorage?.getItem(storageKey)); if (INTERVALS.some(([ms]) => ms === saved)) intervalMs = saved; } catch (_) {}
@@ -185,7 +185,7 @@
     function refresh(force = false) {
       const data = getData();
       const latest = Math.max(Number(data.pressure?.at(-1)?.at) || 0, Number(data.temperatures?.at(-1)?.at) || 0);
-      const next = JSON.stringify([intervalMs, maxRows, latest, data.temperatures?.length || 0, (data.channels || []).map((c) => c.key + c.name), data.wholeDegrees, data.pace && data.pace.word + data.pace.shown]);
+      const next = JSON.stringify([intervalMs, maxRows, latest, data.temperatures?.length || 0, (data.channels || []).map((c) => c.key + c.name), data.wholeDegrees, data.decimals, data.pace && data.pace.word + data.pace.shown]);
       if (!force && next === signature) return;
       signature = next;
       const result = render(table, data, intervalMs, maxRows, selection);

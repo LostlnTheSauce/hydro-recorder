@@ -366,7 +366,7 @@
     const meta = {
       box, height, start, end, fullStart, fullEnd, zoomed: Boolean(zoom), pressure, temperatures, channelConfig: options.channelConfig, visibleKeys: options.visibleKeys,
       pressureMin, pressureMax, temperatureMin, temperatureMax, showPressure,
-      wholeDegrees: options.wholeDegrees === true, replay: options.replay === true, gapLimits: options.gapLimits,
+      wholeDegrees: options.wholeDegrees === true, decimals: decimalsOf(options), replay: options.replay === true, gapLimits: options.gapLimits,
     };
     updateMetaSelection(meta, hasSelectedAt ? options.selectedAt : end);
     canvas._temperatureMeta = meta;
@@ -410,7 +410,7 @@
     setPanelText(panel, '.temp-inspector-pressure', meta.selectedPressure ? `${Number(meta.selectedPressure.pressure).toFixed(1)} PSI` : '—');
     channelConfig.forEach((channel) => {
       const value = meta.selectedTemperature ? validNumber(meta.selectedTemperature[channel.key]) : null;
-      setPanelText(panel, `[data-temp-inspector-value="${channel.key}"]`, value === null ? '—' : `${value.toFixed(meta.wholeDegrees ? 0 : 1)}°F`);
+      setPanelText(panel, `[data-temp-inspector-value="${channel.key}"]`, value === null ? '—' : `${value.toFixed(meta.decimals)}°F`);
     });
     setPanelText(panel, '.temp-scrubber-start', inspectorTime(meta.start));
     setPanelText(panel, '.temp-scrubber-end', `${meta.zoomed || meta.replay ? '' : 'Live '}${inspectorTime(meta.end)}`);
@@ -537,6 +537,13 @@
     return { readings: kept };
   }
 
+  // Decimal places for temperatures: none with Whole degrees, else 1 (default) to 3.
+  function decimalsOf(options) {
+    if (options?.wholeDegrees === true) return 0;
+    const value = Number(options?.decimals);
+    return [1, 2, 3].includes(value) ? value : 1;
+  }
+
   function renderPanel(panel, options) {
     if (!panel) return;
     const channelConfig = channels(options.channels);
@@ -549,7 +556,7 @@
     channelConfig.forEach((channel) => {
       panel.querySelectorAll(`[data-temp-label="${channel.key}"]`).forEach((element) => { element.textContent = channel.name; });
       const value = validNumber(latest[channel.key]);
-      setPanelText(panel, `[data-temp-value="${channel.key}"]`, value === null ? '—' : value.toFixed(options.wholeDegrees ? 0 : 1));
+      setPanelText(panel, `[data-temp-value="${channel.key}"]`, value === null ? '—' : value.toFixed(decimalsOf(options)));
       const current = panel.querySelector(`[data-temp-current="${channel.key}"]`);
       if (current) current.classList.toggle('inactive', value === null);
     });
@@ -571,6 +578,7 @@
       notes: panel.querySelector('.temp-show-notes')?.checked ? (options.notes || []) : [],
       selectedAt: selectionState.followLive ? null : selectionState.at,
       wholeDegrees: options.wholeDegrees === true,
+      decimals: options.decimals,
       zoom: panel._temperatureZoom,
       replay: options.replay === true, gapLimits: options.gapLimits,
     };
@@ -644,7 +652,7 @@
       meta.channelConfig.forEach((channel) => {
         if (!meta.visibleKeys.includes(channel.key) || !temperature || (meta.gapLimits && Math.abs(temperature.at-at) > meta.gapLimits.temperature)) return;
         const value = validNumber(temperature[channel.key]);
-        if (value !== null) values.push(`<span>${channel.name}: ${value.toFixed(meta.wholeDegrees ? 0 : 1)}°F</span>`);
+        if (value !== null) values.push(`<span>${channel.name}: ${value.toFixed(meta.decimals)}°F</span>`);
       });
       tooltip.innerHTML = values.join('');
       tooltip.classList.remove('hidden');
