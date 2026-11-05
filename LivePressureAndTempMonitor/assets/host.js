@@ -405,6 +405,10 @@
         this.testState.temperatureSmoothing = Number(event.target.value) || 0;
         this.saveTestState();
       });
+      this.root.querySelector('.temp-decimals')?.addEventListener('change', (event) => {
+        this.testState.temperatureDecimals = Number(event.target.value) || 1;
+        this.saveTestState(); publish(); this.drawTemperature();
+      });
       this.bindManualTemperatures();
     }
 
@@ -471,6 +475,7 @@
           preview: true,
           viewerVisible: shareTemperatures,
           wholeDegrees: temperatureOptions.wholeDegrees,
+          decimals: this.temperatureDecimals(),
           sampleIntervalSeconds: temperatureOptions.sampleIntervalSeconds,
           smoothingSeconds: this.smoothingSeconds(),
         },
@@ -505,6 +510,13 @@
       return value === undefined || value === null ? 120 : [0, 20, 60, 120, 300].includes(Number(value)) ? Number(value) : 120;
     }
 
+    // Decimal places shown for temperatures (1 to 3; Whole degrees shows none). Display only.
+    temperatureDecimals() {
+      if (this.temperatureRecordingOptions().wholeDegrees) return 0;
+      const value = Number(this.testState.temperatureDecimals);
+      return [1, 2, 3].includes(value) ? value : 1;
+    }
+
     restoreTestSetup() {
       const rateInput = this.root.querySelector('.rate-target');
       if (rateInput && document.activeElement !== rateInput) rateInput.value = this.rateTarget() ?? '';
@@ -513,6 +525,8 @@
       this.psiVoice?.restore();
       const smoothing = this.root.querySelector('.temp-smoothing');
       if (smoothing) smoothing.value = String(this.smoothingSeconds());
+      const decimals = this.root.querySelector('.temp-decimals');
+      if (decimals) decimals.value = String(this.temperatureDecimals() || this.testState.temperatureDecimals || 1);
       if (!this.root.querySelector('.enabled-probes')) {
         const probes = document.createElement('fieldset'); probes.className = 'enabled-probes';
         probes.innerHTML = '<legend>Probes used for this test</legend><p>Unchecked probes are hidden from viewers. Original logger readings are still retained.</p>';
@@ -2057,6 +2071,7 @@
         testEnd: this.testState.officialEnd,
         notes: hostNotes.filter((note) => note.slot === this.slot),
         wholeDegrees: this.temperatureRecordingOptions().wholeDegrees,
+        decimals: this.temperatureDecimals(),
       });
       const status = this.root.querySelector('.temperature-status');
       if (status) {
@@ -2578,6 +2593,9 @@
       controls.whole.checked = options?.wholeDegrees === true;
       controls.whole.disabled = locked;
     }
+    // Whole degrees means no decimals to choose.
+    const decimals = root.querySelector('.temp-decimals');
+    if (decimals) decimals.disabled = options?.wholeDegrees === true;
   }
 
   document.querySelectorAll('[data-gauge]').forEach((root) => {
@@ -2594,6 +2612,8 @@
     });
     controls.whole?.addEventListener('change', () => {
       saveTemperatureOptions(root);
+      const decimals = root.querySelector('.temp-decimals');
+      if (decimals) decimals.disabled = controls.whole.checked;
       gauges.find((gauge) => gauge.slot === root.dataset.gauge)?.drawTemperature();
     });
   });
@@ -3007,6 +3027,7 @@
       channels: gauge.temperatureChannels().filter((channel) => enabled.includes(channel.key) && gauge.logbookCache.present.has(channel.key))
         .map((channel) => smoothing ? { ...channel, name: `${channel.name} (${smoothing < 60 ? `${smoothing} s` : `${smoothing / 60} min`} avg)` } : channel),
       wholeDegrees: gauge.temperatureRecordingOptions?.().wholeDegrees === true,
+      decimals: gauge.temperatureDecimals(),
       pace: gauge.paceStatus(),
     };
   }

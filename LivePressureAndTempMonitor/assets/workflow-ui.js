@@ -234,7 +234,7 @@
       const text = (key, value) => { this.q(`[data-wf="${key}"]`).textContent = value; };
       if (this.q('[data-input="now"]').checked) this.q('[data-input="at"]').value = localInput(now);
       const latest = this.g.temperatureReadings.at(-1);
-      for (const key of ['ambient', 'pipe', 'soil']) this.q(`[data-live-temp="${key}"]`).textContent = W.number(latest?.[key]) === null ? '—' : `${Number(latest[key]).toFixed(this.g.temperatureRecordingOptions().wholeDegrees ? 0 : 1)} °F`;
+      for (const key of ['ambient', 'pipe', 'soil']) this.q(`[data-live-temp="${key}"]`).textContent = W.number(latest?.[key]) === null ? '—' : `${Number(latest[key]).toFixed(this.g.temperatureDecimals?.() ?? (this.g.temperatureRecordingOptions().wholeDegrees ? 0 : 1))} °F`;
       const temperatureFreshMs = Math.max(30000, this.g.temperatureRecordingOptions().sampleIntervalSeconds * 2000 + 5000);
       text('temp-health', latest ? `${now - latest.at < temperatureFreshMs ? 'Current' : 'Last reading'} · ${new Date(latest.at).toLocaleTimeString()}` : 'No readings yet');
       this.q('[data-input="capacity"]').disabled = Boolean(s.baseline);
