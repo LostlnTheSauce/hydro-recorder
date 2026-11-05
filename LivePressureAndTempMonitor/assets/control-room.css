@@ -495,3 +495,9 @@ table td { background:#ffffff55; }
 .logbook-selection[hidden] { display:none; }
 .logbook-selection button { min-height:30px; padding:3px 12px; font-size:.8rem; margin-left:auto; }
 .temperature-box-temp { display:block; margin-top:2px; font-weight:600; }
+/* Both tests side by side on wide screens; each test's own panels stack inside its half. */
+@media (min-width:1100px) {
+  .gauge-grid[data-view-mode="both"] { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+  .gauge-grid[data-view-mode="both"] .page-pressure { grid-template-columns:minmax(0,1fr); }
+  #hostApp[data-dashboard-view="pressure"] .gauge-grid[data-view-mode="both"] .gauge-toolbar { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"name readout" "side readout" "state state"; }
+}
