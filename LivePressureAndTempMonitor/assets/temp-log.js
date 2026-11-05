@@ -267,7 +267,10 @@
 
     // Chart of the logger's temperatures: the round recorder chart (like the paper temperature
     // recorder), a line graph, or none.
-    const chartMode = opts.chart === false || opts.chart === 'none' ? 'none' : opts.chart === 'line' || opts.chart === true ? 'line' : 'round';
+    const chartMode = opts.chart === false || opts.chart === 'none' ? 'none' : opts.chart === 'line' || opts.chart === true ? 'line' : opts.chart === 'both' ? 'both' : 'round';
+    const wantLine = chartMode === 'line' || chartMode === 'both';
+    // The round chart sits on the cover only in the full layout on its own; otherwise it gets its own page.
+    const roundPage = chartMode === 'both' || (chartMode === 'round' && plain);
     const tableNeed = 17 + 17 + data.rows.length * rowH + 70;
     // Plain layout: the round chart gets its own page after the readings (drawn further down).
     if (chartMode === 'round' && !plain) {
@@ -282,16 +285,20 @@
         }
       }
     }
-    let chartH = chartMode === 'line' ? Math.min(190, y - 19 - (M + 70)) : 0;
+    let chartH = wantLine ? Math.min(190, y - 19 - (M + 70)) : 0;
     if (plain && chartH > 90) {
       // Shrink the chart a little when that keeps the whole table (and its note) on this page.
       const room = (y - 23 - 44) - (M + 20);
       if (chartH > room - tableNeed && room - tableNeed >= 110) chartH = room - tableNeed;
     }
     if (chartH > 90) {
-      y = section(page, plain ? 'Temperature chart' : 'Temperatures over the period', plain ? y - 4 : y);
+      y = section(page, plain ? (chartMode === 'both' ? 'Temperature graph' : 'Temperature chart') : 'Temperatures over the period', plain ? y - 4 : y);
       const L = M + 34, R = W - M - 6, T = y - 4, B = y - chartH;
-      const values = data.keys.flatMap((k) => data.series[k].map((p) => p.value));
+      // One point per log row (the same readings as the table), not every reading: the logger's
+      // tenth-of-a-degree flicker every few seconds would fill the graph. Long logs are thinned.
+      const every = Math.max(1, Math.ceil(data.rows.length / 300));
+      const linePoints = Object.fromEntries(data.keys.map((k) => [k, data.rows.filter((r, i) => i % every === 0 || i === data.rows.length - 1).map((r) => ({ at: r.at, value: r.values[k] }))]));
+      const values = data.keys.flatMap((k) => linePoints[k].filter((p) => p.value !== null).map((p) => p.value));
       if (values.length) {
         // Scale fitted to the readings, at least 4 °F tall so the logger's tenth-of-a-degree flicker stays small.
         const vMin = values.reduce((a, b) => Math.min(a, b)), vMax = values.reduce((a, b) => Math.max(a, b));
@@ -320,8 +327,14 @@
         }
         for (const key of data.keys) {
           let path = '', last = null;
-          for (const p of data.series[key]) { path += `${last === null || p.at - last > 300000 ? 'M' : 'L'}${(px(p.at) - L).toFixed(2)},${(T - py(p.value)).toFixed(2)} `; last = p.at; }
-          if (path) page.drawSvgPath(path, { x: L, y: T, borderColor: hex(COLORS[key]), borderWidth: 1.3 });
+          // A row with no reading leaves a gap instead of a line across it.
+          for (const p of linePoints[key]) {
+            if (p.value === null) { last = null; continue; }
+            path += `${last === null ? 'M' : 'L'}${(px(p.at) - L).toFixed(2)},${(T - py(p.value)).toFixed(2)} `; last = p.at;
+          }
+          if (path) page.drawSvgPath(path, { x: L, y: T, borderColor: hex(COLORS[key]), borderWidth: 1.4 });
+          // Dots at each logged reading when there are few enough to see.
+          if (linePoints[key].length <= 80) linePoints[key].filter((p) => p.value !== null).forEach((p) => page.drawCircle({ x: px(p.at), y: py(p.value), size: 1.6, color: hex(COLORS[key]) }));
         }
         let lx = L;
         for (const key of data.keys) {
@@ -378,7 +391,7 @@
     const lines = wrap(statement, 8, font, CW);
     // Plain layout with the round chart: a note that does not fit under the table goes under the chart instead.
     const noteFits = y - (lines.length * 11 + (plain ? 10 : 110)) >= M + 20;
-    const noteOnChart = !noteFits && plain && chartMode === 'round';
+    const noteOnChart = !noteFits && plain && roundPage;
     if (!noteFits && !noteOnChart) { page = doc.addPage([W, H]); y = letterhead(page, 'TEMPERATURE LOG'); }
     y -= 12;
     if (!noteOnChart) lines.forEach((line) => { text(page, line, M, y, { size: 8, color: muted }); y -= 11; });
@@ -390,13 +403,13 @@
     };
     if (!plain) { sign(M, 'Recorded by'); y -= 42; sign(M, "Reviewed by (owner's representative / inspector)"); }
 
-    if (chartMode === 'round' && plain) {
+    if (roundPage) {
       const png = roundChartPng(data);
       if (png) {
         const image = await doc.embedPng(png);
         page = doc.addPage([W, H]);
         y = letterhead(page, 'TEMPERATURE LOG');
-        text(page, 'Temperature chart', M, y - 6, { size: 14, f: bold });
+        text(page, plain ? 'Temperature chart' : 'Temperature recorder chart', M, y - 6, { size: 14, f: bold });
         text(page, `${data.keys.map((k) => NAMES[k]).join(', ')} · ${periodText} · 0–150 °F, one turn = 24 hours`, M, y - 22, { size: 9, color: muted, max: CW });
         const noteRoom = noteOnChart ? lines.length * 11 + 16 : 0;
         const size = Math.min(CW, y - 40 - (M + 20) - noteRoom);
@@ -475,7 +488,7 @@
     const styleSelect = dialog.querySelector('.temp-log-style');
     try { styleSelect.value = root.localStorage.getItem(STYLE_KEY) === 'plain' ? 'plain' : 'full'; } catch (_) { styleSelect.value = 'full'; }
     const chartSelect = dialog.querySelector('.temp-log-chart');
-    try { const saved = root.localStorage.getItem(CHART_KEY); chartSelect.value = ['round', 'line', 'none'].includes(saved) ? saved : 'round'; } catch (_) { chartSelect.value = 'round'; }
+    try { const saved = root.localStorage.getItem(CHART_KEY); chartSelect.value = ['round', 'line', 'both', 'none'].includes(saved) ? saved : 'round'; } catch (_) { chartSelect.value = 'round'; }
     // Decimals: the last choice on this browser, else the test's own setting.
     const decimalsSelect = dialog.querySelector('.temp-log-decimals');
     let decimals = Number(test.temperatureDecimals);
