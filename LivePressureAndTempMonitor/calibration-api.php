@@ -33,7 +33,11 @@ try {
     }
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') json_response(['error' => 'Unsupported request.'], 405);
     session_write_close();
-    if ($action === 'list') json_response(['ok' => true, 'papers' => calibration_list($db), 'maxBytes' => calibration_limit(), 'equipment' => equipment_get($db)]);
+    if ($action === 'list') {
+        // Puts the field logger and its certificate in, once. Never blocks the list.
+        try { calibration_seed_defaults($db); } catch (Throwable $e) { error_log('Calibration seed: ' . $e->getMessage()); }
+        json_response(['ok' => true, 'papers' => calibration_list($db), 'maxBytes' => calibration_limit(), 'equipment' => equipment_get($db)]);
+    }
     if ($action === 'file') {
         $paper = calibration_get($db, $_GET['equipment'] ?? null);
         if (!$paper) json_response(['error' => 'No calibration paper for that equipment.'], 404);

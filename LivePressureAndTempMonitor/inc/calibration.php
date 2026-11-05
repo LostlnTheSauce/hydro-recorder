@@ -132,3 +132,35 @@ function equipment_save(PDO $db, mixed $items, mixed $savedAt): array {
     } catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; }
     return equipment_get($db);
 }
+
+// One time: put the MadgeTech field logger (RTDTempX4, S/N T88206) and its calibration certificate
+// into the shared equipment list. Runs only once the laptop has shared a non-empty list (an empty
+// list here would replace the laptop's own library), adds the logger only if no logger with that
+// serial is there yet, and adds the certificate only if that logger has none. Never runs again
+// after it has done its work, so a later edit or removal stays as the user left it.
+function calibration_seed_defaults(PDO $db, ?int $now = null): bool {
+    $db->exec('CREATE TABLE IF NOT EXISTS hydro_seeds (name VARCHAR(80) PRIMARY KEY, done_at BIGINT NOT NULL)');
+    $seed = 'madgetech-t88206-cert-2026-08-28';
+    $done = $db->prepare('SELECT 1 FROM hydro_seeds WHERE name = ?');
+    $done->execute([$seed]);
+    if ($done->fetchColumn()) return false;
+    $current = equipment_get($db);
+    if ($current['updatedAt'] === 0 || !$current['items']) return false;
+    $now = $now ?? (int) round(microtime(true) * 1000);
+    $logger = null;
+    foreach ($current['items'] as $item) {
+        if (($item['type'] ?? '') === 'temperature_logger' && strtoupper(trim((string) ($item['serial'] ?? ''))) === 'T88206') { $logger = $item; break; }
+    }
+    if ($logger === null) {
+        $logger = ['id' => 'temperature-logger-t88206', 'type' => 'temperature_logger', 'name' => 'RTDTempX4', 'serial' => 'T88206', 'manufacturer' => 'MadgeTech',
+            'range' => '4-channel RTD', 'calibrationDate' => '2026-08-28', 'intervalMonths' => 6, 'capacity' => '', 'isDefault' => true];
+        equipment_save($db, [...$current['items'], $logger], max($now, $current['updatedAt'] + 1));
+    }
+    $paper = $db->prepare('SELECT 1 FROM hydro_calibration_papers WHERE equipment_id = ?');
+    $paper->execute([(string) $logger['id']]);
+    if (!$paper->fetchColumn()) {
+        calibration_save($db, (string) $logger['id'], 'MadgeTech RTDTempX4 T88206 calibration certificate.jpg', require __DIR__ . '/calibration-default-t88206.php', $now);
+    }
+    $db->prepare('INSERT INTO hydro_seeds (name, done_at) VALUES (?, ?)')->execute([$seed, $now]);
+    return true;
+}
