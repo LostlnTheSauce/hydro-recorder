@@ -9,7 +9,7 @@
   if (!app) return;
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const LABELS = { deadweight: 'Deadweight', digital_gauge: 'Digital gauge', pressure_recorder: 'Pressure recorder', ambient_chart: 'Ambient temperature chart', pipe_chart: 'Pipe temperature chart', ground_chart: 'Ground temperature chart', pump: 'Pump' };
+  const LABELS = { deadweight: 'Deadweight', digital_gauge: 'Digital gauge', pressure_recorder: 'Pressure recorder', ambient_chart: 'Ambient temperature chart', pipe_chart: 'Pipe temperature chart', ground_chart: 'Ground temperature chart', temperature_logger: 'Temperature data logger', pump: 'Pump' };
   const ORDER = Object.keys(LABELS);
   const C = root.HydroCalibration;
   let items = [], shared = false;

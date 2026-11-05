@@ -95,7 +95,7 @@ function equipment_clean(mixed $items): array {
         if (!preg_match('//u', $v)) $v = '';
         return function_exists('mb_substr') ? mb_substr($v, 0, $max, 'UTF-8') : substr($v, 0, $max);
     };
-    $types = ['deadweight', 'digital_gauge', 'pressure_recorder', 'ambient_chart', 'pipe_chart', 'ground_chart', 'pump'];
+    $types = ['deadweight', 'digital_gauge', 'pressure_recorder', 'ambient_chart', 'pipe_chart', 'ground_chart', 'temperature_logger', 'pump'];
     $clean = [];
     foreach ($items as $item) {
         if (!is_array($item)) throw new InvalidArgumentException('Invalid equipment entry.');

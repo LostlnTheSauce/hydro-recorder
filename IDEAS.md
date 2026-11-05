@@ -101,3 +101,4 @@ gauge's USB serial adapter and Chrome all run on it before switching (x86 Window
 - Calibration papers: store, scan by phone, print the set.
 - Pick the pump from the equipment list; change the pump after counting.
 - Stroke count Show/Hide; paperwork times default to today.
+- Temperature log PDF from History, with the logger's calibration certificate attached.

@@ -501,3 +501,13 @@ table td { background:#ffffff55; }
   .gauge-grid[data-view-mode="both"] .page-pressure { grid-template-columns:minmax(0,1fr); }
   #hostApp[data-dashboard-view="pressure"] .gauge-grid[data-view-mode="both"] .gauge-toolbar { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"name readout" "side readout" "state state"; }
 }
+/* Temperature log PDF dialog (History). */
+#tempLogDialog { width:min(520px,calc(100vw - 28px)); max-height:calc(100dvh - 40px); overflow:auto; border:1px solid var(--line); border-radius:8px; padding:28px; color:var(--ink); background:var(--paper); box-shadow:0 24px 100px #19324744; }
+#tempLogDialog::backdrop { background:#102b4380; backdrop-filter:blur(3px); }
+#tempLogDialog form { display:grid; gap:14px; } #tempLogDialog h2 { font-size:1.5rem; margin:0; } #tempLogDialog p { margin:0; font-size:.9rem; }
+.temp-log-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.temp-log-fields label, .temp-log-logger-field { display:grid; gap:4px; font-size:.85rem; font-weight:600; }
+.temp-log-probes-set { border:1px solid var(--line); border-radius:6px; padding:8px 12px; margin:0; } .temp-log-probes-set legend { font-size:.85rem; font-weight:600; padding:0 4px; }
+.temp-log-probes { display:flex; flex-wrap:wrap; gap:6px 18px; } .temp-log-probes label { display:flex; align-items:center; gap:6px; font-size:.9rem; }
+.temp-log-help { color:var(--muted, #526675); } .temp-log-message:empty { display:none; } .temp-log-download { justify-self:start; }
+@media (max-width:520px) { .temp-log-fields { grid-template-columns:1fr 1fr; } #tempLogDialog { padding:20px; } }
