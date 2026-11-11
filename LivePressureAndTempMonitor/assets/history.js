@@ -315,6 +315,11 @@
     if (!record) return;
     HydroTempLog.openDialog(record).catch((e) => { status.textContent = e.message || String(e); });
   });
+  // The Crystal's readings as a DataLoggerXP-style Excel data log, for software that reads those files.
+  $('#replayCrystalLog').addEventListener('click', () => {
+    if (!record) return;
+    try { HydroCrystalLog.openDialog(record); } catch (e) { status.textContent = e.message || String(e); }
+  });
   $('#closeReplay').addEventListener('click', closeReplay);
   $('#refreshHistory').addEventListener('click', refresh); $('#historySearch').addEventListener('input', list);
   $('#historyFolder').addEventListener('change', list); refresh();
