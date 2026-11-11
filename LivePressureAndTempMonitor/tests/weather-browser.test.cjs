@@ -65,7 +65,7 @@ async function main() {
       await page.locator('.weather-search button').click();
       await page.waitForFunction(() => !document.querySelector('.weather-result').hidden);
       assert.equal(await page.locator('.weather-title').innerText(), 'Godley, Texas', 'Texas, not Illinois');
-      const rows = await page.locator('.weather-table tbody tr').evaluateAll((trs) => trs.map((tr) => [...tr.cells].map((td) => td.textContent)));
+      const rows = await page.locator('.weather-table tbody tr:not(.weather-divider)').evaluateAll((trs) => trs.map((tr) => [...tr.cells].map((td) => td.textContent)));
       if (!nwsDown) {
         assert.match(await page.locator('.weather-source').innerText(), /Recorded at Cleburne, Cleburne Municipal Airport \(KCPT\).*National Weather Service for Godley, TX/);
         assert.equal(rows[0][0], '12:55 AM'); assert.equal(rows[0][1], '59°F'); assert.equal(rows[0][6], 'Recorded');
@@ -74,6 +74,8 @@ async function main() {
         const recorded = rows.filter((r) => r[6] === 'Recorded'), forecast = rows.filter((r) => r[6] === 'Forecast');
         assert.equal(recorded.at(-1)[0], '1:55 PM', 'recorded up to now');
         assert.equal(forecast[0][0], '3:00 PM', 'forecast from the next hour');
+        assert.equal(await page.locator('.weather-divider').innerText(), 'FORECAST FROM 3:00 PM', 'divider where the forecast starts');
+        assert.equal(await page.locator('tr.forecast td').first().evaluate((td) => getComputedStyle(td).backgroundColor), 'rgb(234, 242, 253)', 'forecast rows tinted');
         assert.equal(forecast.at(-1)[0], '11:00 PM', 'forecast stops at midnight');
         assert.ok(!rows.some((r) => r[1] === '86°F'), "yesterday's reading left out");
         assert.match(await page.locator('.weather-tiles').innerText(), /Recorded at 1:55 PM\s+75°F/);
