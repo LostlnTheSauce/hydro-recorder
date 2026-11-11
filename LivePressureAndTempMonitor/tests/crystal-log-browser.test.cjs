@@ -53,8 +53,9 @@ async function main() {
     assert.equal(run.skipped, 23, 'the unplugged 2 minutes are left out (3600 s still has a reading 1 s away)');
     assert.equal(run.rows.length, 1441 - 23);
     assert.ok(run.rows.every((row, i) => i === 0 || row.seconds > run.rows[i - 1].seconds), 'elapsed seconds only go up');
-    const kept = await page.evaluate((r) => HydroCrystalLog.runData(r, { period: 'official', intervalSec: 60, keepOffset: true }), rec);
-    assert.equal(kept.rows[1].value, 1510.1, 'with the offset kept');
+    // New recordings save the gauge's own reading with each one: used as is, whatever the offset.
+    const stored = await page.evaluate((r) => HydroCrystalLog.runData({ ...r, readings: r.readings.map((x) => ({ ...x, gauge: Math.round((x.pressure - 10) * 10) / 10 + 0.04 })) }, { period: 'official', intervalSec: 60, decimals: 2 }), rec);
+    assert.equal(stored.rows[1].value, 1500.14, 'the saved gauge reading, not worked out from the offset');
     assert.equal(await page.evaluate(() => HydroCrystalLog.gaugePressure(50.0, 10, 100)), 50 / 1.1, 'tapered offset taken out');
     const tooMany = await page.evaluate((r) => { try { HydroCrystalLog.runData(r, { period: 'all', intervalSec: 1 }); return ''; } catch (e) { return e.message; } }, { ...rec, readings: [{ at: 0, pressure: 1 }, { at: 40000000, pressure: 1 }] });
     assert.match(tooMany, /holds 32,000.*every 2 seconds/);
@@ -63,8 +64,8 @@ async function main() {
     await page.evaluate((r) => HydroCrystalLog.openDialog(r), rec);
     assert.equal(await page.locator('.crystal-serial').inputValue(), '021863');
     assert.equal(await page.locator('.crystal-interval').inputValue(), '5');
-    assert.equal(await page.locator('.crystal-pressure').inputValue(), 'gauge');
-    assert.match(await page.locator('.crystal-offset-note').innerText(), /\+10 psi \(full above 100 psi\)/);
+    assert.equal(await page.locator('.crystal-pressure').count(), 0, 'no offset option');
+    assert.match(await page.locator('.crystal-offset-note').innerText(), /offset is never included/);
     await page.locator('#crystalLogDialog [value="build"]').click();
     assert.match(await page.locator('.crystal-message').innerText(), /serial number, model and firmware/);
     await page.locator('.crystal-model').fill('5KPSIXP2I');
@@ -102,7 +103,7 @@ async function main() {
     assert.equal(await page.locator('.crystal-model').inputValue(), '5KPSIXP2I');
     assert.equal(await page.locator('.crystal-firmware').inputValue(), 'R0324');
     assert.deepEqual(errors, []);
-    console.log('Crystal data log: DataLoggerXP Excel workbook (Report + Data), serial/model/firmware/interval/start/stop, gauge readings with the offset taken out (or kept), unplugged gaps left out, 32,000-reading limit, remembered gauge details passed.');
+    console.log('Crystal data log: DataLoggerXP Excel workbook (Report + Data), serial/model/firmware/interval/start/stop, the gauge\'s own readings (saved, or with the offset taken out of older recordings), unplugged gaps left out, 32,000-reading limit, remembered gauge details passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });

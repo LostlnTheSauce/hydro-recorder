@@ -1,8 +1,8 @@
 /* Crystal data log (History page): the pressure readings this site recorded from the Crystal XP2i,
    written as the Excel workbook Crystal's DataLoggerXP saves for a logged run (Report sheet with
    chart, Data sheet with the run details and one "Time / Reading" row per logging interval), so a
-   customer's software that reads those files takes it as is. Pressures are the gauge's own readings:
-   the test's offset is taken back out unless asked to keep it. */
+   customer's software that reads those files takes it as is. Pressures are the gauge's own readings,
+   as the gauge would have logged them: never the recorder's offset. */
 (function (root) {
   'use strict';
   const MAX_READINGS = 32000; // the XP2i's log memory, and the rows the Report chart covers
@@ -41,10 +41,10 @@
   /* The run: one reading every `intervalSec` seconds from the start, the recorded reading nearest
      each moment (the site reads the gauge every second). Moments with no reading nearby (the
      gauge was unplugged) are left out. */
-  function runData(record, { period = 'official', intervalSec = 5, keepOffset = false, decimals = 1 } = {}) {
+  function runData(record, { period = 'official', intervalSec = 5, decimals = 1 } = {}) {
     const test = record.test || {};
     const readings = (record.readings || []).filter((r) => r && Number.isFinite(Number(r.at)) && num(r.pressure) !== null)
-      .map((r) => ({ at: Number(r.at), pressure: Number(r.pressure) })).sort((a, b) => a.at - b.at);
+      .map((r) => ({ at: Number(r.at), pressure: Number(r.pressure), gauge: num(r.gauge) })).sort((a, b) => a.at - b.at);
     if (!readings.length) throw new Error('This test has no pressure readings.');
     const official = officialPeriod(test);
     let from = readings[0].at, to = readings.at(-1).at;
@@ -68,7 +68,8 @@
       while (i < readings.length - 1 && Math.abs(readings[i + 1].at - at) <= Math.abs(readings[i].at - at)) i++;
       const reading = readings[i];
       if (Math.abs(reading.at - at) > within) { skipped++; continue; }
-      const value = keepOffset ? reading.pressure : gaugePressure(reading.pressure, offset, taper);
+      // The gauge's own reading, saved with each reading; older recordings work it out from the offset.
+      const value = reading.gauge !== null ? reading.gauge : gaugePressure(reading.pressure, offset, taper);
       rows.push({ seconds: k * step / 1000, value: Number(value.toFixed(places)) });
     }
     if (!rows.length) throw new Error('No readings were recorded in that period.');
@@ -168,11 +169,10 @@
     $('.crystal-firmware').value = perGauge.firmware || saved.firmware || '';
     $('.crystal-interval').value = String(saved.interval || 5);
     $('.crystal-decimals').value = String(saved.decimals ?? 1);
-    $('.crystal-pressure').value = saved.keepOffset ? 'recorded' : 'gauge';
     const official = officialPeriod(test);
     $('.crystal-period').value = official.start ? 'official' : 'all';
     $('.crystal-period option[value="official"]').disabled = !official.start;
-    $('.crystal-offset-note').textContent = Number(test.offset) ? `This test's offset is ${Number(test.offset) > 0 ? '+' : ''}${Number(test.offset)} psi${Number(test.offsetTaperPsi) ? ` (full above ${Number(test.offsetTaperPsi)} psi)` : ''}.` : 'This test has no offset.';
+    $('.crystal-offset-note').textContent = 'Readings are the gauge\'s own, exactly as it reported them. The recorder\'s pressure offset is never included.';
     $('.crystal-message').textContent = '';
     $('.crystal-download').hidden = true;
     dialog.onsubmit = async (event) => {
@@ -180,11 +180,11 @@
       if (event.submitter?.value === 'cancel') { dialog.close(); return; }
       const gauge = { serial: $('.crystal-serial').value.trim(), model: $('.crystal-model').value.trim(), firmware: $('.crystal-firmware').value.trim(), units: 'PSI' };
       if (!gauge.serial || !gauge.model || !gauge.firmware) { $('.crystal-message').textContent = 'Enter the gauge serial number, model and firmware version.'; return; }
-      const opts = { period: $('.crystal-period').value, intervalSec: Number($('.crystal-interval').value), decimals: Number($('.crystal-decimals').value), keepOffset: $('.crystal-pressure').value === 'recorded', gauge };
+      const opts = { period: $('.crystal-period').value, intervalSec: Number($('.crystal-interval').value), decimals: Number($('.crystal-decimals').value), gauge };
       try {
         const next = remembered(); next.gauges = next.gauges || {};
         next.gauges[gauge.serial.replace(/^0+/, '')] = { model: gauge.model, firmware: gauge.firmware };
-        Object.assign(next, { serial: gauge.serial, model: gauge.model, firmware: gauge.firmware, interval: opts.intervalSec, decimals: opts.decimals, keepOffset: opts.keepOffset });
+        Object.assign(next, { serial: gauge.serial, model: gauge.model, firmware: gauge.firmware, interval: opts.intervalSec, decimals: opts.decimals });
         root.localStorage.setItem(KEY, JSON.stringify(next));
       } catch (_) {}
       const button = $('[value="build"]');
