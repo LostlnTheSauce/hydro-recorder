@@ -1608,7 +1608,7 @@
         saveEquipmentInventory();
         this.testState = { ...defaultTestState(this.slot), offsetTaperPsi: '', ...payload.test, cloudJobId: crypto.randomUUID(), jobId: crypto.randomUUID(), temperatureSourceIds: [], slot: this.slot, equipment: { ...(payload.test.equipment || {}) }, events: Array.isArray(payload.test.events) ? payload.test.events : [] };
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
-        this.readings = payload.readings.filter((reading) => Number.isFinite(Number(reading?.at)) && Number.isFinite(Number(reading?.pressure))).map((reading) => ({ at: Number(reading.at), pressure: Number(reading.pressure), unit: String(reading.unit || 'PSI') })).sort((a, b) => a.at - b.at).slice(-500000);
+        this.readings = payload.readings.filter((reading) => Number.isFinite(Number(reading?.at)) && Number.isFinite(Number(reading?.pressure))).map((reading) => ({ at: Number(reading.at), pressure: Number(reading.pressure), ...(Number.isFinite(Number(reading.gauge)) && reading.gauge !== null && reading.gauge !== '' ? { gauge: Number(reading.gauge) } : {}), unit: String(reading.unit || 'PSI') })).sort((a, b) => a.at - b.at).slice(-500000);
         this.temperatureReadings = Array.isArray(payload.temperatureReadings) ? payload.temperatureReadings : [];
         this.testState.manualTemperatures = this.normalizeManualTemperatures(this.testState.manualTemperatures?.length ? this.testState.manualTemperatures : this.temperatureReadings.filter((entry) => entry?.source === 'manual' || entry?.source === 'sheet'));
         this.peak = this.readings.length ? this.readings.reduce((maximum, reading) => Math.max(maximum, reading.pressure), -Infinity) : null;
@@ -1844,7 +1844,8 @@
       if (!Number.isFinite(pressure)) return;
       const unit = match[2].toUpperCase();
       this.checkUnit(unit);
-      this.add({ at: Date.now(), pressure: this.recordedPressure(pressure), unit });
+      // `gauge` keeps the gauge's own reading, before the offset (the Crystal data log uses it).
+      this.add({ at: Date.now(), pressure: this.recordedPressure(pressure), gauge: pressure, unit });
     }
 
     // Readings are recorded as reported; a non-PSI unit is flagged, never converted.
