@@ -167,7 +167,10 @@
       }
     }
     day.forecast.forEach((p) => rows.push({ ...p, kind: 'Forecast' }));
-    panel.querySelector('.weather-table tbody').innerHTML = rows.map((r) => `<tr class="${r.kind === 'Forecast' ? 'forecast' : ''}"><td>${esc(clock(r.at, tz))}</td><td><b>${Math.round(r.temp)}°F</b></td><td>${esc(r.text)}</td><td>${esc(r.wind)}</td><td>${r.humidity === null || r.humidity === undefined ? '—' : `${Math.round(r.humidity)}%`}</td><td>${r.rain === null || r.rain === undefined ? '—' : `${Math.round(r.rain)}%`}</td><td>${esc(r.kind)}</td></tr>`).join('');
+    // A divider row where the readings stop and the forecast starts.
+    const firstForecast = rows.findIndex((r) => r.kind === 'Forecast');
+    const divider = (i) => (i === firstForecast && i > 0 ? `<tr class="weather-divider"><td colspan="7">Forecast from ${esc(clock(rows[i].at, tz))}</td></tr>` : '');
+    panel.querySelector('.weather-table tbody').innerHTML = rows.map((r, i) => `${divider(i)}<tr class="${r.kind === 'Forecast' ? 'forecast' : 'recorded'}"><td>${esc(clock(r.at, tz))}</td><td><b>${Math.round(r.temp)}°F</b></td><td>${esc(r.text)}</td><td>${esc(r.wind)}</td><td>${r.humidity === null || r.humidity === undefined ? '—' : `${Math.round(r.humidity)}%`}</td><td>${r.rain === null || r.rain === undefined ? '—' : `${Math.round(r.rain)}%`}</td><td>${esc(r.kind)}</td></tr>`).join('');
     panel.querySelector('.weather-legend-recorded').textContent = day.source === 'nws' ? 'Recorded' : 'Weather model (past hours)';
     panel.classList.toggle('weather-model', day.source !== 'nws');
     panel.querySelector('.weather-result').hidden = false;
