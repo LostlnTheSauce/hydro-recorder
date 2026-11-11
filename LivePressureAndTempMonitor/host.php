@@ -375,9 +375,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
       <nav class="tool-tabs" aria-label="Hydrotest tools">
         <button class="active" type="button" data-tool-tab="calculator">Calculator</button>
         <button type="button" data-tool-tab="reports">Recorder report</button>
+        <button type="button" data-tool-tab="weather">Weather</button>
       </nav>
       <div class="tool-frame-section" data-tool-frame="calculator"><iframe src="calculator.html" title="Hydrotest calculator"></iframe></div>
       <div class="tool-frame-section hidden" data-tool-frame="reports"><iframe src="recorder-report.html" title="Pressure recorder report"></iframe></div>
+      <div class="tool-frame-section hidden weather-panel" data-tool-frame="weather">
+        <form class="weather-search"><label>Place<input class="weather-place" autocomplete="off" placeholder="e.g. Godley, Texas"></label><button class="primary" type="submit">Show weather</button></form>
+        <p class="weather-status" role="status">Type a town to see today's weather there: what was recorded so far, then the forecast for the rest of the day.</p>
+        <div class="weather-result" hidden>
+          <h3 class="weather-title"></h3><p class="weather-source"></p>
+          <div class="weather-tiles"></div>
+          <div class="weather-legend"><span><i class="recorded"></i><b class="weather-legend-recorded">Recorded</b></span><span><i class="forecast"></i>Forecast</span><span class="muted">midnight to midnight, °F</span></div>
+          <div class="weather-chart-wrap"><canvas class="weather-chart" aria-label="Temperature today: recorded, then forecast"></canvas></div>
+          <div class="weather-table-wrap"><table class="weather-table"><thead><tr><th>Time</th><th>Temp</th><th>Conditions</th><th>Wind</th><th>Humidity</th><th>Rain chance</th><th></th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
     </section>
     <footer><span>XP2i / XP3i compatible • 9600 baud • one-second local and remote chart readings</span><span>The selected pressure offset is applied before display, logging and export.</span></footer>
     </section>
@@ -398,6 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/logbook.js?v=2"></script>
   <script src="assets/stroke-count.js?v=1"></script>
   <script src="assets/psi-voice.js?v=1"></script>
+  <script src="assets/weather.js?v=1"></script>
   <script src="assets/temp-report.js?v=1"></script>
   <script src="assets/calibration-papers.js?v=1"></script>
   <script src="assets/host.js?v=56"></script>

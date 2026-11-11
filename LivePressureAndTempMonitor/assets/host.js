@@ -2467,8 +2467,10 @@
     button.addEventListener('click', () => {
       document.querySelectorAll('[data-tool-tab]').forEach((item) => item.classList.toggle('active', item === button));
       document.querySelectorAll('[data-tool-frame]').forEach((frame) => frame.classList.toggle('hidden', frame.dataset.toolFrame !== button.dataset.toolTab));
+      if (button.dataset.toolTab === 'weather') document.querySelector('.weather-panel')?.refreshIfStale?.();
     });
   });
+  window.HydroWeather?.init(document.querySelector('.weather-panel'));
   applySecondTestUi();
   gaugeTicker.add(() => gauges.forEach((gauge) => gauge.checkStale()));
   localSaveHealth.onRecover = (since) => {

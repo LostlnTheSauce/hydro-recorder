@@ -515,3 +515,17 @@ table td { background:#ffffff55; }
 .crystal-offset-note { color:var(--muted, #526675); } .crystal-message:empty { display:none; } .crystal-download { justify-self:start; }
 .temp-log-help { color:var(--muted, #526675); } .temp-log-message:empty { display:none; } .temp-log-download { justify-self:start; }
 @media (max-width:520px) { .temp-log-fields { grid-template-columns:1fr 1fr; } #tempLogDialog { padding:20px; } }
+/* Tools > Weather. */
+.weather-panel { display:grid; gap:14px; }
+.weather-search { display:flex; flex-wrap:wrap; gap:10px; align-items:end; } .weather-search label { display:grid; gap:4px; font-weight:600; font-size:.85rem; flex:1 1 260px; max-width:420px; }
+.weather-status { margin:0; color:var(--muted); font-size:.9rem; }
+.weather-result { display:grid; gap:12px; } .weather-result h3 { margin:0; font-size:1.3rem; } .weather-source { margin:0; color:var(--muted); font-size:.82rem; }
+.weather-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; } .weather-tiles div { border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+.weather-tiles span { display:block; color:var(--muted); font-size:.75rem; } .weather-tiles strong { font-size:1.15rem; }
+.weather-legend { display:flex; flex-wrap:wrap; gap:16px; font-size:.82rem; } .weather-legend i { display:inline-block; width:22px; height:0; vertical-align:middle; margin-right:6px; border-top:2.5px solid #d4572a; }
+.weather-legend i.forecast { border-top:2.5px dashed #2a78d6; } .weather-legend b { font-weight:500; } .weather-legend .muted { color:var(--muted); }
+.weather-chart-wrap { height:260px; } .weather-chart { width:100%; height:100%; display:block; }
+.weather-table-wrap { overflow-x:auto; } .weather-table { width:100%; border-collapse:collapse; font-size:.85rem; font-variant-numeric:tabular-nums; }
+.weather-table th, .weather-table td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); white-space:nowrap; } .weather-table th { color:var(--muted); font-weight:600; font-size:.75rem; }
+.weather-table tr.forecast td { color:#2a5d9a; } .weather-table td:last-child { color:var(--muted); font-size:.75rem; }
+.weather-model .weather-legend i.recorded { border-top-color:#7d8a96; }
