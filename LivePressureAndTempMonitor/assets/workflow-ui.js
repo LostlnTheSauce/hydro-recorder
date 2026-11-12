@@ -77,7 +77,7 @@
       this.card.querySelector('.workflow-heading').append(fresh);
       this.card.before(this.root.querySelector('.gauge-actions'));
       this.records = document.createElement('section'); this.records.className = 'workflow-records';
-      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="probe-report">Digital vs physical temps report (PDF)</button><button type="button" data-export="probes">Download digital vs physical temps CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
+      this.records.innerHTML = `<header><h3>Official 15-minute record</h3><p>Adjusted pressure rounded to whole PSI. Missing readings stay blank. Sheet updates remain manual.</p></header><div class="workflow-official-stats"></div><div class="workflow-record-actions"><button type="button" data-export="readings" title="Every pressure reading recorded so far, with the temperature probes beside it while they were recording">Download all readings CSV</button><button type="button" data-export="records">Download complete log CSV</button><button type="button" data-export="probe-report">Digital vs physical temps report (PDF)</button><button type="button" data-export="probes">Download digital vs physical temps CSV</button><button type="button" data-export="backup">Download backup</button></div><div class="event-table-wrap"><table><thead><tr><th>Date / time</th><th>PSI</th><th>Ambient °F</th><th>Pipe °F</th><th>Soil °F</th><th>Status / remarks</th></tr></thead><tbody class="workflow-log-body"></tbody></table></div><details><summary>Stroke-count record</summary><div class="event-table-wrap"><table><thead><tr><th>Actual time</th><th>Checkpoint PSI</th><th>Counter</th><th>Strokes</th><th>Gallons</th><th>Total gal</th></tr></thead><tbody class="workflow-stroke-body"></tbody></table></div></details>`;
       this.root.append(this.records);
       this.records.append(this.root.querySelector('.paperwork-sync-panel'));
       this.records.append(this.root.querySelector('.ramp-panel'));
@@ -267,6 +267,25 @@
       if (window.HydroDemo?.enabled) return this.message('Demo records are for practice only; exports are disabled.');
       const s = this.state(), name = (this.g.testState.jobNumber || `Test-${this.g.slot}`).replace(/[^a-z0-9_-]/gi, '_');
       if (kind === 'backup') return this.g.downloadTestBackup();
+      if (kind === 'readings') {
+        // Every pressure reading recorded so far (as shown on the page, offset included), with each
+        // temperature probe's latest reading from the 2 minutes before it. Probes with no readings are left out.
+        const readings = this.g.readings.filter(r => Number.isFinite(Number(r?.at)) && Number.isFinite(Number(r?.pressure))).sort((a, b) => a.at - b.at);
+        if (!readings.length) return this.message('No pressure readings have been recorded on this test yet.');
+        const temps = this.g.temperatureReadings.filter(r => Number.isFinite(Number(r?.at))).sort((a, b) => a.at - b.at);
+        const keys = ['ambient', 'pipe', 'soil', 'aux'].filter(k => temps.some(r => W.number(r[k]) !== null));
+        const names = Object.fromEntries(this.g.temperatureChannels().map(c => [c.key, c.name]));
+        const latest = {}; let j = 0;
+        const rows = readings.map(r => {
+          const at = Number(r.at);
+          for (; j < temps.length && temps[j].at <= at; j++) keys.forEach(k => { if (W.number(temps[j][k]) !== null) latest[k] = { at: temps[j].at, value: Number(temps[j][k]) }; });
+          const d = new Date(at);
+          return [d.toLocaleDateString(), d.toLocaleTimeString(), Number(Number(r.pressure).toFixed(2)),
+            ...keys.map(k => (latest[k] && at - latest[k].at <= 120000 ? Number(latest[k].value.toFixed(3)) : ''))];
+        });
+        download(`${name}_all-readings.csv`, ['Date', 'Time', 'Pressure PSI', ...keys.map(k => `${names[k] || k} F`)], rows);
+        return this.message(`Downloaded ${rows.length.toLocaleString()} pressure readings, ${stamp(readings[0].at)} to ${stamp(readings.at(-1).at)}${keys.length ? `, with ${keys.map(k => names[k] || k).join(', ')} temperatures` : ' (no temperature probe readings on this test)'}.`);
+      }
       if (kind === 'probes' || kind === 'probe-report') {
         // Every Sheet log row with the electronic probes' own readings beside the temperatures
         // in the Sheet (as of the last sync) or typed on the site, for comparing them.
