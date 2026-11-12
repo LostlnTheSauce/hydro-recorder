@@ -404,6 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['host_password'])) {
   <script src="assets/demo.js?v=3"></script>
   <script src="assets/jobs.js?v=2"></script>
   <script src="assets/cloud-history.js?v=2"></script>
+  <script src="assets/readings-csv.js?v=1"></script>
   <script src="assets/workflow-ui.js?v=11"></script>
   <script src="assets/workspace.js?v=6"></script>
   <script src="assets/field-power.js?v=3"></script>
