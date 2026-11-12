@@ -284,7 +284,9 @@
     const render = () => {
       state.frame = 0;
       const data = latest.get(source); if (!data) return;
-      const { w, h } = size(), dpr = window.devicePixelRatio || 1;
+      // Drawn at least twice the screen's pixels, like the chart on the page: fine grid lines and the
+      // small numbers stay clean when the whole chart is in view.
+      const { w, h } = size(), dpr = Math.max(2, window.devicePixelRatio || 1);
       const width = Math.round(w * dpr), height = Math.round(h * dpr);
       if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
       const k = dpr * (Math.min(w, h) / SIZE) * state.zoom;
