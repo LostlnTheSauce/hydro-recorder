@@ -920,12 +920,19 @@
       }
 
       if (readings.length) {
-        let path = '';
+        // Every reading goes into the line, but a point within 0.2 chart units (far finer than print) of
+        // the last one drawn adds nothing visible, so it is skipped: tens of thousands of overlapping
+        // pieces make some viewers (e-mail previews) smear the line thick. The line is fully opaque
+        // for the same reason: a see-through line is put in a transparency group that previews
+        // turn into a blurry low-resolution picture.
+        let path = '', last = null;
         readings.forEach((reading, i) => {
           const p = pointForReading(reading, cx, cy, inner, outer, fullScale, chartHours);
-          path += `${i ? 'L' : 'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+          if (last && i < readings.length - 1 && Math.hypot(p.x - last.x, p.y - last.y) < 0.2) return;
+          path += `${last ? 'L' : 'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+          last = p;
         });
-        parts.push(`<path d="${path}" fill="none" stroke="${traceColor}" stroke-width="${traceWidth}" stroke-linecap="round" stroke-linejoin="round" opacity=".98"/>`);
+        parts.push(`<path d="${path}" fill="none" stroke="${traceColor}" stroke-width="${traceWidth}" stroke-linecap="round" stroke-linejoin="round"/>`);
         if (!plain && sampled && $('showIntervalMarkers').checked) {
           const markerRadius = readings.length <= 500 ? 4.2 : readings.length <= 2000 ? 2.5 : 1.45;
           const markerStroke = readings.length <= 500 ? 1.8 : 1.1;
