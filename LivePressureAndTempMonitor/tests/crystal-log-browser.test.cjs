@@ -96,6 +96,15 @@ async function main() {
     assert.match(data, /<c r="A1428"><v>7200<\/v><\/c><c r="B1428"><v>1512<\/v><\/c>/);
     assert.ok(!/<c r="A\d+"><v>3605<\/v>/.test(data) && /<c r="A\d+"><v>3720<\/v>/.test(data), 'unplugged moments left out, logging picks up after');
     assert.ok(unzip(xlsx, 'xl/charts/chart1.xml').includes("'Data'!$B$11:$B$32010"), 'Report chart covers the gauge memory');
+    // The Report boxes show the run even where Excel does not recalculate (Protected View).
+    const report = unzip(xlsx, 'xl/worksheets/sheet1.xml');
+    assert.match(report, /<c r="B4" s="8"><f ca="1">Data!B1<\/f><v>21863<\/v><\/c>/);
+    assert.match(report, /<c r="B5" s="11" t="str"><f ca="1">Data!B2<\/f><v>5KPSIXP2I<\/v><\/c>/);
+    assert.match(report, /<c r="B7" s="11" t="str"><f ca="1">Data!B3<\/f><v>PSI<\/v><\/c>/);
+    assert.match(report, /<c r="E6" s="10"><f ca="1">Data!B7<\/f><v>5<\/v><\/c>/);
+    assert.equal(Number(/<c r="E4" s="9"><f ca="1">Data!B8<\/f><v>([^<]+)<\/v>/.exec(report)[1]), start, 'start box = Data start');
+    assert.equal(Number(/<c r="E5" s="12"><f ca="1">Data!B9<\/f><v>([^<]+)<\/v>/.exec(report)[1]), stop, 'stop box = Data stop');
+    assert.ok(!/\[(Serial Number|Model|Start|Stop|Units|MessageStore|Logging Interval)\]/.test(report), 'no template text left');
 
     // Model and firmware come back for this gauge next time.
     await page.locator('#crystalLogDialog [value="cancel"]').click();

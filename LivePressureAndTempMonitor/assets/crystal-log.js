@@ -105,6 +105,27 @@
         const rows = dataSheetRows(run, gauge);
         return { name: file.name, text: file.head.replace('{{DIMENSION}}', `A1:E${rows.lastRow}`) + rows.xml + file.tail };
       }
+      if (file.name === 'xl/worksheets/sheet1.xml') {
+        // The Report sheet's boxes are formulas reading the Data sheet. Their stored results are filled
+        // in too, so the Report reads right in a viewer that does not recalculate (Excel's Protected
+        // View or an unactivated Excel, file previews); Excel still recalculates them when it can.
+        const serial = String(gauge.serial || '').trim();
+        let text = file.text;
+        const cell = (ref, formula, style, value) => {
+          const pattern = new RegExp(`<c r="${ref}" s="${style}" t="str"><f ca="1">${formula}</f><v>[^<]*</v></c>`);
+          if (!pattern.test(text)) throw new Error(`The Crystal log template's Report cell ${ref} is missing.`);
+          text = text.replace(pattern, typeof value === 'number' ? `<c r="${ref}" s="${style}"><f ca="1">${formula}</f><v>${numberText(value)}</v></c>`
+            : `<c r="${ref}" s="${style}" t="str"><f ca="1">${formula}</f><v>${xml(value)}</v></c>`);
+        };
+        cell('B4', 'Data!B1', 8, /^\d+$/.test(serial) ? Number(serial) : serial);
+        cell('E4', 'Data!B8', 9, excelDate(run.start));
+        cell('B5', 'Data!B2', 11, gauge.model || '');
+        cell('E5', 'Data!B9', 12, excelDate(run.stop));
+        cell('B6', 'Data!D4', 8, '------------');
+        cell('E6', 'Data!B7', 10, run.intervalSec);
+        cell('B7', 'Data!B3', 11, gauge.units || 'PSI');
+        return { name: file.name, text };
+      }
       if (file.name === 'xl/sharedStrings.xml') {
         return { name: file.name, text: file.text.replace('{{MODEL}}', xml(gauge.model)).replace('{{UNITS}}', xml(gauge.units || 'PSI')).replace('{{FIRMWARE}}', xml(gauge.firmware)) };
       }
