@@ -1158,7 +1158,7 @@
       <span class="card-num">10</span>
     </div>
     <div class="card-body">
-      <p class="section-label">Full, buried (restrained) line — what a change in water temperature does to the pressure</p>
+      <p class="section-label">Full line — what a change in water temperature does to the pressure</p>
       <div class="input-row">
         <div class="input-group"><label>Pipe Size</label><select id="tp_size" onchange="pickPipeSize()"><option value="">Pick a size, or type the OD</option></select></div>
         <div class="input-group"><label>Outside Diameter (in)</label><input type="number" id="tp_od" placeholder="e.g. 12.75" step="any" oninput="calcTempPressure()"></div>
@@ -1168,6 +1168,7 @@
       <div class="input-row">
         <div class="input-group"><label>Water / Pipe Temp Now (°F)</label><input type="number" id="tp_t1" placeholder="e.g. 62" step="any" oninput="calcTempPressure()"></div>
         <div class="input-group"><label>Expected Temp Later (°F) <small>— optional</small></label><input type="number" id="tp_t2" placeholder="e.g. 60" step="any" oninput="calcTempPressure()"></div>
+        <div class="input-group"><label>Pipe Is</label><select id="tp_lay" onchange="calcTempPressure()"><option value="buried">Buried (held in the ground)</option><option value="exposed">Above ground (free to move)</option></select></div>
       </div>
       <div class="results" id="tpResults">
         <div class="verdict" id="tpVerdict"></div>
@@ -2071,8 +2072,9 @@
   }
 
   // ── CARD 10: PRESSURE CHANGE FROM TEMPERATURE ─────────────
-  // Full, closed, buried (restrained) steel line: dP/dT = (B - 2a) / (D(1 - v^2)/(E t) + C)
-  // (the hydrotest temperature correction in Pipeline Rules of Thumb / API RP 1110).
+  // Full, closed steel line. Buried (restrained): dP/dT = (B - 2a) / (D(1 - v^2)/(E t) + C), the hydrotest
+  // temperature correction in Pipeline Rules of Thumb. Above ground (free to grow lengthwise, closed
+  // ends): dP/dT = (B - 3a) / (D(5/4 - v)/(E t) + C).
   // B: water volume expansion (table above), a: steel linear expansion, C: water compressibility.
   const PIPE_OD = [['2', 2.375], ['3', 3.5], ['4', 4.5], ['6', 6.625], ['8', 8.625], ['10', 10.75], ['12', 12.75], ['14', 14], ['16', 16], ['18', 18], ['20', 20], ['24', 24], ['30', 30], ['36', 36], ['42', 42]];
   // Water compressibility per bar at 1 atm (standard table), by °C; a little lower at test pressure.
@@ -2086,18 +2088,18 @@
     return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
   };
   // Psi per °F at a water temperature, for a pipe OD and wall (in) and the line pressure (psi).
-  function restrainedPsiPerF(tempF, od, wt, psi) {
+  function restrainedPsiPerF(tempF, od, wt, psi, exposed = false) {
     const c = (tempF - 32) / 1.8;
     const bar = Math.max(0, (psi || 0) / 14.5038);
     const compressibility = lookupC(WATER_COMPRESSIBILITY_C, c) / (1 + 3.4e-4 * bar) / 14.5038;   // per psi
-    const pipeStretch = od * (1 - POISSON * POISSON) / (STEEL_E * wt);
-    return (lookupC(WATER_EXPANSION_C, c) - 2 * STEEL_LINEAR_C) / (pipeStretch + compressibility) / 1.8;
+    const pipeStretch = od * (exposed ? 1.25 - POISSON : 1 - POISSON * POISSON) / (STEEL_E * wt);
+    return (lookupC(WATER_EXPANSION_C, c) - (exposed ? 3 : 2) * STEEL_LINEAR_C) / (pipeStretch + compressibility) / 1.8;
   }
   // Pressure change for a temperature change, added up a tenth of a degree at a time.
-  function pressureForTemps(t1, t2, od, wt, psi) {
+  function pressureForTemps(t1, t2, od, wt, psi, exposed = false) {
     const steps = Math.max(1, Math.ceil(Math.abs(t2 - t1) / 0.1)), dt = (t2 - t1) / steps;
     let change = 0, p = psi || 0;
-    for (let i = 0; i < steps; i++) { const d = restrainedPsiPerF(t1 + dt * (i + 0.5), od, wt, p) * dt; change += d; p += d; }
+    for (let i = 0; i < steps; i++) { const d = restrainedPsiPerF(t1 + dt * (i + 0.5), od, wt, p, exposed) * dt; change += d; p += d; }
     return change;
   }
 
@@ -2118,12 +2120,13 @@
     document.getElementById('tpResults').classList.toggle('visible', ok);
     if (!ok) return;
     const fmt = (n, d = 1) => n.toFixed(d), signed = (n, d = 1) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${Math.abs(n).toFixed(d)}`;
-    const pressure = psi > 0 ? psi : 0, perF = restrainedPsiPerF(t1, od, wt, pressure);
+    const exposed = document.getElementById('tp_lay').value === 'exposed';
+    const pressure = psi > 0 ? psi : 0, perF = restrainedPsiPerF(t1, od, wt, pressure, exposed);
     const box = (cls, label, value, unit) => `<div class="result-box ${cls}"><div class="result-label">${label}</div><div class="result-value">${value}<span class="result-unit">${unit}</span></div></div>`;
     const v = document.getElementById('tpVerdict');
     const boxes = [box('highlight', 'Per 1 °F of Water', fmt(perF), 'psi'), box('', 'Per 0.1 °F', fmt(perF / 10, 2), 'psi')];
     if (!isNaN(t2) && t2 !== t1) {
-      const change = pressureForTemps(t1, t2, od, wt, pressure);
+      const change = pressureForTemps(t1, t2, od, wt, pressure, exposed);
       v.className = `verdict ${change < 0 ? 'warn' : 'good'}`;
       v.innerHTML = `<strong>Expect about ${signed(change)} psi</strong>Water going from ${fmt(t1)}°F to ${fmt(t2)}°F ${change < 0 ? 'drops' : 'raises'} the pressure about ${fmt(Math.abs(change))} psi in this pipe.`;
       boxes.push(box(change < 0 ? 'red' : 'green', 'Expected Change', signed(change), 'psi'));
@@ -2134,10 +2137,11 @@
     }
     document.getElementById('tpResultGrid').innerHTML = boxes.join('');
     const drops = [0.25, 0.5, 1, 2, 3, 5];
-    document.getElementById('tpSteps').innerHTML = `<table class="tp-steps"><thead><tr><th>Water cools</th>${drops.map((d) => `<th>${d}°F</th>`).join('')}</tr></thead><tbody><tr><td>Pressure drops about</td>${drops.map((d) => `<td>${fmt(-pressureForTemps(t1, t1 - d, od, wt, pressure))} psi</td>`).join('')}</tr></tbody></table>`;
+    document.getElementById('tpSteps').innerHTML = `<table class="tp-steps"><thead><tr><th>Water cools</th>${drops.map((d) => `<th>${d}°F</th>`).join('')}</tr></thead><tbody><tr><td>Pressure drops about</td>${drops.map((d) => `<td>${fmt(-pressureForTemps(t1, t1 - d, od, wt, pressure, exposed))} psi</td>`).join('')}</tr></tbody></table>`;
     document.getElementById('tpNote').textContent = `Water at ${fmt(t1)}°F in ${od}" OD × ${wt}" wall steel${pressure ? ` at ${Math.round(pressure)} psi` : ''}. More when the water is warm, less when cold; a stiffer pipe (thicker wall, smaller diameter) gives more. `
-      + 'Full, buried (restrained) line, the hydrotest temperature formula ΔP = (B − 2α)ΔT ÷ (D(1 − ν²)/(E·t) + C), steel α 6.5×10⁻⁶/°F, E 30,000,000 psi, ν 0.3. '
-      + 'An estimate: air in the line, exposed pipe and where the probe sits all change it. The temperature that counts is the water in the pipe, not the air.';
+      + (exposed ? 'Above-ground line free to grow lengthwise: ΔP = (B − 3α)ΔT ÷ (D(5/4 − ν)/(E·t) + C). ' : 'Buried (restrained) line, the hydrotest temperature formula ΔP = (B − 2α)ΔT ÷ (D(1 − ν²)/(E·t) + C). ')
+      + 'Steel α 6.5×10⁻⁶/°F, E 30,000,000 psi, ν 0.3. '
+      + 'An estimate: air in the line and where the probe sits change it. The temperature that counts is the water in the pipe; on exposed pipe in the sun the steel reads hotter than the water.';
   }
 
   // Init

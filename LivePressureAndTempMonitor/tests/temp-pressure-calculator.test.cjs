@@ -28,6 +28,9 @@ async function main() {
     assert.ok(cold < hand / 2, 'much less per degree in cold water');
     assert.ok(thick > hand, 'more per degree with a thicker wall');
     assert.ok(await page.evaluate(() => restrainedPsiPerF(80, 24, 0.322, 1500)) < hand, 'less per degree in a bigger pipe with the same wall');
+    // Above ground, free to grow lengthwise: (B - 3a) / (D(5/4 - v)/(E t) + C), a little less per degree.
+    const free = await page.evaluate(() => restrainedPsiPerF(80, 8.625, 0.322, 1500, true));
+    assert.ok(Math.abs(free - (0.2726e-3 - 3 * 1.17e-5) / (8.625 * 0.95 / (30e6 * 0.322) + 3.004e-6) / 1.8) < 0.3 && free < hand, `above ground ${free.toFixed(2)} psi/°F`);
     // The card.
     await page.locator('#tp_size').selectOption('12.75');
     assert.equal(await page.locator('#tp_od').inputValue(), '12.75', 'pipe size fills the OD');
@@ -43,6 +46,11 @@ async function main() {
     assert.ok(change < 0 && Math.abs(change + 2 * mid) < 0.3, `2 °F of cooling is twice the per-degree figure at 61 °F (${change.toFixed(2)} vs ${(-2 * mid).toFixed(2)})`);
     assert.match(await page.locator('#tpVerdict').innerText(), new RegExp(`Expect about −${Math.abs(change).toFixed(1)} psi`));
     assert.match(await page.locator('#tpResultGrid').innerText(), new RegExp(`${(1440 + change).toFixed(1)}`), 'expected pressure');
+    await page.locator('#tp_lay').selectOption('exposed');
+    assert.match(await page.locator('#tpNote').innerText(), /Above-ground line free to grow lengthwise/);
+    const exposedChange = await page.evaluate(() => pressureForTemps(62, 60, 12.75, 0.375, 1440, true));
+    assert.match(await page.locator('#tpVerdict').innerText(), new RegExp(`Expect about −${Math.abs(exposedChange).toFixed(1)} psi`));
+    await page.locator('#tp_lay').selectOption('buried');
     const steps = await page.locator('.tp-steps td').allInnerTexts();
     assert.equal(steps[0], 'Pressure drops about'); assert.equal(steps.length, 7);
     assert.equal(await page.locator('#tp_wt').evaluate(() => { document.getElementById('tp_wt').value = '7'; calcTempPressure(); return document.getElementById('tpResults').classList.contains('visible'); }), false, 'a wall thicker than the pipe is refused');
