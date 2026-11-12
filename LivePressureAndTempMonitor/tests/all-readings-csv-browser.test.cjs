@@ -12,6 +12,8 @@ async function main() {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/' || url.pathname === '/host.php') { res.setHeader('content-type', 'text/html'); return res.end(fixture()); }
+    if (url.pathname === '/history.php') { res.setHeader('content-type', 'text/html'); return res.end(fixture('history.php')); }
+    if (url.pathname === '/history-api.php') { res.setHeader('content-type', 'application/json'); return res.end('{"jobs":[]}'); }
     const file = path.join(root, url.pathname);
     if (url.pathname.startsWith('/assets/') && fs.existsSync(file)) { res.setHeader('content-type', file.endsWith('.css') ? 'text/css' : 'text/javascript'); return res.end(fs.readFileSync(file)); }
     res.writeHead(403, { 'content-type': 'application/json' }); res.end('{"error":"offline fixture"}');
@@ -26,7 +28,8 @@ async function main() {
     await page.locator('[data-dashboard-tab="logs"]').click();
     const readCsv = async () => {
       const [download] = await Promise.all([page.waitForEvent('download'), page.locator('[data-gauge="A"] [data-export="readings"]').click()]);
-      return { name: download.suggestedFilename(), lines: fs.readFileSync(await download.path(), 'utf8').split('\r\n').map((line) => JSON.parse(`[${line}]`)) };
+      const raw = fs.readFileSync(await download.path(), 'utf8');
+      return { name: download.suggestedFilename(), raw, lines: raw.split('\r\n').map((line) => JSON.parse(`[${line}]`)) };
     };
     // Pressures only (no probe hooked up), no official test started.
     const start = await page.evaluate(() => {
@@ -51,8 +54,17 @@ async function main() {
     assert.equal(csv.lines[1][3], '', 'blank before the probe started');
     assert.equal(csv.lines[301][3], '61.534');
     assert.equal(csv.lines[311][3], '61.544', 'the latest reading before each pressure');
+    // Test history makes the same file from a saved test's readings.
+    const saved = await page.evaluate(() => ({ readings: window.testGauges[0].readings, temperatureReadings: window.testGauges[0].temperatureReadings }));
+    const history = await context.newPage();
+    history.on('pageerror', (error) => errors.push(error.message));
+    await history.goto(`http://127.0.0.1:${server.address().port}/history.php`);
+    assert.equal(await history.locator('#replayReadingsCsv').innerText(), 'All readings (CSV)');
+    const historyCsv = await history.evaluate((rec) => HydroReadingsCsv.text(HydroReadingsCsv.table(rec.readings, rec.temperatureReadings, { pipe: 'Pipe' })), saved);
+    assert.equal(historyCsv, csv.raw, 'History CSV is byte-for-byte the Live one');
+    assert.equal(await history.evaluate(() => HydroReadingsCsv.fileName('', 'A')), 'Test-A_all-readings.csv');
     assert.deepEqual(errors, []);
-    console.log('All readings CSV: every pressure reading without an official test, date and time columns, probe columns only when the probe recorded, latest probe reading beside each pressure passed.');
+    console.log('All readings CSV (Live and History): every pressure reading without an official test, date and time columns, probe columns only when the probe recorded, latest probe reading beside each pressure passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });

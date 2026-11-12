@@ -320,6 +320,14 @@
     if (!record) return;
     try { HydroCrystalLog.openDialog(record); } catch (e) { status.textContent = e.message || String(e); }
   });
+  // Every pressure reading in this saved test (and any probe temperatures), the same CSV as Records on the live page.
+  $('#replayReadingsCsv').addEventListener('click', () => {
+    if (!record) return;
+    const t = HydroReadingsCsv.table(record.readings, record.temperatureReadings);
+    if (!t.rows.length) { status.textContent = 'This test has no pressure readings.'; return; }
+    HydroReadingsCsv.download(HydroReadingsCsv.fileName(record.test?.jobNumber, record.test?.slot), t);
+    status.textContent = `Downloaded ${t.rows.length.toLocaleString()} pressure readings${t.keys.length ? ` with ${t.probeNames.join(', ')} temperatures` : ''}.`;
+  });
   $('#closeReplay').addEventListener('click', closeReplay);
   $('#refreshHistory').addEventListener('click', refresh); $('#historySearch').addEventListener('input', list);
   $('#historyFolder').addEventListener('change', list); refresh();

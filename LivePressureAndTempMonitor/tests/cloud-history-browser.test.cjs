@@ -76,6 +76,11 @@ const server=http.createServer(async(req,res)=>{
     await view.getByRole('button',{name:'Open & replay'}).click();await view.waitForSelector('#replay:not([hidden])');
     assert.equal(await view.locator('#historyLibrary').isVisible(),false,'Opened tests hide library controls');
     assert.match(await view.locator('#replaySummary').innerText(),/4,002 pressure readings/);
+    // All readings as a CSV, the same format as Records on the live page.
+    const [csvDownload]=await Promise.all([view.waitForEvent('download'),view.locator('#replayReadingsCsv').click()]);
+    assert.match(csvDownload.suggestedFilename(),/_all-readings\.csv$/);
+    const csvLines=fs.readFileSync(await csvDownload.path(),'utf8').split('\r\n');
+    assert.match(csvLines[0],/^"Date","Time","Pressure PSI"/);assert.equal(csvLines.length,4003,'header plus every saved pressure reading');
     // Digital vs physical report straight from the saved test.
     await phone.addInitScript(()=>{window.print=()=>{window.__printed=true;};});
     assert.equal(await view.locator('#replaySheet').isHidden(),true,'no Sheet link when the test has no Sheet');
