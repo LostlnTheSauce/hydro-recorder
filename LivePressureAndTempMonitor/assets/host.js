@@ -879,7 +879,8 @@
         this.testState.sheetColumns = Object.fromEntries([...this.root.querySelectorAll('[data-sheet-column]')].map((input) => [input.dataset.sheetColumn, input.checked]));
         localStorage.setItem(`${testStoragePrefix}${this.slot}`, JSON.stringify(this.testState));
         const off = this.sheetColumnsOff();
-        this.renderSheetStatus(off.length ? `Sync to Sheet will leave the ${off.join(', ')} column${off.length === 1 ? '' : 's'} as they are in the Sheet.` : 'Sync to Sheet will fill every column.');
+        this.renderSheetStatus(this.sheetLogOff() ? 'All LOG columns are off: Sync to Sheet will leave the LOG rows as they are (no start row needed). The stroke count and other ticked items still sync.'
+          : off.length ? `Sync to Sheet will leave the ${off.join(', ')} column${off.length === 1 ? '' : 's'} as they are in the Sheet.` : 'Sync to Sheet will fill every column.');
       }));
       // Pre-test entries typed into the Sheet by hand can be left alone: the official test then
       // starts on the chosen LOG row and nothing above it is written.
@@ -1082,8 +1083,15 @@
 
     // The rows Sync to Sheet writes: without pre-test entries when they are switched off. That
     // needs a chosen start row, or the official test would start on row 23 over the typed entries.
+    // Every LOG column switched off: the LOG rows are left alone (no rows are sent, so no times are
+    // written either), e.g. to sync only the stroke count.
+    sheetLogOff() {
+      return this.sheetColumnsOff().length === window.HydroWorkflow.SHEET_COLUMNS.length;
+    }
+
     sheetRowsToSync(options = {}) {
       const rows = this.sheetRows(options);
+      if (this.sheetLogOff()) return { ...rows, preTestRows: [], officialRows: [], postTestRows: [] };
       if (this.testState.sheetPreTest === false) {
         if (!Number(this.testState.sheetStartRow)) throw new Error('Pre-test entries are switched off: enter the LOG row the official test starts on, so the rows you typed above it are left alone.');
         rows.preTestRows = [];
@@ -1193,6 +1201,9 @@
       const knownVersion = Number(this.testState.sheet.scriptVersion) || 0;
       const oldScript = knownVersion > 0 && knownVersion < 7;
       const rowCount = (toSync.preTestRows?.length || 0) + (toSync.officialRows?.length || 0) + (toSync.postTestRows?.length || 0);
+      if (oldScript && !rowCount && this.sheetLogOff()) {
+        return this.renderSheetStatus('All LOG columns are off, but your Google Sheet script is an older version that would blank the LOG rows anyway. Update it first (paste the new Code.gs into Apps Script and deploy a new version, see SETUP.md), then sync.', 'error');
+      }
       if (oldScript && !rowCount) {
         return this.renderSheetStatus('Nothing to sync yet: no official start time and no entries, so the Sheet was left as it is. Your Google Sheet script is an older version that would blank what you typed in the LOG. Update it (paste the new Code.gs into Apps Script and deploy a new version, see SETUP.md) before syncing.', 'error');
       }
@@ -1201,7 +1212,11 @@
       const where = startRow ? (this.testState.sheetPreTest === false ? `from LOG row ${startRow} down (rows above it are left as they are)` : `from LOG row ${startRow} down (rows above it are only used for pre-test entries)`) : 'from LOG row 23 down';
       const off = this.sheetColumnsOff();
       const kept = off.length ? ` Columns switched off (${off.join(', ')}) are left as they are.` : '';
-      if (!window.confirm(`Sync to Google Sheet now? This will write the site's times and pressures ${where}.${kept} Temperatures and remarks you typed in the Sheet are kept: a site reading replaces a typed temperature, and a site remark goes in front of a typed one. Rows the site has nothing for are left as they are. Continue?`)) return;
+      if (this.sheetLogOff()) {
+        const written = ['the job details at the top', this.testState.sheetStrokes !== false ? 'the stroke count' : '', this.testState.sheetDesign !== false ? 'the test design values' : ''].filter(Boolean);
+        const list = written.length > 1 ? `${written.slice(0, -1).join(', ')} and ${written.at(-1)}` : written[0];
+        if (!window.confirm(`Sync to Google Sheet now? All LOG columns are off, so the LOG rows are left as they are. Only ${list} are written. Continue?`)) return;
+      } else if (!window.confirm(`Sync to Google Sheet now? This will write the site's times and pressures ${where}.${kept} Temperatures and remarks you typed in the Sheet are kept: a site reading replaces a typed temperature, and a site remark goes in front of a typed one. Rows the site has nothing for are left as they are. Continue?`)) return;
       // An older Sheet script would blank a switched-off pressure or remarks column.
       if (off.some((column) => column === 'pressure' || column === 'comments') && !(Number(this.testState.sheet.scriptVersion) >= 3)
         && !window.confirm('Switching off the pressure or remarks column needs the updated Google Sheet script (Code.gs). If it has not been deployed yet, press Cancel, or that column will be cleared. Continue?')) return;
@@ -1236,6 +1251,9 @@
           return;
         }
         const strokeNote = result.strokeRowsWritten ? ` Wrote ${result.strokeRowsWritten - 1} stroke reading${result.strokeRowsWritten === 2 ? '' : 's'} to the Test Stroke Count tab.` : '';
+        if (this.sheetLogOff()) {
+          return this.renderSheetStatus(`Synced${strokeNote || ' the job details.'} The LOG rows were left as they are (all LOG columns are off).`, 'complete');
+        }
         const message = `Synced ${result.officialRowsWritten || 0} official row${result.officialRowsWritten === 1 ? '' : 's'}${rows} using the ${this.pressureOffset()} psi offset.${strokeNote} Imported ${importedTemperatures} temperature row${importedTemperatures === 1 ? '' : 's'} from the Sheet.${noStart || ' Manual-only mode remains on.'}`;
         this.renderSheetStatus(message, 'complete');
       } catch (error) {
