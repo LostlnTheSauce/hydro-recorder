@@ -1186,12 +1186,22 @@
     async syncGoogleSheet() {
       if (demo?.enabled) return this.renderSheetStatus('Demo mode cannot create or sync Google Sheets.', 'error');
       if (!this.testState.sheet?.spreadsheetId || this.sheetSyncInFlight) return;
-      try { this.sheetRowsToSync(); } catch (error) { return this.renderSheetStatus(error.message, 'error'); }
+      let toSync;
+      try { toSync = this.sheetRowsToSync(); } catch (error) { return this.renderSheetStatus(error.message, 'error'); }
+      // Sheet scripts before version 7 rewrite every log row they manage, blanking remarks typed in the
+      // Sheet (and whole rows when the site has nothing for them). Never send those an empty sync.
+      const knownVersion = Number(this.testState.sheet.scriptVersion) || 0;
+      const oldScript = knownVersion > 0 && knownVersion < 7;
+      const rowCount = (toSync.preTestRows?.length || 0) + (toSync.officialRows?.length || 0) + (toSync.postTestRows?.length || 0);
+      if (oldScript && !rowCount) {
+        return this.renderSheetStatus('Nothing to sync yet: no official start time and no entries, so the Sheet was left as it is. Your Google Sheet script is an older version that would blank what you typed in the LOG. Update it (paste the new Code.gs into Apps Script and deploy a new version, see SETUP.md) before syncing.', 'error');
+      }
+      if (oldScript && !window.confirm('Your Google Sheet script is an older version: syncing rewrites the remarks column and blanks remarks you typed in the Sheet. Update it first (paste the new Code.gs into Apps Script and deploy a new version, see SETUP.md). Sync anyway?')) return;
       const startRow = Number(this.testState.sheetStartRow) || 0;
       const where = startRow ? (this.testState.sheetPreTest === false ? `from LOG row ${startRow} down (rows above it are left as they are)` : `from LOG row ${startRow} down (rows above it are only used for pre-test entries)`) : 'from LOG row 23 down';
       const off = this.sheetColumnsOff();
       const kept = off.length ? ` Columns switched off (${off.join(', ')}) are left as they are.` : '';
-      if (!window.confirm(`Sync to Google Sheet now? This will rewrite times, pressures and comments ${where}.${kept} Temperatures typed in columns C–E stay with their time unless the site has a reading. Continue?`)) return;
+      if (!window.confirm(`Sync to Google Sheet now? This will write the site's times and pressures ${where}.${kept} Temperatures and remarks you typed in the Sheet are kept: a site reading replaces a typed temperature, and a site remark goes in front of a typed one. Rows the site has nothing for are left as they are. Continue?`)) return;
       // An older Sheet script would blank a switched-off pressure or remarks column.
       if (off.some((column) => column === 'pressure' || column === 'comments') && !(Number(this.testState.sheet.scriptVersion) >= 3)
         && !window.confirm('Switching off the pressure or remarks column needs the updated Google Sheet script (Code.gs). If it has not been deployed yet, press Cancel, or that column will be cleared. Continue?')) return;
@@ -1219,6 +1229,10 @@
           ? ' No official start time is saved yet, so there are no 15-minute rows. Enter the start under Test times for paperwork, press Save test times, then sync again.' : '';
         if (!(result.layoutVersion >= 6)) {
           this.renderSheetStatus('Synced, but the Google Sheet script is out of date: it may have erased design values typed into the Sheet, and the Pipeline Data, stroke count or design switch may have been ignored. Paste the new Code.gs into Apps Script (keep your own HYDRO_TEMPLATE_ID line) and deploy a new version (see SETUP.md).', 'error');
+          return;
+        }
+        if (!(result.layoutVersion >= 7)) {
+          this.renderSheetStatus('Synced, but the Google Sheet script is out of date: it rewrites the remarks column, so remarks typed in the Sheet may have been blanked (File > Version history in the Sheet can bring them back). Paste the new Code.gs into Apps Script (keep your own HYDRO_TEMPLATE_ID line) and deploy a new version (see SETUP.md).', 'error');
           return;
         }
         const strokeNote = result.strokeRowsWritten ? ` Wrote ${result.strokeRowsWritten - 1} stroke reading${result.strokeRowsWritten === 2 ? '' : 's'} to the Test Stroke Count tab.` : '';

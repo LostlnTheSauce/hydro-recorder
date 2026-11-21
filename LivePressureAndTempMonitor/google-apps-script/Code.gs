@@ -1,7 +1,7 @@
 const HYDRO_TEMPLATE_ID = 'REDACTED';
 const HYDRO_SECRET_PROPERTY = 'HYDRO_SYNC_SECRET';
 const HYDRO_ALLOWED_PREFIX = 'HYDRO_SHEET_';
-const HYDRO_LAYOUT_VERSION = 6;
+const HYDRO_LAYOUT_VERSION = 7;
 // Log columns the site can switch off; those cells are left as the operator typed them.
 const HYDRO_LOG_COLUMNS = { pressure: 1, ambient: 2, pipe: 3, ground: 4, comments: 5 };
 // Test Stroke Count field data: five groups of Pressure / Stroke / Difference columns
@@ -233,8 +233,9 @@ function hydroWriteLog_(log, layout) {
     ...log.getRange(23, 1, 26, 6).getValues(),
     ...log.getRange(51, 1, 37, 6).getValues()
   ];
+  const siteTimes = layout.entries.filter(Boolean).map((entry) => hydroTime_(hydroDate_(entry.at))).filter(Number.isFinite);
   const values = existing.map((row, index) => layout.owned[index]
-    ? hydroMergeRow_(layout.entries[index], row, existing, layout.skipped)
+    ? hydroMergeRow_(layout.entries[index], row, existing, layout.skipped, siteTimes)
     : row);
   // Write each run of rows the site owns; rows left to the operator are not touched.
   let index = 0;
@@ -247,18 +248,41 @@ function hydroWriteLog_(log, layout) {
   }
 }
 
-// C:E are operator-owned temperature cells. A site value wins; otherwise the
-// temperature typed for the same time is kept, wherever that row has moved to.
-function hydroMergeRow_(entry, current, existing, skipped = []) {
-  const values = entry ? hydroLogRow_(entry) : ['', '', '', '', '', ''];
-  const at = entry ? hydroTime_(values[0]) : NaN;
+// Nothing typed in the Sheet is lost. A row the site has nothing for is left as it is (unless it
+// holds a row the site has moved to another line, which is cleared so it is not there twice).
+// On a row the site writes, time and pressure come from the site; temperatures (C:E) and the
+// remark (F) typed for the same time are kept, wherever that row was, as are the ones typed on
+// this row when its time is not one the site uses. A site temperature wins; a site remark goes in
+// front of the typed one.
+function hydroMergeRow_(entry, current, existing, skipped = [], siteTimes = []) {
+  const currentAt = hydroTime_(current[0]);
+  const moved = Number.isFinite(currentAt) && siteTimes.some((at) => Math.abs(at - currentAt) <= 30000);
+  if (!entry) {
+    if (!moved) return current;
+    const cleared = ['', '', '', '', '', ''];
+    skipped.forEach((column) => { cleared[column] = current[column]; });
+    return cleared;
+  }
+  const values = hydroLogRow_(entry);
+  const at = hydroTime_(values[0]);
   const sameTime = Number.isFinite(at) ? existing.find((row) => Math.abs(hydroTime_(row[0]) - at) <= 30000) : null;
-  const source = sameTime || (Number.isFinite(hydroTime_(current[0])) ? null : current);
+  const source = sameTime || (moved ? null : current);
   [2, 3, 4].forEach((column) => {
     if (values[column] === '') values[column] = source ? source[column] : '';
   });
+  values[5] = hydroMergeRemark_(values[5], source ? source[5] : '');
   skipped.forEach((column) => { values[column] = current[column]; });
   return values;
+}
+
+// The site's remark and the one typed in the Sheet: whichever there is, or both ("Begin test /
+// Inspector on site"). A typed remark that already holds the site's text is kept as it is.
+function hydroMergeRemark_(site, typed) {
+  const siteText = String(site ?? '').replace(/^'/, '').trim();
+  const typedText = String(typed ?? '').trim();
+  if (!typedText) return site;
+  if (!siteText || typedText.toLowerCase().includes(siteText.toLowerCase())) return hydroSafeCellValue_(typedText);
+  return hydroSafeCellValue_(`${siteText} / ${typedText}`);
 }
 
 function hydroTime_(value) {

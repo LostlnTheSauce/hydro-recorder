@@ -16,6 +16,8 @@ The field console never edits the clean `Test Template` master. The Apps Script 
 
 7. Upload the updated website files. Sign in to the field console, open **Test Setup**, and press **Create Google Sheet** for the desired test.
 
+Since script version 7, a sync never erases what was typed in the Sheet: temperatures and remarks typed on a log row are kept (a site reading replaces a typed temperature; a site remark goes in front of a typed one), and log rows the site has nothing for are left as they are. Older scripts rewrote the remarks column and blanked rows the site had nothing for, so update the script if the website says it is out of date.
+
 When updating an existing installation, first copy your own `HYDRO_TEMPLATE_ID` line (the repository copy says `REDACTED`), paste the new `Code.gs`, put your template ID line back, save it, then choose **Deploy → Manage deployments → Edit**, select **New version**, and deploy. Keep the existing web-app URL and secret; you do not need to run `setupHydroAutomation` again.
 
 Keep the web-app URL and secret private. If either is exposed, run `setupHydroAutomation` again and update `config.php` with the replacement secret.

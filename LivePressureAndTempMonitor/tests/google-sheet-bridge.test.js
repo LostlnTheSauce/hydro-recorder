@@ -20,7 +20,7 @@ function sync(snapshot, typedByOperator = () => {}) {
 {
   const pre = [entry(0, 'Pressure is at 0 psi / Begin pressurizing', 0), entry(20, 'Reached 75%'), entry(50, 'Reached test pressure')];
   const { log, summary, result } = sync({ preTestRows: pre, officialRows: officialRows(33), postTestRows: [entry(600, 'Begin depressurizing')] });
-  assert.equal(result.layoutVersion, 6);
+  assert.equal(result.layoutVersion, 7);
   assert.equal(log.cell('F23'), 'Pressure is at 0 psi / Begin pressurizing');
   assert.equal(log.cell('F26'), 'Begin test', 'official test starts right after three pre-test rows');
   assert.equal(log.cell('B26'), 4150, 'pressure is written');
@@ -173,4 +173,43 @@ function sync(snapshot, typedByOperator = () => {}) {
   assert.equal(run.log.cell('B24'), 4100, 'pressure written again once switched back on');
 }
 
-console.log('Google Sheet bridge: auto and chosen start rows, page break, capacity errors, operator rows and moving temperatures, whole-degree temperatures and switched-off columns passed.');
+// Nothing to sync (no official start yet): rows filled in by hand in the Sheet are left exactly as typed.
+{
+  const typedRows = [[new Date(base), 0, '', '', '', 'Begin pressurizing'], [new Date(base + 30 * minute), 1000, 61, 66, '', 'At test pressure, inspector on site'], [new Date(base + 45 * minute), 1012, 62, 70, '', 'Bled 13 oz']];
+  const run = sync({ preTestRows: [], officialRows: [], postTestRows: [] }, (sheet) => sheet.getRange('A23:F25').setValues(typedRows));
+  assert.equal(run.result.officialRowsWritten, 0);
+  assert.deepEqual(run.log.getRange('A23:F25').getValues().map((row) => [time(row[0]), ...row.slice(1)]), typedRows.map((row) => [time(row[0]), ...row.slice(1)]), 'nothing to sync: typed rows untouched');
+}
+
+// Remarks typed on rows the site writes are kept; a site remark goes in front of a typed one, once.
+{
+  const run = sync({ officialRows: officialRows(3) });
+  run.log.getRange('F24').setValue('Bled 13 oz');
+  run.log.getRange('F23').setValue('Inspector on site');
+  run.again({ officialRows: officialRows(3) });
+  assert.equal(run.log.cell('F24'), 'Bled 13 oz', 'typed remark kept when the site has none');
+  assert.equal(run.log.cell('F23'), 'Begin test / Inspector on site', 'site remark in front of the typed one');
+  run.again({ officialRows: officialRows(3) });
+  assert.equal(run.log.cell('F23'), 'Begin test / Inspector on site', 'not repeated on the next sync');
+  run.log.getRange('F23').setValue('Begin test - pump off');
+  run.again({ officialRows: officialRows(3) });
+  assert.equal(run.log.cell('F23'), 'Begin test - pump off', 'a typed remark that holds the site text is kept as typed');
+  // A pre-test entry pushes the rows down: the typed remark moves with its time, and nothing is left twice.
+  run.again({ preTestRows: [entry(0, 'Begin pressurizing', 0)], officialRows: officialRows(3) });
+  assert.equal(run.log.cell('F25'), 'Bled 13 oz', 'remark moved with its time');
+  assert.equal(time(run.log.cell('A26')), base + 90 * minute, 'last official row on row 26');
+  run.again({ officialRows: officialRows(3) });
+  assert.equal(run.log.cell('F24'), 'Bled 13 oz', 'and back');
+  assert.deepEqual([run.log.cell('A26'), run.log.cell('F26')], ['', ''], 'the row the site moved up is cleared, not left twice');
+}
+
+// The official start is corrected (every time changes): what was typed on each row stays on that row.
+{
+  const run = sync({ officialRows: officialRows(2) });
+  run.log.getRange('F24').setValue('Bled 13 oz'); run.log.getRange('C24').setValue(64);
+  run.again({ officialRows: officialRows(2, 65) });
+  assert.equal(time(run.log.cell('A24')), base + 80 * minute, 'new time written');
+  assert.deepEqual([run.log.cell('F24'), run.log.cell('C24')], ['Bled 13 oz', 64], 'typed remark and temperature kept on the row');
+}
+
+console.log('Google Sheet bridge: typed remarks and rows never erased (nothing to sync, merged remarks, moved rows, corrected start), auto and chosen start rows, page break, capacity errors, operator rows and moving temperatures, whole-degree temperatures and switched-off columns passed.');
