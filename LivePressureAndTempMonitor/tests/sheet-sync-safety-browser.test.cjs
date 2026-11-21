@@ -60,8 +60,36 @@ async function main() {
     assert.match(dialogs[0], /Temperatures and remarks you typed in the Sheet are kept/);
     assert.match(dialogs[0], /Rows the site has nothing for are left as they are/);
     assert.equal(syncs.length, 1);
+    // Only the stroke count: every LOG column and pre-test entries off. No start row needed, no LOG rows sent.
+    await page.evaluate(() => {
+      const g = window.testGauges[0], w = g.workflowController.state(), now = Date.now();
+      HydroWorkflow.manualStroke(w, now - 3000, 1300, 0, 0.0043);
+      HydroWorkflow.manualStroke(w, now - 2000, 1310, 103, 0.0043);
+      w.strokePlan = { step: 10, target: 1740, skipped: [] };
+      g.saveTestState();
+    });
+    await page.locator('[data-gauge="A"] .sheet-pretest-toggle').uncheck();
+    await page.locator('[data-gauge="A"] .sheet-design-toggle').uncheck();
+    for (const column of ['pressure', 'ambient', 'pipe', 'ground', 'comments']) {
+      const box = page.locator(`[data-gauge="A"] [data-sheet-column="${column}"]`);
+      if (await box.isChecked()) await box.uncheck();
+    }
+    assert.match(await message.innerText(), /All LOG columns are off: Sync to Sheet will leave the LOG rows as they are \(no start row needed\)/);
+    dialogs.length = 0;
+    await sync.click();
+    await page.waitForFunction(() => /LOG rows were left as they are/.test(document.querySelector('[data-gauge="A"] .sheet-sync-message').textContent));
+    assert.match(dialogs[0], /All LOG columns are off, so the LOG rows are left as they are\. Only the job details at the top and the stroke count are written/);
+    const sent = syncs.at(-1).snapshot;
+    assert.deepEqual([sent.preTestRows.length, sent.officialRows.length, sent.postTestRows.length], [0, 0, 0], 'no LOG rows sent');
+    assert.equal(sent.strokes.entries.length, 1, 'stroke count sent');
+    // The same with an older Sheet script: refused, since it would blank the LOG rows.
+    await setSheet(6);
+    const before = syncs.length;
+    await sync.click();
+    assert.match(await message.innerText(), /All LOG columns are off, but your Google Sheet script is an older version/);
+    assert.equal(syncs.length, before);
     assert.deepEqual(errors, []);
-    console.log('Sheet sync safety: old Sheet script refused when there is nothing to sync and warned otherwise (cancel sends nothing), current script syncs with a confirm that says typed remarks are kept passed.');
+    console.log('Sheet sync safety: stroke count alone with every LOG column off (no start row, LOG untouched), old Sheet script refused when there is nothing to sync and warned otherwise (cancel sends nothing), current script syncs with a confirm that says typed remarks are kept passed.');
   } finally { await browser.close(); server.close(); }
 }
 main().catch((error) => { console.error(error); process.exit(1); });
